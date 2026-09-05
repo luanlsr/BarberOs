@@ -1,0 +1,1 @@
+"""BarberOS AI service."""

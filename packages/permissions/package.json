@@ -1,0 +1,16 @@
+{
+  "name": "@barberos/permissions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@barberos/contracts": "0.1.0"
+  }
+}
