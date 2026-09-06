@@ -1,4 +1,4 @@
-import type { AppointmentStatus, SessionContext } from '@barberos/contracts';
+import type { AppointmentStatus, Permission, SessionContext } from '@barberos/contracts';
 
 export type AgendaTone = 'neutral' | 'success' | 'warning' | 'danger';
 
@@ -44,6 +44,38 @@ export type AgendaAppointment = {
   notes?: string;
 };
 
+export type AgendaAppointmentAction = {
+  id: 'check-in' | 'contact' | 'reschedule' | 'cancel';
+  label: string;
+  description: string;
+  permission: Permission;
+  href?: string;
+  disabledReason?: string;
+  variant: 'primary' | 'secondary' | 'danger';
+};
+
+export type AgendaAppointmentHistoryItem = {
+  id: string;
+  label: string;
+  atLabel: string;
+  actorName: string;
+  statusLabel: string;
+  reason?: string;
+};
+
+export type AgendaAppointmentDetail = {
+  appointment: AgendaAppointment;
+  customer: {
+    name: string;
+    phone: string;
+    lastVisitLabel: string;
+    visitsLabel: string;
+    notes?: string;
+  };
+  history: readonly AgendaAppointmentHistoryItem[];
+  actions: readonly AgendaAppointmentAction[];
+};
+
 export type AgendaTimelineSlot = {
   timeLabel: string;
   appointments: readonly AgendaAppointment[];
@@ -68,6 +100,7 @@ export type AgendaViewModel = {
   appointments: readonly AgendaAppointment[];
   timeline: readonly AgendaTimelineSlot[];
   professionalColumns: readonly AgendaProfessionalColumn[];
+  selectedAppointmentDetail?: AgendaAppointmentDetail;
   kpis: readonly AgendaKpi[];
   emptyMessage: string;
 };
@@ -216,7 +249,7 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
 
 export function getAgendaViewModel(
   session: SessionContext,
-  options: { date?: string; professionalId?: string } = {},
+  options: { date?: string; professionalId?: string; appointmentId?: string } = {},
 ): AgendaViewModel {
   return buildAgendaViewModel({ session, ...options });
 }
@@ -225,10 +258,12 @@ export function buildAgendaViewModel({
   session,
   date,
   professionalId,
+  appointmentId,
 }: {
   session: SessionContext;
   date?: string;
   professionalId?: string;
+  appointmentId?: string;
 }): AgendaViewModel {
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
   const hasReadPermission =
@@ -266,6 +301,8 @@ export function buildAgendaViewModel({
       (appointment) => appointment.professionalId === professional.id,
     ),
   }));
+  const selectedAppointment =
+    appointments.find((appointment) => appointment.id === appointmentId) ?? appointments[0];
 
   return {
     dateIso,
@@ -288,6 +325,10 @@ export function buildAgendaViewModel({
     appointments,
     timeline: buildTimeline(appointments),
     professionalColumns,
+    selectedAppointmentDetail:
+      hasReadPermission && selectedAppointment
+        ? buildAppointmentDetail(session, selectedAppointment, dateIso)
+        : undefined,
     kpis: buildKpis(appointments, visibleProfessionals.length),
     emptyMessage: hasReadPermission
       ? 'Nenhum agendamento encontrado para este filtro.'
@@ -328,6 +369,114 @@ function toAgendaAppointment(seed: AppointmentSeed, dateIso: string): AgendaAppo
     totalCents,
     notes: seed.notes,
   };
+}
+
+function buildAppointmentDetail(
+  session: SessionContext,
+  appointment: AgendaAppointment,
+  dateIso: string,
+): AgendaAppointmentDetail {
+  return {
+    appointment,
+    customer: {
+      name: appointment.customerName,
+      phone: appointment.customerPhone,
+      lastVisitLabel: 'Ultima visita ha 28 dias',
+      visitsLabel: '8 atendimentos registrados',
+      notes: appointment.notes,
+    },
+    history: buildAppointmentHistory(appointment, dateIso),
+    actions: buildAppointmentActions(session, appointment),
+  };
+}
+
+function buildAppointmentHistory(
+  appointment: AgendaAppointment,
+  dateIso: string,
+): AgendaAppointmentHistoryItem[] {
+  const createdAt = toIsoDateTime(dateIso, subtractMinutes(appointment.startLabel, 90));
+  const baseHistory: AgendaAppointmentHistoryItem[] = [
+    {
+      id: `${appointment.id}-created`,
+      label: 'Agendamento criado',
+      atLabel: toLocalDateTimeLabel(createdAt),
+      actorName: appointment.sourceLabel,
+      statusLabel: statusLabels.PENDING,
+      reason: 'Registro inicial na agenda.',
+    },
+  ];
+
+  if (appointment.status !== 'PENDING') {
+    const updatedAt = toIsoDateTime(dateIso, subtractMinutes(appointment.startLabel, 30));
+    baseHistory.push({
+      id: `${appointment.id}-current`,
+      label: 'Status atualizado',
+      atLabel: toLocalDateTimeLabel(updatedAt),
+      actorName: appointment.sourceLabel === 'WhatsApp' ? 'Automacao WhatsApp' : 'Recepcao',
+      statusLabel: appointment.statusLabel,
+      reason:
+        appointment.status === 'CONFIRMED'
+          ? 'Cliente confirmado para o horario.'
+          : 'Fluxo operacional atualizado.',
+    });
+  }
+
+  return baseHistory;
+}
+
+function buildAppointmentActions(
+  session: SessionContext,
+  appointment: AgendaAppointment,
+): AgendaAppointmentAction[] {
+  const actions: AgendaAppointmentAction[] = [];
+  const isActive = !['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(appointment.status);
+  const canCheckIn = ['PENDING', 'CONFIRMED'].includes(appointment.status);
+
+  if (hasPermission(session, 'appointments.update') && canCheckIn) {
+    actions.push({
+      id: 'check-in',
+      label: 'Check-in',
+      description: 'Iniciar atendimento e abrir a futura Comanda.',
+      permission: 'appointments.update',
+      href: `/agenda?appointmentId=${appointment.id}&mode=check-in`,
+      variant: 'primary',
+    });
+  }
+
+  if (hasPermission(session, 'customers.read')) {
+    actions.push({
+      id: 'contact',
+      label: 'Contato',
+      description: 'Abrir telefone do cliente.',
+      permission: 'customers.read',
+      href: `tel:${appointment.customerPhone.replace(/\D/g, '')}`,
+      variant: 'secondary',
+    });
+  }
+
+  if (hasPermission(session, 'appointments.update') && isActive) {
+    actions.push({
+      id: 'reschedule',
+      label: 'Reagendar',
+      description: 'Escolher outro profissional, data ou horario.',
+      permission: 'appointments.update',
+      href: `/agenda?appointmentId=${appointment.id}&mode=reschedule`,
+      variant: 'secondary',
+    });
+  }
+
+  if (hasPermission(session, 'appointments.cancel') && isActive) {
+    actions.push({
+      id: 'cancel',
+      label: 'Cancelar',
+      description: 'Cancelar o agendamento com motivo auditavel.',
+      permission: 'appointments.cancel',
+      href: `/agenda?appointmentId=${appointment.id}&mode=cancel`,
+      variant: 'danger',
+    });
+  }
+
+  return actions;
 }
 
 function buildTimeline(appointments: readonly AgendaAppointment[]) {
@@ -426,7 +575,29 @@ function toLocalTimeLabel(isoDateTime: string) {
   }).format(date);
 }
 
+function toLocalDateTimeLabel(isoDateTime: string) {
+  const date = new Date(isoDateTime);
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(date);
+}
+
+function subtractMinutes(timeLabel: string, minutes: number) {
+  const [hour = 0, minute = 0] = timeLabel.split(':').map(Number);
+  const date = new Date(Date.UTC(2026, 0, 1, hour, minute));
+  date.setMinutes(date.getMinutes() - minutes);
+  return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+}
+
 function nextHour(timeLabel: string) {
   const [hour] = timeLabel.split(':').map(Number);
   return `${String(hour + 1).padStart(2, '0')}:00`;
+}
+
+function hasPermission(session: SessionContext, permission: Permission) {
+  return session.permissions.includes(permission);
 }

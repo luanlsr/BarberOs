@@ -43,6 +43,7 @@ describe('agenda data loading layer', () => {
     expect(model.hasReadPermission).toBe(false);
     expect(model.canCreateAppointment).toBe(false);
     expect(model.appointments).toEqual([]);
+    expect(model.selectedAppointmentDetail).toBeUndefined();
     expect(model.emptyMessage).toContain('permissao');
   });
 
@@ -51,5 +52,48 @@ describe('agenda data loading layer', () => {
 
     expect(model.professionals).toHaveLength(1);
     expect(model.professionalColumns).toHaveLength(1);
+  });
+
+  test('selects appointment detail with status history and permitted actions', () => {
+    const model = buildAgendaViewModel({
+      session: developmentSession,
+      appointmentId: 'dev-appointment-1530',
+    });
+
+    expect(model.selectedAppointmentDetail?.appointment.customerName).toBe('Joao Pedro');
+    expect(model.selectedAppointmentDetail?.history.map((item) => item.statusLabel)).toEqual([
+      'Aguardando',
+      'Confirmado',
+    ]);
+    expect(model.selectedAppointmentDetail?.actions.map((action) => action.id)).toEqual([
+      'check-in',
+      'contact',
+      'reschedule',
+      'cancel',
+    ]);
+  });
+
+  test('filters appointment detail actions by session permissions', () => {
+    const readOnlyModel = buildAgendaViewModel({
+      session: sessionWith({
+        permissions: ['appointments.read', 'customers.read'],
+        entitlements: ['core.operations'],
+      }),
+      appointmentId: 'dev-appointment-1530',
+    });
+
+    expect(readOnlyModel.selectedAppointmentDetail?.actions.map((action) => action.id)).toEqual([
+      'contact',
+    ]);
+
+    const agendaOnlyModel = buildAgendaViewModel({
+      session: sessionWith({
+        permissions: ['appointments.read'],
+        entitlements: ['core.operations'],
+      }),
+      appointmentId: 'dev-appointment-1530',
+    });
+
+    expect(agendaOnlyModel.selectedAppointmentDetail?.actions).toEqual([]);
   });
 });

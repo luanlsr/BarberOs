@@ -5,11 +5,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Scissors,
   Users,
   WifiOff,
 } from 'lucide-react';
-import { Button, StatusBadge } from '@barberos/ui';
+import { Button } from '@barberos/ui';
+import { AppointmentCard } from './appointment-card';
+import { AppointmentDetailSurface } from './appointment-detail-surface';
 import type {
   AgendaAppointment,
   AgendaProfessionalColumn,
@@ -103,77 +104,100 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
         </span>
       </div>
 
-      {agenda.appointments.length ? (
-        <>
-          <section className="agenda-mobile-timeline" aria-labelledby="agenda-mobile-title">
-            <div className="agenda-section-title">
-              <h2 id="agenda-mobile-title">Timeline do dia</h2>
-              <span>{agenda.appointments.length} agendamentos</span>
-            </div>
-            <div className="agenda-timeline-list">
-              {agenda.timeline.map((slot) => (
-                <TimelineSlot key={slot.timeLabel} slot={slot} />
-              ))}
-            </div>
-          </section>
-
-          <section className="agenda-tablet-columns" aria-labelledby="agenda-tablet-title">
-            <div className="agenda-section-title">
-              <h2 id="agenda-tablet-title">Agenda por profissional</h2>
-              <span>{agenda.appointments.length} agendamentos</span>
-            </div>
-            <div className="agenda-column-grid">
-              {agenda.professionalColumns.map((column) => (
-                <ProfessionalColumn column={column} key={column.professional.id} />
-              ))}
-            </div>
-          </section>
-
-          <section className="agenda-desktop-grid" aria-labelledby="agenda-desktop-title">
-            <div className="agenda-section-title">
-              <h2 id="agenda-desktop-title">Grade operacional</h2>
-              <span>{agenda.appointments.length} agendamentos</span>
-            </div>
-            <div
-              className="agenda-grid-table"
-              style={{
-                gridTemplateColumns: `76px repeat(${Math.max(agenda.professionalColumns.length, 1)}, minmax(180px, 1fr))`,
-              }}
-            >
-              <div className="agenda-grid-corner" aria-hidden="true" />
-              {agenda.professionalColumns.map((column) => (
-                <div className="agenda-grid-header" key={column.professional.id}>
-                  <strong>{column.professional.name}</strong>
-                  <span>{column.professional.roleLabel}</span>
+      <div className="agenda-workspace">
+        <div className="agenda-schedule-pane">
+          {agenda.appointments.length ? (
+            <>
+              <section className="agenda-mobile-timeline" aria-labelledby="agenda-mobile-title">
+                <div className="agenda-section-title">
+                  <h2 id="agenda-mobile-title">Timeline do dia</h2>
+                  <span>{agenda.appointments.length} agendamentos</span>
                 </div>
-              ))}
-              {agenda.timeline.map((slot) => (
-                <DesktopRow columns={agenda.professionalColumns} key={slot.timeLabel} slot={slot} />
-              ))}
-            </div>
-          </section>
-        </>
-      ) : (
-        <section className="agenda-empty-state" aria-labelledby="agenda-empty-title">
-          <AlertTriangle size={24} aria-hidden="true" />
-          <div>
-            <h2 id="agenda-empty-title">Agenda vazia</h2>
-            <p>{agenda.emptyMessage}</p>
-          </div>
-        </section>
-      )}
+                <div className="agenda-timeline-list">
+                  {agenda.timeline.map((slot) => (
+                    <TimelineSlot agenda={agenda} key={slot.timeLabel} slot={slot} />
+                  ))}
+                </div>
+              </section>
+
+              <section className="agenda-tablet-columns" aria-labelledby="agenda-tablet-title">
+                <div className="agenda-section-title">
+                  <h2 id="agenda-tablet-title">Agenda por profissional</h2>
+                  <span>{agenda.appointments.length} agendamentos</span>
+                </div>
+                <div className="agenda-column-grid">
+                  {agenda.professionalColumns.map((column) => (
+                    <ProfessionalColumn
+                      agenda={agenda}
+                      column={column}
+                      key={column.professional.id}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section className="agenda-desktop-grid" aria-labelledby="agenda-desktop-title">
+                <div className="agenda-section-title">
+                  <h2 id="agenda-desktop-title">Grade operacional</h2>
+                  <span>{agenda.appointments.length} agendamentos</span>
+                </div>
+                <div
+                  className="agenda-grid-table"
+                  style={{
+                    gridTemplateColumns: `76px repeat(${Math.max(agenda.professionalColumns.length, 1)}, minmax(180px, 1fr))`,
+                  }}
+                >
+                  <div className="agenda-grid-corner" aria-hidden="true" />
+                  {agenda.professionalColumns.map((column) => (
+                    <div className="agenda-grid-header" key={column.professional.id}>
+                      <strong>{column.professional.name}</strong>
+                      <span>{column.professional.roleLabel}</span>
+                    </div>
+                  ))}
+                  {agenda.timeline.map((slot) => (
+                    <DesktopRow
+                      agenda={agenda}
+                      columns={agenda.professionalColumns}
+                      key={slot.timeLabel}
+                      slot={slot}
+                    />
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
+            <section className="agenda-empty-state" aria-labelledby="agenda-empty-title">
+              <AlertTriangle size={24} aria-hidden="true" />
+              <div>
+                <h2 id="agenda-empty-title">Agenda vazia</h2>
+                <p>{agenda.emptyMessage}</p>
+              </div>
+            </section>
+          )}
+        </div>
+        {agenda.appointments.length ? (
+          <AppointmentDetailSurface detail={agenda.selectedAppointmentDetail} />
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function TimelineSlot({ slot }: Readonly<{ slot: AgendaTimelineSlot }>) {
+function TimelineSlot({
+  agenda,
+  slot,
+}: Readonly<{ agenda: AgendaViewModel; slot: AgendaTimelineSlot }>) {
   return (
     <div className="agenda-timeline-slot">
       <time>{slot.timeLabel}</time>
       <div className="agenda-timeline-items">
         {slot.appointments.length ? (
           slot.appointments.map((appointment) => (
-            <AgendaAppointmentTile appointment={appointment} key={appointment.id} />
+            <AppointmentCard
+              appointment={appointment}
+              detailHref={appointmentDetailHref(agenda, appointment)}
+              key={appointment.id}
+            />
           ))
         ) : (
           <span className="agenda-free-slot">Livre</span>
@@ -183,7 +207,10 @@ function TimelineSlot({ slot }: Readonly<{ slot: AgendaTimelineSlot }>) {
   );
 }
 
-function ProfessionalColumn({ column }: Readonly<{ column: AgendaProfessionalColumn }>) {
+function ProfessionalColumn({
+  agenda,
+  column,
+}: Readonly<{ agenda: AgendaViewModel; column: AgendaProfessionalColumn }>) {
   return (
     <article className="agenda-professional-column">
       <header>
@@ -196,7 +223,11 @@ function ProfessionalColumn({ column }: Readonly<{ column: AgendaProfessionalCol
       <div className="agenda-column-items">
         {column.appointments.length ? (
           column.appointments.map((appointment) => (
-            <AgendaAppointmentTile appointment={appointment} key={appointment.id} />
+            <AppointmentCard
+              appointment={appointment}
+              detailHref={appointmentDetailHref(agenda, appointment)}
+              key={appointment.id}
+            />
           ))
         ) : (
           <span className="agenda-free-slot">Sem agendamentos</span>
@@ -207,9 +238,14 @@ function ProfessionalColumn({ column }: Readonly<{ column: AgendaProfessionalCol
 }
 
 function DesktopRow({
+  agenda,
   columns,
   slot,
-}: Readonly<{ columns: readonly AgendaProfessionalColumn[]; slot: AgendaTimelineSlot }>) {
+}: Readonly<{
+  agenda: AgendaViewModel;
+  columns: readonly AgendaProfessionalColumn[];
+  slot: AgendaTimelineSlot;
+}>) {
   return (
     <>
       <time className="agenda-grid-time">{slot.timeLabel}</time>
@@ -220,7 +256,12 @@ function DesktopRow({
         return (
           <div className="agenda-grid-cell" key={`${slot.timeLabel}-${column.professional.id}`}>
             {appointments.map((appointment) => (
-              <AgendaAppointmentTile appointment={appointment} key={appointment.id} compact />
+              <AppointmentCard
+                appointment={appointment}
+                compact
+                detailHref={appointmentDetailHref(agenda, appointment)}
+                key={appointment.id}
+              />
             ))}
           </div>
         );
@@ -229,34 +270,10 @@ function DesktopRow({
   );
 }
 
-function AgendaAppointmentTile({
-  appointment,
-  compact = false,
-}: Readonly<{ appointment: AgendaAppointment; compact?: boolean }>) {
-  return (
-    <article className={`agenda-appointment-tile ${compact ? 'compact' : ''}`} tabIndex={0}>
-      <div className="agenda-appointment-time">
-        <strong>{appointment.startLabel}</strong>
-        <span>{appointment.endLabel}</span>
-      </div>
-      <div className="agenda-appointment-main">
-        <div className="agenda-appointment-title">
-          <h3>{appointment.customerName}</h3>
-          <StatusBadge variant={appointment.statusTone}>{appointment.statusLabel}</StatusBadge>
-        </div>
-        <p>{appointment.serviceNames.join(' + ')}</p>
-        <div className="agenda-appointment-meta">
-          <span>
-            <Users size={14} aria-hidden="true" />
-            {appointment.professionalName}
-          </span>
-          <span>
-            <Scissors size={14} aria-hidden="true" />
-            {appointment.durationLabel}
-          </span>
-          <span>{appointment.totalLabel}</span>
-        </div>
-      </div>
-    </article>
-  );
+function appointmentDetailHref(agenda: AgendaViewModel, appointment: AgendaAppointment) {
+  const params = new URLSearchParams({ date: agenda.dateIso, appointmentId: appointment.id });
+  if (agenda.selectedProfessionalId !== 'all') {
+    params.set('professionalId', agenda.selectedProfessionalId);
+  }
+  return `/agenda?${params.toString()}`;
 }
