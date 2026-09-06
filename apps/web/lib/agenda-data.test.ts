@@ -96,4 +96,20 @@ describe('agenda data loading layer', () => {
 
     expect(agendaOnlyModel.selectedAppointmentDetail?.actions).toEqual([]);
   });
+  test('builds new appointment flow data with occupied slot feedback inputs', () => {
+    const model = buildAgendaViewModel({ session: developmentSession, mode: 'new' });
+
+    expect(model.newAppointment.isOpen).toBe(true);
+    expect(model.newAppointment.canCreateAppointment).toBe(true);
+    expect(model.newAppointment.canCreateCustomer).toBe(true);
+    expect(model.newAppointment.customers.map((customer) => customer.name)).toContain(
+      'Marcos Vinicius',
+    );
+    expect(model.newAppointment.timeOptions.map((time) => time.value)).toContain('12:00');
+    expect(model.newAppointment.occupiedSlots).toContainEqual({
+      professionalId: 'dev-professional-carlos',
+      timeLabel: '09:00',
+      customerName: 'Marcos Vinicius',
+    });
+  });
 });

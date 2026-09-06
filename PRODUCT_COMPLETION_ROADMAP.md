@@ -6,9 +6,9 @@ Este arquivo organiza os proximos passos depois do PRD para transformar o Barber
 
 Change em andamento: `core-operations-scheduling`
 
-Progresso conhecido: 22 de 28 tarefas concluidas.
+Progresso conhecido: 23 de 28 tarefas concluidas.
 
-O recorte atual cobre a fundacao operacional: contratos, permissoes, migration de Core Operations, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade e agendamentos, shell/navegacao e a primeira tela responsiva de Agenda, o AppointmentCard e a superficie de detalhes do agendamento com historico e acoes por permissao.
+O recorte atual cobre a fundacao operacional: contratos, permissoes, migration de Core Operations, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade e agendamentos, shell/navegacao e a primeira tela responsiva de Agenda, o AppointmentCard, a superficie de detalhes do agendamento com historico e acoes por permissao, e o fluxo inicial de novo agendamento com cliente rapido e feedback de conflito.
 
 ## Sequencia macro
 

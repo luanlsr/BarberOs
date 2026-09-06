@@ -23,6 +23,37 @@ export type AgendaService = {
   priceCents: number;
 };
 
+export type AgendaCustomerOption = {
+  id: string;
+  name: string;
+  phone: string;
+};
+
+export type AgendaTimeOption = {
+  value: string;
+  label: string;
+};
+
+export type AgendaOccupiedSlot = {
+  professionalId: string;
+  timeLabel: string;
+  customerName: string;
+};
+
+export type AgendaNewAppointmentModel = {
+  isOpen: boolean;
+  dateIso: string;
+  branchId: string;
+  canCreateAppointment: boolean;
+  canCreateCustomer: boolean;
+  defaultProfessionalId: string;
+  customers: readonly AgendaCustomerOption[];
+  professionals: readonly AgendaProfessional[];
+  services: readonly AgendaService[];
+  timeOptions: readonly AgendaTimeOption[];
+  occupiedSlots: readonly AgendaOccupiedSlot[];
+};
+
 export type AgendaAppointment = {
   id: string;
   customerName: string;
@@ -94,6 +125,7 @@ export type AgendaViewModel = {
   selectedProfessionalId: string;
   selectedProfessionalLabel: string;
   canCreateAppointment: boolean;
+  newAppointment: AgendaNewAppointmentModel;
   hasReadPermission: boolean;
   professionals: readonly AgendaProfessional[];
   services: readonly AgendaService[];
@@ -249,7 +281,7 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
 
 export function getAgendaViewModel(
   session: SessionContext,
-  options: { date?: string; professionalId?: string; appointmentId?: string } = {},
+  options: { date?: string; professionalId?: string; appointmentId?: string; mode?: string } = {},
 ): AgendaViewModel {
   return buildAgendaViewModel({ session, ...options });
 }
@@ -259,11 +291,13 @@ export function buildAgendaViewModel({
   date,
   professionalId,
   appointmentId,
+  mode,
 }: {
   session: SessionContext;
   date?: string;
   professionalId?: string;
   appointmentId?: string;
+  mode?: string;
 }): AgendaViewModel {
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
   const hasReadPermission =
@@ -303,6 +337,21 @@ export function buildAgendaViewModel({
   }));
   const selectedAppointment =
     appointments.find((appointment) => appointment.id === appointmentId) ?? appointments[0];
+  const canCreateAppointment =
+    session.permissions.includes('appointments.create') &&
+    (session.entitlements ?? []).includes('core.operations') &&
+    session.branchScope.includes(branchId);
+  const newAppointment = buildNewAppointmentModel({
+    isOpen: mode === 'new',
+    dateIso,
+    branchId,
+    canCreateAppointment,
+    canCreateCustomer: hasPermission(session, 'customers.create'),
+    professionals: visibleProfessionals,
+    services,
+    appointments,
+    selectedProfessionalId,
+  });
 
   return {
     dateIso,
@@ -315,10 +364,8 @@ export function buildAgendaViewModel({
         ? 'Todos os profissionais'
         : (visibleProfessionals.find((professional) => professional.id === selectedProfessionalId)
             ?.name ?? 'Profissional'),
-    canCreateAppointment:
-      session.permissions.includes('appointments.create') &&
-      (session.entitlements ?? []).includes('core.operations') &&
-      session.branchScope.includes(branchId),
+    canCreateAppointment,
+    newAppointment,
     hasReadPermission,
     professionals: visibleProfessionals,
     services,
@@ -591,6 +638,79 @@ function subtractMinutes(timeLabel: string, minutes: number) {
   const date = new Date(Date.UTC(2026, 0, 1, hour, minute));
   date.setMinutes(date.getMinutes() - minutes);
   return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+function buildNewAppointmentModel({
+  isOpen,
+  dateIso,
+  branchId,
+  canCreateAppointment,
+  canCreateCustomer,
+  professionals: visibleProfessionals,
+  services: visibleServices,
+  appointments,
+  selectedProfessionalId,
+}: {
+  isOpen: boolean;
+  dateIso: string;
+  branchId: string;
+  canCreateAppointment: boolean;
+  canCreateCustomer: boolean;
+  professionals: readonly AgendaProfessional[];
+  services: readonly AgendaService[];
+  appointments: readonly AgendaAppointment[];
+  selectedProfessionalId: string;
+}): AgendaNewAppointmentModel {
+  return {
+    isOpen,
+    dateIso,
+    branchId,
+    canCreateAppointment,
+    canCreateCustomer,
+    defaultProfessionalId:
+      selectedProfessionalId !== 'all'
+        ? selectedProfessionalId
+        : (visibleProfessionals[0]?.id ?? ''),
+    customers: buildCustomerOptions(appointments),
+    professionals: visibleProfessionals,
+    services: visibleServices,
+    timeOptions: buildTimeOptions(),
+    occupiedSlots: buildOccupiedSlots(appointments),
+  };
+}
+
+function buildCustomerOptions(appointments: readonly AgendaAppointment[]): AgendaCustomerOption[] {
+  const customers = new Map<string, AgendaCustomerOption>();
+  for (const appointment of appointments) {
+    customers.set(appointment.customerPhone, {
+      id: appointment.customerPhone.replace(/\D/g, ''),
+      name: appointment.customerName,
+      phone: appointment.customerPhone,
+    });
+  }
+  return [...customers.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function buildTimeOptions(): AgendaTimeOption[] {
+  const options: AgendaTimeOption[] = [];
+  for (let hour = 8; hour <= 18; hour += 1) {
+    for (const minute of [0, 30]) {
+      if (hour === 18 && minute > 0) continue;
+      const value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      options.push({ value, label: value });
+    }
+  }
+  return options;
+}
+
+function buildOccupiedSlots(appointments: readonly AgendaAppointment[]): AgendaOccupiedSlot[] {
+  return appointments
+    .filter((appointment) => !['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(appointment.status))
+    .map((appointment) => ({
+      professionalId: appointment.professionalId,
+      timeLabel: appointment.startLabel,
+      customerName: appointment.customerName,
+    }));
 }
 
 function nextHour(timeLabel: string) {

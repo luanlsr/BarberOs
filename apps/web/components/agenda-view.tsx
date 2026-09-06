@@ -11,6 +11,7 @@ import {
 import { Button } from '@barberos/ui';
 import { AppointmentCard } from './appointment-card';
 import { AppointmentDetailSurface } from './appointment-detail-surface';
+import { NewAppointmentFlow } from './new-appointment-flow';
 import type {
   AgendaAppointment,
   AgendaProfessionalColumn,
@@ -103,6 +104,8 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
           {agenda.professionals.length} profissionais visiveis
         </span>
       </div>
+
+      <NewAppointmentFlow model={agenda.newAppointment} />
 
       <div className="agenda-workspace">
         <div className="agenda-schedule-pane">
