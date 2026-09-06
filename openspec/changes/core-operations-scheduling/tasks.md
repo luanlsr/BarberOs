@@ -32,7 +32,7 @@
 ## 5. Operational UI
 
 - [x] 5.1 Extend shell navigation and central `+` action with Agenda, Clientes, Equipe, Servicos and new appointment/customer actions filtered by permissions and entitlement; verify navigation tests pass.
-- [ ] 5.2 Build agenda data loading layer and responsive Agenda route with mobile day timeline, tablet columns and desktop grid; verify Playwright screenshots at 320px, 390px, 768px, 1024px, 1440px and 1920px show no overlap or horizontal page scroll.
+- [x] 5.2 Build agenda data loading layer and responsive Agenda route with mobile day timeline, tablet columns and desktop grid; verify Playwright screenshots at 320px, 390px, 768px, 1024px, 1440px and 1920px show no overlap or horizontal page scroll.
 - [ ] 5.3 Build `AppointmentCard` and appointment detail surface with status, customer, professional, services, history and permission-filtered actions; verify component/unit tests cover visible information and denied actions.
 - [ ] 5.4 Build new appointment flow with quick customer creation, service/professional/date/time selection and conflict feedback; verify E2E can create an appointment and handles an occupied slot.
 - [ ] 5.5 Build initial Customers, Professionals and Services operational list/form screens with loading, empty, error, disabled, offline and permission-denied states; verify responsive and accessibility checks pass.

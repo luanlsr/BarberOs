@@ -1,5 +1,4 @@
 import {
-  activeAppointmentStatuses,
   availabilityQuerySchema,
   cancelAppointmentCommandSchema,
   createAppointmentCommandSchema,
@@ -31,7 +30,10 @@ import type {
 } from '../domain';
 
 const coreOperationsEntitlement = 'core.operations' satisfies Entitlement;
-const reschedulableStatuses = ['PENDING', 'CONFIRMED'] as const satisfies readonly AppointmentStatus[];
+const reschedulableStatuses = [
+  'PENDING',
+  'CONFIRMED',
+] as const satisfies readonly AppointmentStatus[];
 
 const allowedTransitions = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
@@ -70,7 +72,11 @@ export class AppointmentApplicationService {
 
     await this.assertCustomerCanBeScheduled(context, parsed.customerId, parsed.branchId);
     await this.assertProfessionalCanBeScheduled(context, parsed.professionalId, parsed.branchId);
-    const serviceSnapshots = await this.buildServiceSnapshots(context, parsed.services, parsed.professionalId);
+    const serviceSnapshots = await this.buildServiceSnapshots(
+      context,
+      parsed.services,
+      parsed.professionalId,
+    );
     const endsAt = addMinutes(parsed.startsAt, totalDurationMinutes(serviceSnapshots));
 
     await this.assertNoConflictingAppointment(context, {
@@ -117,7 +123,8 @@ export class AppointmentApplicationService {
 
   async updateStatus(context: RequestContext, command: UpdateAppointmentStatusCommand) {
     const parsed = updateAppointmentStatusCommandSchema.parse(command);
-    const permission = parsed.status === 'CANCELLED' ? 'appointments.cancel' : 'appointments.update';
+    const permission =
+      parsed.status === 'CANCELLED' ? 'appointments.cancel' : 'appointments.update';
     const current = await this.getAuthorizedAppointment(context, parsed.id, permission);
 
     if (current.status === parsed.status) {
@@ -150,11 +157,19 @@ export class AppointmentApplicationService {
   }
 
   async listStatusHistory(context: RequestContext, appointmentId: string) {
-    const appointment = await this.getAuthorizedAppointment(context, appointmentId, 'appointments.read');
+    const appointment = await this.getAuthorizedAppointment(
+      context,
+      appointmentId,
+      'appointments.read',
+    );
     return this.appointments.listStatusHistory(context, appointment.id);
   }
 
-  private async getAuthorizedAppointment(context: RequestContext, appointmentId: string, permission: Permission) {
+  private async getAuthorizedAppointment(
+    context: RequestContext,
+    appointmentId: string,
+    permission: Permission,
+  ) {
     const appointment = await this.appointments.findById(context, appointmentId);
     if (!appointment || appointment.tenantId !== context.tenantId) {
       throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Appointment was not found.');
@@ -164,17 +179,28 @@ export class AppointmentApplicationService {
     return appointment;
   }
 
-  private async assertCustomerCanBeScheduled(context: RequestContext, customerId: string, branchId: string) {
+  private async assertCustomerCanBeScheduled(
+    context: RequestContext,
+    customerId: string,
+    branchId: string,
+  ) {
     const customer = await this.customers.findCustomerById(context, customerId);
     if (!customer || customer.tenantId !== context.tenantId || customer.status === 'ARCHIVED') {
       throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Customer was not found.');
     }
     if (customer.branchId && customer.branchId !== branchId) {
-      throw new CoreOperationsApplicationError('CORE_BRANCH_SCOPE_DENIED', 'Customer is not available in this branch.');
+      throw new CoreOperationsApplicationError(
+        'CORE_BRANCH_SCOPE_DENIED',
+        'Customer is not available in this branch.',
+      );
     }
   }
 
-  private async assertProfessionalCanBeScheduled(context: RequestContext, professionalId: string, branchId: string) {
+  private async assertProfessionalCanBeScheduled(
+    context: RequestContext,
+    professionalId: string,
+    branchId: string,
+  ) {
     const professional = await this.professionals.findProfessionalById(context, professionalId);
     if (
       !professional ||
@@ -208,16 +234,28 @@ export class AppointmentApplicationService {
     return snapshots;
   }
 
-  private async assertNoConflictingAppointment(context: RequestContext, query: ScheduleWindowQuery) {
+  private async assertNoConflictingAppointment(
+    context: RequestContext,
+    query: ScheduleWindowQuery,
+  ) {
     const conflicts = await this.activeAppointments.listActiveAppointmentsForWindow(context, query);
-    const hasConflict = conflicts.some((appointment) => appointment.id !== query.excludeAppointmentId);
+    const hasConflict = conflicts.some(
+      (appointment) => appointment.id !== query.excludeAppointmentId,
+    );
     if (hasConflict) {
-      throw new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.');
+      throw new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Appointment overlaps an active appointment.',
+      );
     }
   }
 }
 
-function authorizeAppointmentAccess(context: RequestContext, permission: Permission, branchId: string) {
+function authorizeAppointmentAccess(
+  context: RequestContext,
+  permission: Permission,
+  branchId: string,
+) {
   authorize(context, { permission, entitlement: coreOperationsEntitlement, branchId });
 }
 
@@ -229,21 +267,35 @@ function assertServiceCanBeScheduled(
   if (!service || service.tenantId !== context.tenantId || service.status !== 'ACTIVE') {
     throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.');
   }
-  if (service.enabledProfessionalIds.length > 0 && !service.enabledProfessionalIds.includes(professionalId)) {
-    throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Service is not enabled for this professional.');
+  if (
+    service.enabledProfessionalIds.length > 0 &&
+    !service.enabledProfessionalIds.includes(professionalId)
+  ) {
+    throw new CoreOperationsApplicationError(
+      'CORE_VALIDATION_ERROR',
+      'Service is not enabled for this professional.',
+    );
   }
 }
 
 function assertReschedulable(appointment: Appointment) {
-  if (!reschedulableStatuses.includes(appointment.status as (typeof reschedulableStatuses)[number])) {
-    throw new CoreOperationsApplicationError('APPOINTMENT_INVALID_TRANSITION', 'Appointment cannot be rescheduled from its current status.');
+  if (
+    !reschedulableStatuses.includes(appointment.status as (typeof reschedulableStatuses)[number])
+  ) {
+    throw new CoreOperationsApplicationError(
+      'APPOINTMENT_INVALID_TRANSITION',
+      'Appointment cannot be rescheduled from its current status.',
+    );
   }
 }
 
 function assertValidStatusTransition(previous: AppointmentStatus, next: AppointmentStatus) {
   const allowed = allowedTransitions[previous] as readonly AppointmentStatus[];
   if (!allowed.includes(next)) {
-    throw new CoreOperationsApplicationError('APPOINTMENT_INVALID_TRANSITION', 'Appointment status transition is not allowed.');
+    throw new CoreOperationsApplicationError(
+      'APPOINTMENT_INVALID_TRANSITION',
+      'Appointment status transition is not allowed.',
+    );
   }
 }
 
@@ -260,7 +312,10 @@ async function mapAppointmentPersistenceConflict<T>(operation: () => Promise<T>)
     return await operation();
   } catch (error) {
     if (isAppointmentDatabaseConflict(error)) {
-      throw new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.');
+      throw new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Appointment overlaps an active appointment.',
+      );
     }
     throw error;
   }
@@ -269,7 +324,12 @@ async function mapAppointmentPersistenceConflict<T>(operation: () => Promise<T>)
 function isAppointmentDatabaseConflict(error: unknown) {
   if (!error || typeof error !== 'object') return false;
 
-  const record = error as { code?: unknown; message?: unknown; details?: unknown; constraint?: unknown };
+  const record = error as {
+    code?: unknown;
+    message?: unknown;
+    details?: unknown;
+    constraint?: unknown;
+  };
   const code = typeof record.code === 'string' ? record.code : undefined;
   if (code === '23P01' || code === '23505') return true;
 
