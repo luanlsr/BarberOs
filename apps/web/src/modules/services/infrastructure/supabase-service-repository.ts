@@ -7,7 +7,11 @@ import {
   type UpdateServiceCommand,
 } from '@barberos/contracts';
 
-import type { AssignServiceProfessionalCommand, ServiceListFilters, ServiceRepository } from '../domain';
+import type {
+  AssignServiceProfessionalCommand,
+  ServiceListFilters,
+  ServiceRepository,
+} from '../domain';
 
 type ServiceRow = {
   id: string;
@@ -41,7 +45,10 @@ export class SupabaseServiceRepository implements ServiceRepository {
   constructor(private readonly client: SupabaseClient) {}
 
   async list(context: RequestContext, filters: ServiceListFilters = {}) {
-    let query = this.client.from('services').select(serviceSelect).eq('tenant_id', context.tenantId);
+    let query = this.client
+      .from('services')
+      .select(serviceSelect)
+      .eq('tenant_id', context.tenantId);
 
     if (filters.status) {
       query = query.eq('status', filters.status);
@@ -56,7 +63,11 @@ export class SupabaseServiceRepository implements ServiceRepository {
 
     return ((data ?? []) as ServiceRow[])
       .map(toService)
-      .filter((service) => !filters.professionalId || service.enabledProfessionalIds.includes(filters.professionalId));
+      .filter(
+        (service) =>
+          !filters.professionalId ||
+          service.enabledProfessionalIds.includes(filters.professionalId),
+      );
   }
 
   async findServiceById(context: RequestContext, serviceId: string) {
@@ -106,10 +117,15 @@ export class SupabaseServiceRepository implements ServiceRepository {
     if (changes.description !== undefined) payload.description = changes.description;
     if (changes.durationMinutes !== undefined) payload.duration_minutes = changes.durationMinutes;
     if (changes.priceCents !== undefined) payload.price_cents = changes.priceCents;
-    if (changes.estimatedCostCents !== undefined) payload.estimated_cost_cents = changes.estimatedCostCents;
+    if (changes.estimatedCostCents !== undefined)
+      payload.estimated_cost_cents = changes.estimatedCostCents;
     if (changes.status !== undefined) payload.status = changes.status;
 
-    const { error } = await this.client.from('services').update(payload).eq('tenant_id', context.tenantId).eq('id', id);
+    const { error } = await this.client
+      .from('services')
+      .update(payload)
+      .eq('tenant_id', context.tenantId)
+      .eq('id', id);
     if (error) throw error;
 
     if (enabledProfessionalIds) {
@@ -122,7 +138,11 @@ export class SupabaseServiceRepository implements ServiceRepository {
   async archive(context: RequestContext, serviceId: string) {
     const { error } = await this.client
       .from('services')
-      .update({ status: 'ARCHIVED', archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        status: 'ARCHIVED',
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('tenant_id', context.tenantId)
       .eq('id', serviceId);
 
@@ -141,7 +161,11 @@ export class SupabaseServiceRepository implements ServiceRepository {
     if (error) throw error;
   }
 
-  private async replaceEnabledProfessionals(context: RequestContext, serviceId: string, professionalIds: readonly string[]) {
+  private async replaceEnabledProfessionals(
+    context: RequestContext,
+    serviceId: string,
+    professionalIds: readonly string[],
+  ) {
     const { error: deleteError } = await this.client
       .from('service_professionals')
       .delete()
@@ -172,7 +196,9 @@ function toService(row: ServiceRow) {
     priceCents: row.price_cents,
     estimatedCostCents: row.estimated_cost_cents ?? undefined,
     status: row.status,
-    enabledProfessionalIds: (row.service_professionals ?? []).map((professional) => professional.professional_id),
+    enabledProfessionalIds: (row.service_professionals ?? []).map(
+      (professional) => professional.professional_id,
+    ),
     archivedAt: row.archived_at ?? undefined,
   });
 }

@@ -22,7 +22,10 @@ export type PreferredProfessionalSnapshot = {
 };
 
 export interface CustomerProfessionalLookup {
-  findProfessionalById(context: RequestContext, professionalId: string): Promise<PreferredProfessionalSnapshot | null>;
+  findProfessionalById(
+    context: RequestContext,
+    professionalId: string,
+  ): Promise<PreferredProfessionalSnapshot | null>;
 }
 
 export interface CustomerRepository {

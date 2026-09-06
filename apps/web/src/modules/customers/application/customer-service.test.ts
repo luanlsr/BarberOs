@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { CreateCustomerCommand, Customer, RequestContext, UpdateCustomerCommand } from '@barberos/contracts';
+import type {
+  CreateCustomerCommand,
+  Customer,
+  RequestContext,
+  UpdateCustomerCommand,
+} from '@barberos/contracts';
 
 import type {
   CustomerListFilters,
@@ -111,14 +116,20 @@ class FakeCustomerRepository implements CustomerRepository {
   async archive(_context: RequestContext, customerId: string) {
     this.archivedId = customerId;
     const current = this.customers.get(customerId) ?? tenantCustomer;
-    const archived = { ...current, status: 'ARCHIVED' as const, archivedAt: '2026-09-05T00:00:00.000Z' };
+    const archived = {
+      ...current,
+      status: 'ARCHIVED' as const,
+      archivedAt: '2026-09-05T00:00:00.000Z',
+    };
     this.customers.set(customerId, archived);
     return archived;
   }
 }
 
 class FakeCustomerProfessionalLookup implements CustomerProfessionalLookup {
-  readonly professionals = new Map<string, PreferredProfessionalSnapshot>([[activeProfessional.id, activeProfessional]]);
+  readonly professionals = new Map<string, PreferredProfessionalSnapshot>([
+    [activeProfessional.id, activeProfessional],
+  ]);
 
   async findProfessionalById(_context: RequestContext, professionalId: string) {
     return this.professionals.get(professionalId) ?? null;
@@ -137,7 +148,10 @@ describe('CustomerApplicationService', () => {
   });
 
   it('searches customers with permission, entitlement and branch scope', async () => {
-    const results = await service.search(receptionistContext, { branchId: 'branch-1', query: 'joao' });
+    const results = await service.search(receptionistContext, {
+      branchId: 'branch-1',
+      query: 'joao',
+    });
 
     expect(results).toEqual([tenantCustomer]);
     expect(customers.listedFilters).toEqual({ branchId: 'branch-1', query: 'joao' });
@@ -161,16 +175,27 @@ describe('CustomerApplicationService', () => {
   });
 
   it('denies creation without customer permission', async () => {
-    const context = { ...receptionistContext, permissions: ['customers.read'] } satisfies RequestContext;
+    const context = {
+      ...receptionistContext,
+      permissions: ['customers.read'],
+    } satisfies RequestContext;
 
     await expect(
-      service.create(context, { branchId: 'branch-1', name: 'Pedro Souza', phone: '+5511988880002' }),
+      service.create(context, {
+        branchId: 'branch-1',
+        name: 'Pedro Souza',
+        phone: '+5511988880002',
+      }),
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
   });
 
   it('denies writes outside branch scope', async () => {
     await expect(
-      service.create(receptionistContext, { branchId: 'branch-2', name: 'Pedro Souza', phone: '+5511988880002' }),
+      service.create(receptionistContext, {
+        branchId: 'branch-2',
+        name: 'Pedro Souza',
+        phone: '+5511988880002',
+      }),
     ).rejects.toMatchObject({ code: 'BRANCH_SCOPE_DENIED' });
   });
 
@@ -190,16 +215,27 @@ describe('CustomerApplicationService', () => {
         preferredProfessionalId: 'professional-2',
       }),
     ).rejects.toEqual(
-      new CoreOperationsApplicationError('CORE_BRANCH_SCOPE_DENIED', 'Preferred professional is outside the customer branch.'),
+      new CoreOperationsApplicationError(
+        'CORE_BRANCH_SCOPE_DENIED',
+        'Preferred professional is outside the customer branch.',
+      ),
     );
   });
 
   it('updates visible tenant customers only', async () => {
-    const updated = await service.update(receptionistContext, { id: 'customer-1', notes: 'Prefere horario da tarde' });
+    const updated = await service.update(receptionistContext, {
+      id: 'customer-1',
+      notes: 'Prefere horario da tarde',
+    });
 
     expect(updated.notes).toBe('Prefere horario da tarde');
-    expect(customers.updatedCommand).toEqual({ id: 'customer-1', notes: 'Prefere horario da tarde' });
-    await expect(service.update(tenantBContext, { id: 'customer-1', notes: 'tentativa externa' })).rejects.toEqual(
+    expect(customers.updatedCommand).toEqual({
+      id: 'customer-1',
+      notes: 'Prefere horario da tarde',
+    });
+    await expect(
+      service.update(tenantBContext, { id: 'customer-1', notes: 'tentativa externa' }),
+    ).rejects.toEqual(
       new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Customer was not found.'),
     );
   });
@@ -217,6 +253,8 @@ describe('CustomerApplicationService', () => {
 
     expect(archived.status).toBe('ARCHIVED');
     expect(customers.archivedId).toBe('customer-1');
-    await expect(service.archive(tenantBContext, 'customer-1')).rejects.toMatchObject({ code: 'CORE_NOT_FOUND' });
+    await expect(service.archive(tenantBContext, 'customer-1')).rejects.toMatchObject({
+      code: 'CORE_NOT_FOUND',
+    });
   });
 });

@@ -44,14 +44,20 @@ describe('service route handlers', () => {
       update: vi.fn(async () => ({ ...serviceRecord, priceCents: 5500 })),
       archive: vi.fn(async () => ({ ...serviceRecord, status: 'ARCHIVED' as const })),
     };
-    handlers = createServiceRouteHandlers({ resolveContext: vi.fn(async () => context), service: services });
+    handlers = createServiceRouteHandlers({
+      resolveContext: vi.fn(async () => context),
+      service: services,
+    });
   });
 
   it('lists services with category, professional and search filters', async () => {
     const response = await handlers.GET(
-      new Request('https://barberos.local/api/v1/services?category=Cabelo&professionalId=professional-1&search=Corte', {
-        headers: { 'x-request-id': 'request-1' },
-      }),
+      new Request(
+        'https://barberos.local/api/v1/services?category=Cabelo&professionalId=professional-1&search=Corte',
+        {
+          headers: { 'x-request-id': 'request-1' },
+        },
+      ),
     );
 
     expect(response.status).toBe(200);
@@ -64,7 +70,12 @@ describe('service route handlers', () => {
   });
 
   it('creates services and returns 201', async () => {
-    const body = { category: 'Cabelo', name: 'Corte Masculino', durationMinutes: 30, priceCents: 5000 };
+    const body = {
+      category: 'Cabelo',
+      name: 'Corte Masculino',
+      durationMinutes: 30,
+      priceCents: 5000,
+    };
 
     const response = await handlers.POST(
       new Request('https://barberos.local/api/v1/services', {
@@ -80,13 +91,20 @@ describe('service route handlers', () => {
   });
 
   it('maps validation failures to stable API errors', async () => {
-    services.create.mockRejectedValueOnce(new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Price must be zero or greater.'));
+    services.create.mockRejectedValueOnce(
+      new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Price must be zero or greater.'),
+    );
 
     const response = await handlers.POST(
       new Request('https://barberos.local/api/v1/services', {
         method: 'POST',
         headers: { 'x-request-id': 'request-1' },
-        body: JSON.stringify({ category: 'Cabelo', name: 'Corte Masculino', durationMinutes: 30, priceCents: -1 }),
+        body: JSON.stringify({
+          category: 'Cabelo',
+          name: 'Corte Masculino',
+          durationMinutes: 30,
+          priceCents: -1,
+        }),
       }),
     );
 
@@ -112,7 +130,10 @@ describe('service route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...serviceRecord, priceCents: 5500 }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...serviceRecord, priceCents: 5500 },
+      requestId: 'request-1',
+    });
     expect(services.update).toHaveBeenCalledWith(context, body);
   });
 
@@ -125,12 +146,20 @@ describe('service route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...serviceRecord, status: 'ARCHIVED' as const }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...serviceRecord, status: 'ARCHIVED' as const },
+      requestId: 'request-1',
+    });
     expect(services.archive).toHaveBeenCalledWith(context, 'service-1');
   });
 
   it('returns stable error model for permission denied responses', async () => {
-    services.update.mockRejectedValueOnce(new CoreOperationsApplicationError('CORE_PERMISSION_DENIED', 'Missing services.update permission.'));
+    services.update.mockRejectedValueOnce(
+      new CoreOperationsApplicationError(
+        'CORE_PERMISSION_DENIED',
+        'Missing services.update permission.',
+      ),
+    );
 
     const response = await handlers.PATCH(
       new Request('https://barberos.local/api/v1/services', {

@@ -83,7 +83,13 @@ describe('schedule route handlers', () => {
   });
 
   it('upserts professional schedules', async () => {
-    const body = { branchId: 'branch-1', professionalId: 'professional-1', weekday: 1, startsAtLocal: '09:00', endsAtLocal: '18:00' };
+    const body = {
+      branchId: 'branch-1',
+      professionalId: 'professional-1',
+      weekday: 1,
+      startsAtLocal: '09:00',
+      endsAtLocal: '18:00',
+    };
 
     const response = await handlers.PUT(
       new Request('https://barberos.local/api/v1/schedules', {
@@ -108,7 +114,10 @@ describe('schedule block route handlers', () => {
       listScheduleBlocks: vi.fn(async () => [block]),
       createScheduleBlock: vi.fn(async () => block),
     };
-    handlers = createScheduleBlockRouteHandlers({ resolveContext: vi.fn(async () => context), service });
+    handlers = createScheduleBlockRouteHandlers({
+      resolveContext: vi.fn(async () => context),
+      service,
+    });
   });
 
   it('creates schedule blocks and returns 201', async () => {
@@ -135,7 +144,10 @@ describe('schedule block route handlers', () => {
 
   it('maps schedule block appointment conflicts to a stable 409 error', async () => {
     service.createScheduleBlock.mockRejectedValueOnce(
-      new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Schedule block overlaps an active appointment.'),
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Schedule block overlaps an active appointment.',
+      ),
     );
 
     const response = await handlers.POST(
@@ -178,14 +190,20 @@ describe('availability route handlers', () => {
         },
       ]),
     };
-    handlers = createAvailabilityRouteHandlers({ resolveContext: vi.fn(async () => context), service });
+    handlers = createAvailabilityRouteHandlers({
+      resolveContext: vi.fn(async () => context),
+      service,
+    });
   });
 
   it('returns availability slots from query filters', async () => {
     const response = await handlers.GET(
-      new Request('https://barberos.local/api/v1/availability?branchId=branch-1&serviceId=service-1&professionalId=professional-1&startsOn=2026-09-07&endsOn=2026-09-07&slotStepMinutes=30', {
-        headers: { 'x-request-id': 'request-1' },
-      }),
+      new Request(
+        'https://barberos.local/api/v1/availability?branchId=branch-1&serviceId=service-1&professionalId=professional-1&startsOn=2026-09-07&endsOn=2026-09-07&slotStepMinutes=30',
+        {
+          headers: { 'x-request-id': 'request-1' },
+        },
+      ),
     );
 
     expect(response.status).toBe(200);

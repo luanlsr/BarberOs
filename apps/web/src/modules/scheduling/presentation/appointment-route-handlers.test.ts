@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Appointment, AppointmentStatusHistory, RequestContext } from '@barberos/contracts';
 
 import { CoreOperationsApplicationError } from '../application/appointment-service';
-import { createAppointmentRouteHandlers, type AppointmentRouteService } from './appointment-route-handlers';
+import {
+  createAppointmentRouteHandlers,
+  type AppointmentRouteService,
+} from './appointment-route-handlers';
 
 const context: RequestContext = {
   requestId: 'request-1',
@@ -10,7 +13,12 @@ const context: RequestContext = {
   tenantId: 'tenant-1',
   membershipId: 'membership-1',
   role: 'RECEPTIONIST',
-  permissions: ['appointments.read', 'appointments.create', 'appointments.update', 'appointments.cancel'],
+  permissions: [
+    'appointments.read',
+    'appointments.create',
+    'appointments.update',
+    'appointments.cancel',
+  ],
   entitlements: ['core.operations'],
   branchScope: ['branch-1'],
 };
@@ -25,7 +33,15 @@ const appointment: Appointment = {
   endsAt: '2026-09-07T12:30:00.000Z',
   status: 'CONFIRMED',
   source: 'MANUAL',
-  services: [{ sequence: 1, serviceId: 'service-1', serviceName: 'Corte Masculino', durationMinutes: 30, priceCents: 5000 }],
+  services: [
+    {
+      sequence: 1,
+      serviceId: 'service-1',
+      serviceName: 'Corte Masculino',
+      durationMinutes: 30,
+      priceCents: 5000,
+    },
+  ],
 };
 
 const history: AppointmentStatusHistory = {
@@ -57,19 +73,29 @@ describe('appointment route handlers', () => {
       list: vi.fn(async () => [appointment]),
       get: vi.fn(async () => appointment),
       create: vi.fn(async () => appointment),
-      reschedule: vi.fn(async () => ({ ...appointment, startsAt: '2026-09-07T13:00:00.000Z', endsAt: '2026-09-07T13:30:00.000Z' })),
+      reschedule: vi.fn(async () => ({
+        ...appointment,
+        startsAt: '2026-09-07T13:00:00.000Z',
+        endsAt: '2026-09-07T13:30:00.000Z',
+      })),
       updateStatus: vi.fn(async () => ({ ...appointment, status: 'CHECKED_IN' as const })),
       cancel: vi.fn(async () => ({ ...appointment, status: 'CANCELLED' as const })),
       listStatusHistory: vi.fn(async () => [history]),
     };
-    handlers = createAppointmentRouteHandlers({ resolveContext: vi.fn(async () => context), service });
+    handlers = createAppointmentRouteHandlers({
+      resolveContext: vi.fn(async () => context),
+      service,
+    });
   });
 
   it('lists appointments using branch and date filters', async () => {
     const response = await handlers.GET(
-      new Request('https://barberos.local/api/v1/appointments?branchId=branch-1&serviceId=service-1&professionalId=professional-1&startsOn=2026-09-07&endsOn=2026-09-07', {
-        headers: { 'x-request-id': 'request-1' },
-      }),
+      new Request(
+        'https://barberos.local/api/v1/appointments?branchId=branch-1&serviceId=service-1&professionalId=professional-1&startsOn=2026-09-07&endsOn=2026-09-07',
+        {
+          headers: { 'x-request-id': 'request-1' },
+        },
+      ),
     );
 
     expect(response.status).toBe(200);
@@ -107,7 +133,10 @@ describe('appointment route handlers', () => {
 
   it('maps appointment conflicts to stable 409 responses', async () => {
     service.create.mockRejectedValueOnce(
-      new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.'),
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Appointment overlaps an active appointment.',
+      ),
     );
 
     const response = await handlers.POST(
@@ -135,7 +164,11 @@ describe('appointment route handlers', () => {
   });
 
   it('reschedules appointments through PATCH when no status is provided', async () => {
-    const body = { id: 'appointment-1', startsAt: '2026-09-07T13:00:00.000Z', reason: 'Cliente pediu novo horario' };
+    const body = {
+      id: 'appointment-1',
+      startsAt: '2026-09-07T13:00:00.000Z',
+      reason: 'Cliente pediu novo horario',
+    };
 
     const response = await handlers.PATCH(
       new Request('https://barberos.local/api/v1/appointments', {
@@ -147,7 +180,11 @@ describe('appointment route handlers', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      data: { ...appointment, startsAt: '2026-09-07T13:00:00.000Z', endsAt: '2026-09-07T13:30:00.000Z' },
+      data: {
+        ...appointment,
+        startsAt: '2026-09-07T13:00:00.000Z',
+        endsAt: '2026-09-07T13:30:00.000Z',
+      },
       requestId: 'request-1',
     });
     expect(service.reschedule).toHaveBeenCalledWith(context, body);
@@ -165,7 +202,10 @@ describe('appointment route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...appointment, status: 'CHECKED_IN' as const }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...appointment, status: 'CHECKED_IN' as const },
+      requestId: 'request-1',
+    });
     expect(service.updateStatus).toHaveBeenCalledWith(context, body);
   });
 
@@ -179,8 +219,14 @@ describe('appointment route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...appointment, status: 'CANCELLED' as const }, requestId: 'request-1' });
-    expect(service.cancel).toHaveBeenCalledWith(context, { id: 'appointment-1', reason: 'Cliente cancelou' });
+    expect(await response.json()).toEqual({
+      data: { ...appointment, status: 'CANCELLED' as const },
+      requestId: 'request-1',
+    });
+    expect(service.cancel).toHaveBeenCalledWith(context, {
+      id: 'appointment-1',
+      reason: 'Cliente cancelou',
+    });
   });
 
   it('returns status history when requested', async () => {

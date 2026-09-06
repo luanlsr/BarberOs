@@ -11,7 +11,10 @@ import { jsonError, jsonFromError } from '../../shared/presentation/api';
 import type { AvailabilitySlot } from '../domain';
 
 export type ScheduleRouteService = {
-  listProfessionalSchedules(context: RequestContext, branchId: string): Promise<ProfessionalSchedule[]>;
+  listProfessionalSchedules(
+    context: RequestContext,
+    branchId: string,
+  ): Promise<ProfessionalSchedule[]>;
   upsertProfessionalSchedule(
     context: RequestContext,
     command: CreateProfessionalScheduleCommand,
@@ -20,7 +23,10 @@ export type ScheduleRouteService = {
 
 export type ScheduleBlockRouteService = {
   listScheduleBlocks(context: RequestContext, branchId: string): Promise<ScheduleBlock[]>;
-  createScheduleBlock(context: RequestContext, command: CreateScheduleBlockCommand): Promise<ScheduleBlock>;
+  createScheduleBlock(
+    context: RequestContext,
+    command: CreateScheduleBlockCommand,
+  ): Promise<ScheduleBlock>;
 };
 
 export type AvailabilityRouteService = {
@@ -42,16 +48,25 @@ export type SchedulingRouteDependencies<TService> = {
   service: TService;
 };
 
-export function createScheduleRouteHandlers(dependencies: SchedulingRouteDependencies<ScheduleRouteService>) {
+export function createScheduleRouteHandlers(
+  dependencies: SchedulingRouteDependencies<ScheduleRouteService>,
+) {
   return {
     GET: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const branchId = requiredParam(new URL(request.url), 'branchId');
-        if (!branchId) return jsonError('CORE_VALIDATION_ERROR', 'Branch id is required.', 400, context.requestId);
+        if (!branchId)
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Branch id is required.',
+            400,
+            context.requestId,
+          );
 
         const schedules = await dependencies.service.listProfessionalSchedules(context, branchId);
         return NextResponse.json({ data: schedules, requestId: context.requestId });
@@ -63,7 +78,8 @@ export function createScheduleRouteHandlers(dependencies: SchedulingRouteDepende
     PUT: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as CreateProfessionalScheduleCommand;
@@ -76,16 +92,25 @@ export function createScheduleRouteHandlers(dependencies: SchedulingRouteDepende
   };
 }
 
-export function createScheduleBlockRouteHandlers(dependencies: SchedulingRouteDependencies<ScheduleBlockRouteService>) {
+export function createScheduleBlockRouteHandlers(
+  dependencies: SchedulingRouteDependencies<ScheduleBlockRouteService>,
+) {
   return {
     GET: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const branchId = requiredParam(new URL(request.url), 'branchId');
-        if (!branchId) return jsonError('CORE_VALIDATION_ERROR', 'Branch id is required.', 400, context.requestId);
+        if (!branchId)
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Branch id is required.',
+            400,
+            context.requestId,
+          );
 
         const blocks = await dependencies.service.listScheduleBlocks(context, branchId);
         return NextResponse.json({ data: blocks, requestId: context.requestId });
@@ -97,7 +122,8 @@ export function createScheduleBlockRouteHandlers(dependencies: SchedulingRouteDe
     POST: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as CreateScheduleBlockCommand;
@@ -110,12 +136,15 @@ export function createScheduleBlockRouteHandlers(dependencies: SchedulingRouteDe
   };
 }
 
-export function createAvailabilityRouteHandlers(dependencies: SchedulingRouteDependencies<AvailabilityRouteService>) {
+export function createAvailabilityRouteHandlers(
+  dependencies: SchedulingRouteDependencies<AvailabilityRouteService>,
+) {
   return {
     GET: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
@@ -125,7 +154,12 @@ export function createAvailabilityRouteHandlers(dependencies: SchedulingRouteDep
         const endsOn = requiredParam(url, 'endsOn');
 
         if (!branchId || !serviceId || !startsOn || !endsOn) {
-          return jsonError('CORE_VALIDATION_ERROR', 'Branch, service and date window are required.', 400, context.requestId);
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Branch, service and date window are required.',
+            400,
+            context.requestId,
+          );
         }
 
         const slots = await dependencies.service.findAvailableSlots(

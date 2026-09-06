@@ -2,7 +2,10 @@ import { readFile, readdir } from 'node:fs/promises';
 
 const migrationName = '20260905010000_core_operations_scheduling.sql';
 const migrationsDir = new URL('../supabase/migrations/', import.meta.url);
-const migration = await readFile(new URL(`../supabase/migrations/${migrationName}`, import.meta.url), 'utf8');
+const migration = await readFile(
+  new URL(`../supabase/migrations/${migrationName}`, import.meta.url),
+  'utf8',
+);
 const seed = await readFile(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
 const migrationLower = migration.toLowerCase();
 const seedLower = seed.toLowerCase();
@@ -103,4 +106,6 @@ if (missing.length) {
   process.exit(1);
 }
 
-console.log(`Core operations migration validated (${tables.length} tables, ${requiredMigrationSnippets.length} migration checks, ${requiredSeedSnippets.length} seed checks).`);
+console.log(
+  `Core operations migration validated (${tables.length} tables, ${requiredMigrationSnippets.length} migration checks, ${requiredSeedSnippets.length} seed checks).`,
+);

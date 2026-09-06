@@ -67,7 +67,11 @@ function DesktopQuickActions({ actions }: Readonly<{ actions: PrimaryActionItem[
       {actions.map((action) => {
         const Icon = actionIcons[action.icon];
         return (
-          <Link className="button button-secondary quick-action-button" href={action.href} key={action.href}>
+          <Link
+            className="button button-secondary quick-action-button"
+            href={action.href}
+            key={action.href}
+          >
             <Icon size={16} aria-hidden="true" />
             {action.label}
           </Link>
@@ -82,7 +86,12 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
 
   if (!actions.length) {
     return (
-      <button className="mobile-add-button" type="button" disabled aria-label="Nenhuma acao disponivel">
+      <button
+        className="mobile-add-button"
+        type="button"
+        disabled
+        aria-label="Nenhuma acao disponivel"
+      >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
       </button>
     );
@@ -90,7 +99,11 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
 
   if (actions.length === 1) {
     return (
-      <Link className="mobile-add-button" href={actions[0].href} aria-label={`Criar ${actions[0].label.toLowerCase()}`}>
+      <Link
+        className="mobile-add-button"
+        href={actions[0].href}
+        aria-label={`Criar ${actions[0].label.toLowerCase()}`}
+      >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
       </Link>
     );
@@ -133,7 +146,11 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
 
   const entitlements = session.entitlements ?? [];
   const visibleItems = filterNavigation(navigationItems, session.permissions, entitlements);
-  const visibleActions = filterPrimaryActions(primaryActionItems, session.permissions, entitlements);
+  const visibleActions = filterPrimaryActions(
+    primaryActionItems,
+    session.permissions,
+    entitlements,
+  );
   const mobileNavItems = visibleItems.filter((item) => item.mobile).slice(0, 4);
   const leadingMobileItems = mobileNavItems.slice(0, 2);
   const trailingMobileItems = mobileNavItems.slice(2, 4);

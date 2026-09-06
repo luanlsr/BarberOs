@@ -26,7 +26,9 @@ export const GET = handlers.GET;
 async function getAvailabilityApplicationService() {
   const client = await createSupabaseServerClient();
   if (!client) {
-    throw Object.assign(new Error('Persistence is not configured.'), { code: 'PERSISTENCE_NOT_CONFIGURED' });
+    throw Object.assign(new Error('Persistence is not configured.'), {
+      code: 'PERSISTENCE_NOT_CONFIGURED',
+    });
   }
   const schedulingRepository = new SupabaseSchedulingRepository(client);
   return new AvailabilityApplicationService(

@@ -29,13 +29,33 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'CORE_BRANCH_SCOPE_DENIED':
       return jsonError(code, getErrorMessage(error, code), 403, requestId);
     case 'PERMISSION_DENIED':
-      return jsonError('CORE_PERMISSION_DENIED', getErrorMessage(error, 'Permission denied.'), 403, requestId);
+      return jsonError(
+        'CORE_PERMISSION_DENIED',
+        getErrorMessage(error, 'Permission denied.'),
+        403,
+        requestId,
+      );
     case 'ENTITLEMENT_DENIED':
-      return jsonError('CORE_ENTITLEMENT_DENIED', getErrorMessage(error, 'Entitlement denied.'), 403, requestId);
+      return jsonError(
+        'CORE_ENTITLEMENT_DENIED',
+        getErrorMessage(error, 'Entitlement denied.'),
+        403,
+        requestId,
+      );
     case 'BRANCH_SCOPE_DENIED':
-      return jsonError('CORE_BRANCH_SCOPE_DENIED', getErrorMessage(error, 'Branch scope denied.'), 403, requestId);
+      return jsonError(
+        'CORE_BRANCH_SCOPE_DENIED',
+        getErrorMessage(error, 'Branch scope denied.'),
+        403,
+        requestId,
+      );
     case 'PERSISTENCE_NOT_CONFIGURED':
-      return jsonError('PERSISTENCE_NOT_CONFIGURED', getErrorMessage(error, 'Persistence is not configured.'), 503, requestId);
+      return jsonError(
+        'PERSISTENCE_NOT_CONFIGURED',
+        getErrorMessage(error, 'Persistence is not configured.'),
+        503,
+        requestId,
+      );
     case 'CORE_NOT_FOUND':
       return jsonError(code, getErrorMessage(error, code), 404, requestId);
     case 'APPOINTMENT_CONFLICT':

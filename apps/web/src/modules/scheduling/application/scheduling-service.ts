@@ -13,7 +13,11 @@ import {
 import { authorize } from '@barberos/permissions';
 
 import { CoreOperationsApplicationError } from '../../shared/application/errors';
-import type { ScheduleRepository, ScheduleWindowQuery, SchedulingAppointmentLookup } from '../domain';
+import type {
+  ScheduleRepository,
+  ScheduleWindowQuery,
+  SchedulingAppointmentLookup,
+} from '../domain';
 
 const coreOperationsEntitlement = 'core.operations' satisfies Entitlement;
 
@@ -31,7 +35,10 @@ export class SchedulingApplicationService {
     return schedules.filter((schedule) => isScheduleVisibleToContext(context, schedule));
   }
 
-  async upsertProfessionalSchedule(context: RequestContext, command: CreateProfessionalScheduleCommand) {
+  async upsertProfessionalSchedule(
+    context: RequestContext,
+    command: CreateProfessionalScheduleCommand,
+  ) {
     const parsed = createProfessionalScheduleCommandSchema.parse(command);
     authorizeScheduleAccess(context, 'schedules.manage', parsed.branchId);
     return this.schedules.upsertProfessionalSchedule(context, parsed);
@@ -53,15 +60,22 @@ export class SchedulingApplicationService {
   async isWindowBlocked(context: RequestContext, query: ScheduleWindowQuery) {
     authorizeScheduleAccess(context, 'schedules.read', query.branchId);
     const blocks = await this.schedules.listScheduleBlocks(context, query.branchId);
-    return blocks.filter((block) => isScheduleBlockVisibleToContext(context, block)).some(
-      (block) =>
-        block.active &&
-        (!block.professionalId || !query.professionalId || block.professionalId === query.professionalId) &&
-        rangesOverlap(block.startsAt, block.endsAt, query.startsAt, query.endsAt),
-    );
+    return blocks
+      .filter((block) => isScheduleBlockVisibleToContext(context, block))
+      .some(
+        (block) =>
+          block.active &&
+          (!block.professionalId ||
+            !query.professionalId ||
+            block.professionalId === query.professionalId) &&
+          rangesOverlap(block.startsAt, block.endsAt, query.startsAt, query.endsAt),
+      );
   }
 
-  private async assertNoAppointmentOverlap(context: RequestContext, block: CreateScheduleBlockCommand) {
+  private async assertNoAppointmentOverlap(
+    context: RequestContext,
+    block: CreateScheduleBlockCommand,
+  ) {
     if (!block.professionalId || !this.appointments) return;
 
     const conflicts = await this.appointments.listActiveAppointmentsForWindow(context, {
@@ -72,17 +86,26 @@ export class SchedulingApplicationService {
     });
 
     if (conflicts.some((appointment) => isAppointmentVisibleToContext(context, appointment))) {
-      throw new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Schedule block overlaps an active appointment.');
+      throw new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Schedule block overlaps an active appointment.',
+      );
     }
   }
 }
 
-function authorizeScheduleAccess(context: RequestContext, permission: Permission, branchId: string) {
+function authorizeScheduleAccess(
+  context: RequestContext,
+  permission: Permission,
+  branchId: string,
+) {
   authorize(context, { permission, entitlement: coreOperationsEntitlement, branchId });
 }
 
 function rangesOverlap(leftStart: string, leftEnd: string, rightStart: string, rightEnd: string) {
-  return Date.parse(leftStart) < Date.parse(rightEnd) && Date.parse(rightStart) < Date.parse(leftEnd);
+  return (
+    Date.parse(leftStart) < Date.parse(rightEnd) && Date.parse(rightStart) < Date.parse(leftEnd)
+  );
 }
 
 function isScheduleVisibleToContext(context: RequestContext, schedule: ProfessionalSchedule) {
@@ -94,5 +117,7 @@ function isScheduleBlockVisibleToContext(context: RequestContext, block: Schedul
 }
 
 function isAppointmentVisibleToContext(context: RequestContext, appointment: Appointment) {
-  return appointment.tenantId === context.tenantId && context.branchScope.includes(appointment.branchId);
+  return (
+    appointment.tenantId === context.tenantId && context.branchScope.includes(appointment.branchId)
+  );
 }

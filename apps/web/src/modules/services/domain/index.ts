@@ -26,5 +26,8 @@ export interface ServiceRepository {
   create(context: RequestContext, command: CreateServiceCommand): Promise<Service>;
   update(context: RequestContext, command: UpdateServiceCommand): Promise<Service>;
   archive(context: RequestContext, serviceId: string): Promise<Service>;
-  assignProfessional(context: RequestContext, command: AssignServiceProfessionalCommand): Promise<void>;
+  assignProfessional(
+    context: RequestContext,
+    command: AssignServiceProfessionalCommand,
+  ): Promise<void>;
 }

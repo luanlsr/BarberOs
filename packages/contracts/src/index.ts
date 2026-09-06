@@ -489,9 +489,7 @@ export const updateAppointmentStatusCommandSchema = z.object({
   status: appointmentStatusSchema,
   reason: z.string().trim().max(500).optional(),
 });
-export type UpdateAppointmentStatusCommand = z.infer<
-  typeof updateAppointmentStatusCommandSchema
->;
+export type UpdateAppointmentStatusCommand = z.infer<typeof updateAppointmentStatusCommandSchema>;
 
 export const cancelAppointmentCommandSchema = z.object({
   id: nonEmptyIdSchema,

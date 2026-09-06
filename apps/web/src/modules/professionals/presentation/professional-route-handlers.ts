@@ -27,7 +27,8 @@ export function createProfessionalRouteHandlers(dependencies: ProfessionalRouteD
     GET: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
@@ -46,12 +47,16 @@ export function createProfessionalRouteHandlers(dependencies: ProfessionalRouteD
     POST: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as CreateProfessionalCommand;
         const professional = await dependencies.service.create(context, command);
-        return NextResponse.json({ data: professional, requestId: context.requestId }, { status: 201 });
+        return NextResponse.json(
+          { data: professional, requestId: context.requestId },
+          { status: 201 },
+        );
       } catch (error) {
         return jsonFromError(error, context.requestId);
       }
@@ -60,7 +65,8 @@ export function createProfessionalRouteHandlers(dependencies: ProfessionalRouteD
     PATCH: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as UpdateProfessionalCommand;
@@ -74,13 +80,20 @@ export function createProfessionalRouteHandlers(dependencies: ProfessionalRouteD
     DELETE: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
-        const body = await request.json().catch(() => null) as { id?: string } | null;
+        const body = (await request.json().catch(() => null)) as { id?: string } | null;
         const professionalId = body?.id ?? optionalParam(url, 'id');
-        if (!professionalId) return jsonError('CORE_VALIDATION_ERROR', 'Professional id is required.', 400, context.requestId);
+        if (!professionalId)
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Professional id is required.',
+            400,
+            context.requestId,
+          );
         const professional = await dependencies.service.archive(context, professionalId);
         return NextResponse.json({ data: professional, requestId: context.requestId });
       } catch (error) {
@@ -95,5 +108,7 @@ function optionalParam(url: URL, key: string) {
 }
 
 function compactFilters(filters: ProfessionalListFilters) {
-  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined)) as ProfessionalListFilters;
+  return Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== undefined),
+  ) as ProfessionalListFilters;
 }

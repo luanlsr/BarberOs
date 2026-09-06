@@ -8,7 +8,11 @@ import type {
   ScheduleBlock,
 } from '@barberos/contracts';
 
-import type { ScheduleRepository, ScheduleWindowQuery, SchedulingAppointmentLookup } from '../domain';
+import type {
+  ScheduleRepository,
+  ScheduleWindowQuery,
+  SchedulingAppointmentLookup,
+} from '../domain';
 import { CoreOperationsApplicationError, SchedulingApplicationService } from './scheduling-service';
 
 const managerContext: RequestContext = {
@@ -80,7 +84,15 @@ const activeAppointment: Appointment = {
   endsAt: '2026-09-07T14:40:00.000Z',
   status: 'CONFIRMED',
   source: 'MANUAL',
-  services: [{ sequence: 1, serviceId: 'service-1', serviceName: 'Corte Masculino', durationMinutes: 40, priceCents: 5000 }],
+  services: [
+    {
+      sequence: 1,
+      serviceId: 'service-1',
+      serviceName: 'Corte Masculino',
+      durationMinutes: 40,
+      priceCents: 5000,
+    },
+  ],
 };
 
 class FakeScheduleRepository implements ScheduleRepository {
@@ -93,7 +105,10 @@ class FakeScheduleRepository implements ScheduleRepository {
     return this.schedules.filter((schedule) => schedule.branchId === branchId);
   }
 
-  async upsertProfessionalSchedule(context: RequestContext, command: CreateProfessionalScheduleCommand) {
+  async upsertProfessionalSchedule(
+    context: RequestContext,
+    command: CreateProfessionalScheduleCommand,
+  ) {
     this.upsertedSchedule = command;
     const schedule: ProfessionalSchedule = {
       id: 'schedule-upserted',
@@ -195,7 +210,11 @@ describe('SchedulingApplicationService', () => {
       type: 'MANUAL',
     });
 
-    expect(created).toMatchObject({ id: 'block-created', tenantId: 'tenant-2', branchId: 'branch-1' });
+    expect(created).toMatchObject({
+      id: 'block-created',
+      tenantId: 'tenant-2',
+      branchId: 'branch-1',
+    });
   });
 
   it('rejects invalid schedule breaks through the contract schema', async () => {
@@ -258,12 +277,17 @@ describe('SchedulingApplicationService', () => {
         type: 'MANUAL',
       }),
     ).rejects.toEqual(
-      new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Schedule block overlaps an active appointment.'),
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Schedule block overlaps an active appointment.',
+      ),
     );
   });
 
   it('denies branch-scoped schedule access outside the request context', async () => {
-    await expect(service.listProfessionalSchedules(managerContext, 'branch-2')).rejects.toMatchObject({
+    await expect(
+      service.listProfessionalSchedules(managerContext, 'branch-2'),
+    ).rejects.toMatchObject({
       code: 'BRANCH_SCOPE_DENIED',
     });
   });

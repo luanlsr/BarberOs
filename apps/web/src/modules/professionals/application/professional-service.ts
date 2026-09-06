@@ -21,9 +21,15 @@ export class ProfessionalApplicationService {
   constructor(private readonly professionals: ProfessionalRepository) {}
 
   async list(context: RequestContext, filters: ProfessionalListFilters = {}) {
-    authorizeProfessionalAccess(context, 'professionals.read', filters.branchId ? [filters.branchId] : []);
+    authorizeProfessionalAccess(
+      context,
+      'professionals.read',
+      filters.branchId ? [filters.branchId] : [],
+    );
     const professionals = await this.professionals.list(context, filters);
-    return professionals.filter((professional) => isProfessionalVisibleToContext(context, professional));
+    return professionals.filter((professional) =>
+      isProfessionalVisibleToContext(context, professional),
+    );
   }
 
   async create(context: RequestContext, command: CreateProfessionalCommand) {
@@ -36,7 +42,11 @@ export class ProfessionalApplicationService {
     const parsed = updateProfessionalCommandSchema.parse(command);
     const current = await this.findVisibleProfessional(context, parsed.id);
 
-    authorizeProfessionalAccess(context, 'professionals.update', parsed.branchIds?.length ? parsed.branchIds : current.branchIds);
+    authorizeProfessionalAccess(
+      context,
+      'professionals.update',
+      parsed.branchIds?.length ? parsed.branchIds : current.branchIds,
+    );
     return this.professionals.update(context, parsed);
   }
 
@@ -56,7 +66,11 @@ export class ProfessionalApplicationService {
   }
 }
 
-function authorizeProfessionalAccess(context: RequestContext, permission: Permission, branchIds: readonly string[]) {
+function authorizeProfessionalAccess(
+  context: RequestContext,
+  permission: Permission,
+  branchIds: readonly string[],
+) {
   if (!branchIds.length) {
     authorize(context, { permission, entitlement: coreOperationsEntitlement });
     return;

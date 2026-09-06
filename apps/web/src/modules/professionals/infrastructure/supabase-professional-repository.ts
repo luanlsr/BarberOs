@@ -39,7 +39,10 @@ export class SupabaseProfessionalRepository implements ProfessionalRepository {
   constructor(private readonly client: SupabaseClient) {}
 
   async list(context: RequestContext, filters: ProfessionalListFilters = {}) {
-    let query = this.client.from('professionals').select(professionalSelect).eq('tenant_id', context.tenantId);
+    let query = this.client
+      .from('professionals')
+      .select(professionalSelect)
+      .eq('tenant_id', context.tenantId);
 
     if (filters.status) {
       query = query.eq('status', filters.status);
@@ -56,7 +59,9 @@ export class SupabaseProfessionalRepository implements ProfessionalRepository {
 
     return ((data ?? []) as ProfessionalRow[])
       .map(toProfessional)
-      .filter((professional) => !filters.branchId || professional.branchIds.includes(filters.branchId));
+      .filter(
+        (professional) => !filters.branchId || professional.branchIds.includes(filters.branchId),
+      );
   }
 
   async findProfessionalById(context: RequestContext, professionalId: string) {
@@ -107,7 +112,11 @@ export class SupabaseProfessionalRepository implements ProfessionalRepository {
     if (changes.avatarUrl !== undefined) payload.avatar_url = changes.avatarUrl;
     if (changes.status !== undefined) payload.status = changes.status;
 
-    const { error } = await this.client.from('professionals').update(payload).eq('tenant_id', context.tenantId).eq('id', id);
+    const { error } = await this.client
+      .from('professionals')
+      .update(payload)
+      .eq('tenant_id', context.tenantId)
+      .eq('id', id);
     if (error) throw error;
 
     if (branchIds) {
@@ -120,7 +129,11 @@ export class SupabaseProfessionalRepository implements ProfessionalRepository {
   async archive(context: RequestContext, professionalId: string) {
     const { error } = await this.client
       .from('professionals')
-      .update({ status: 'ARCHIVED', archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        status: 'ARCHIVED',
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('tenant_id', context.tenantId)
       .eq('id', professionalId);
 
@@ -128,7 +141,11 @@ export class SupabaseProfessionalRepository implements ProfessionalRepository {
     return this.findById(context, professionalId) as Promise<Professional>;
   }
 
-  private async replaceBranches(context: RequestContext, professionalId: string, branchIds: readonly string[]) {
+  private async replaceBranches(
+    context: RequestContext,
+    professionalId: string,
+    branchIds: readonly string[],
+  ) {
     const { error: deleteError } = await this.client
       .from('professional_branches')
       .delete()

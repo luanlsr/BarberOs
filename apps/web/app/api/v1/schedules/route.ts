@@ -17,7 +17,10 @@ const handlers = createScheduleRouteHandlers({
     async listProfessionalSchedules(context: RequestContext, branchId: string) {
       return (await getSchedulingApplicationService()).listProfessionalSchedules(context, branchId);
     },
-    async upsertProfessionalSchedule(context: RequestContext, command: CreateProfessionalScheduleCommand) {
+    async upsertProfessionalSchedule(
+      context: RequestContext,
+      command: CreateProfessionalScheduleCommand,
+    ) {
       return (await getSchedulingApplicationService()).upsertProfessionalSchedule(context, command);
     },
   },
@@ -29,7 +32,9 @@ export const PUT = handlers.PUT;
 async function getSchedulingApplicationService() {
   const client = await createSupabaseServerClient();
   if (!client) {
-    throw Object.assign(new Error('Persistence is not configured.'), { code: 'PERSISTENCE_NOT_CONFIGURED' });
+    throw Object.assign(new Error('Persistence is not configured.'), {
+      code: 'PERSISTENCE_NOT_CONFIGURED',
+    });
   }
   const repository = new SupabaseSchedulingRepository(client);
   return new SchedulingApplicationService(repository, repository);

@@ -1,4 +1,8 @@
-import type { CreateServiceCommand, RequestContext, UpdateServiceCommand } from '@barberos/contracts';
+import type {
+  CreateServiceCommand,
+  RequestContext,
+  UpdateServiceCommand,
+} from '@barberos/contracts';
 import { createSupabaseServerClient, getRequestContext } from '../../../../lib/auth/server';
 import { ServiceApplicationService } from '../../../../src/modules/services/application/service-service';
 import type { ServiceListFilters } from '../../../../src/modules/services/domain';
@@ -38,7 +42,9 @@ export const DELETE = handlers.DELETE;
 async function getServiceApplicationService() {
   const client = await createSupabaseServerClient();
   if (!client) {
-    throw Object.assign(new Error('Persistence is not configured.'), { code: 'PERSISTENCE_NOT_CONFIGURED' });
+    throw Object.assign(new Error('Persistence is not configured.'), {
+      code: 'PERSISTENCE_NOT_CONFIGURED',
+    });
   }
   return new ServiceApplicationService(new SupabaseServiceRepository(client));
 }

@@ -136,7 +136,11 @@ const appointmentStatusHistorySelect = `
 const activeAppointmentStatuses = ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_SERVICE'] as const;
 
 export class SupabaseSchedulingRepository
-  implements ScheduleRepository, AppointmentRepository, SchedulingAppointmentLookup, SchedulingBranchLookup
+  implements
+    ScheduleRepository,
+    AppointmentRepository,
+    SchedulingAppointmentLookup,
+    SchedulingBranchLookup
 {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -153,7 +157,10 @@ export class SupabaseSchedulingRepository
     return ((data ?? []) as ProfessionalScheduleRow[]).map(toProfessionalSchedule);
   }
 
-  async upsertProfessionalSchedule(context: RequestContext, command: CreateProfessionalScheduleCommand) {
+  async upsertProfessionalSchedule(
+    context: RequestContext,
+    command: CreateProfessionalScheduleCommand,
+  ) {
     const { data, error } = await this.client
       .from('professional_schedules')
       .upsert(
@@ -274,7 +281,13 @@ export class SupabaseSchedulingRepository
 
     const appointmentId = (data as { id: string }).id;
     await this.replaceAppointmentServices(context, appointmentId, command.services);
-    await this.createStatusHistory(context, appointmentId, null, command.status ?? 'CONFIRMED', undefined);
+    await this.createStatusHistory(
+      context,
+      appointmentId,
+      null,
+      command.status ?? 'CONFIRMED',
+      undefined,
+    );
     return this.findById(context, appointmentId) as Promise<Appointment>;
   }
 
@@ -298,12 +311,22 @@ export class SupabaseSchedulingRepository
   async updateStatus(context: RequestContext, command: UpdateAppointmentStatusRecordCommand) {
     const { error } = await this.client
       .from('appointments')
-      .update({ status: command.status, updated_by: context.userId, updated_at: new Date().toISOString() })
+      .update({
+        status: command.status,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      })
       .eq('tenant_id', context.tenantId)
       .eq('id', command.id);
 
     if (error) throw error;
-    await this.createStatusHistory(context, command.id, command.previousStatus, command.status, command.reason);
+    await this.createStatusHistory(
+      context,
+      command.id,
+      command.previousStatus,
+      command.status,
+      command.reason,
+    );
     return this.findById(context, command.id) as Promise<Appointment>;
   }
 
@@ -404,8 +427,12 @@ function toProfessionalSchedule(row: ProfessionalScheduleRow) {
     weekday: row.weekday,
     startsAtLocal: normalizeLocalTime(row.starts_at_local),
     endsAtLocal: normalizeLocalTime(row.ends_at_local),
-    breakStartsAtLocal: row.break_starts_at_local ? normalizeLocalTime(row.break_starts_at_local) : undefined,
-    breakEndsAtLocal: row.break_ends_at_local ? normalizeLocalTime(row.break_ends_at_local) : undefined,
+    breakStartsAtLocal: row.break_starts_at_local
+      ? normalizeLocalTime(row.break_starts_at_local)
+      : undefined,
+    breakEndsAtLocal: row.break_ends_at_local
+      ? normalizeLocalTime(row.break_ends_at_local)
+      : undefined,
     active: row.active,
   });
 }

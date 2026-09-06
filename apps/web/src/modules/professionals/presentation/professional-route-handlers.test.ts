@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Professional, RequestContext } from '@barberos/contracts';
 
 import { CoreOperationsApplicationError } from '../application/professional-service';
-import { createProfessionalRouteHandlers, type ProfessionalRouteService } from './professional-route-handlers';
+import {
+  createProfessionalRouteHandlers,
+  type ProfessionalRouteService,
+} from './professional-route-handlers';
 
 const context: RequestContext = {
   requestId: 'request-1',
@@ -88,7 +91,10 @@ describe('professional route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...professional, displayName: 'Carlos Atualizado' }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...professional, displayName: 'Carlos Atualizado' },
+      requestId: 'request-1',
+    });
     expect(service.update).toHaveBeenCalledWith(context, body);
   });
 
@@ -101,13 +107,19 @@ describe('professional route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...professional, status: 'ARCHIVED' as const }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...professional, status: 'ARCHIVED' as const },
+      requestId: 'request-1',
+    });
     expect(service.archive).toHaveBeenCalledWith(context, 'professional-1');
   });
 
   it('returns stable error model for authorization failures', async () => {
     service.archive.mockRejectedValueOnce(
-      new CoreOperationsApplicationError('CORE_PERMISSION_DENIED', 'Missing professionals.update permission.'),
+      new CoreOperationsApplicationError(
+        'CORE_PERMISSION_DENIED',
+        'Missing professionals.update permission.',
+      ),
     );
 
     const response = await handlers.DELETE(

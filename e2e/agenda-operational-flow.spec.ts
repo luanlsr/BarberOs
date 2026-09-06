@@ -30,13 +30,21 @@ test('login to agenda, create an appointment, cancel it and frees the slot', asy
   await form.getByLabel('Horario').selectOption('12:00');
   await page.getByRole('button', { name: 'Criar agendamento' }).click();
 
-  await expect(flow.getByRole('status')).toContainText('Agendamento criado para Camila Operacional');
+  await expect(flow.getByRole('status')).toContainText(
+    'Agendamento criado para Camila Operacional',
+  );
   await expect(form.getByLabel('Horario')).toContainText('12:00 - ocupado por Camila Operacional');
 
   await flow.getByRole('button', { name: 'Cancelar agendamento' }).click();
-  await expect(flow.getByRole('status')).toContainText('Agendamento cancelado. Horario 12:00 liberado.');
-  await expect(form.getByLabel('Horario')).not.toContainText('12:00 - ocupado por Camila Operacional');
+  await expect(flow.getByRole('status')).toContainText(
+    'Agendamento cancelado. Horario 12:00 liberado.',
+  );
+  await expect(form.getByLabel('Horario')).not.toContainText(
+    '12:00 - ocupado por Camila Operacional',
+  );
 
   await page.getByRole('button', { name: 'Criar agendamento' }).click();
-  await expect(flow.getByRole('status')).toContainText('Agendamento criado para Camila Operacional');
+  await expect(flow.getByRole('status')).toContainText(
+    'Agendamento criado para Camila Operacional',
+  );
 });

@@ -11,7 +11,11 @@ import {
 import { authorize } from '@barberos/permissions';
 
 import { CoreOperationsApplicationError } from '../../shared/application/errors';
-import type { CustomerListFilters, CustomerProfessionalLookup, CustomerRepository } from '../domain';
+import type {
+  CustomerListFilters,
+  CustomerProfessionalLookup,
+  CustomerRepository,
+} from '../domain';
 
 const coreOperationsEntitlement = 'core.operations' satisfies Entitlement;
 
@@ -32,7 +36,11 @@ export class CustomerApplicationService {
   async create(context: RequestContext, command: CreateCustomerCommand) {
     const parsed = createCustomerCommandSchema.parse(command);
     authorizeCustomerAccess(context, 'customers.create', parsed.branchId);
-    await this.validatePreferredProfessional(context, parsed.preferredProfessionalId, parsed.branchId);
+    await this.validatePreferredProfessional(
+      context,
+      parsed.preferredProfessionalId,
+      parsed.branchId,
+    );
     return this.customers.create(context, parsed);
   }
 
@@ -42,7 +50,11 @@ export class CustomerApplicationService {
     const effectiveBranchId = parsed.branchId ?? current.branchId;
 
     authorizeCustomerAccess(context, 'customers.update', effectiveBranchId);
-    await this.validatePreferredProfessional(context, parsed.preferredProfessionalId, effectiveBranchId);
+    await this.validatePreferredProfessional(
+      context,
+      parsed.preferredProfessionalId,
+      effectiveBranchId,
+    );
     return this.customers.update(context, parsed);
   }
 
@@ -67,20 +79,40 @@ export class CustomerApplicationService {
   ) {
     if (!preferredProfessionalId) return;
     if (!this.professionals) {
-      throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Preferred professional lookup is unavailable.');
+      throw new CoreOperationsApplicationError(
+        'CORE_VALIDATION_ERROR',
+        'Preferred professional lookup is unavailable.',
+      );
     }
 
-    const professional = await this.professionals.findProfessionalById(context, preferredProfessionalId);
-    if (!professional || professional.tenantId !== context.tenantId || professional.status === 'ARCHIVED') {
-      throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Preferred professional is invalid.');
+    const professional = await this.professionals.findProfessionalById(
+      context,
+      preferredProfessionalId,
+    );
+    if (
+      !professional ||
+      professional.tenantId !== context.tenantId ||
+      professional.status === 'ARCHIVED'
+    ) {
+      throw new CoreOperationsApplicationError(
+        'CORE_VALIDATION_ERROR',
+        'Preferred professional is invalid.',
+      );
     }
     if (branchId && !professional.branchIds.includes(branchId)) {
-      throw new CoreOperationsApplicationError('CORE_BRANCH_SCOPE_DENIED', 'Preferred professional is outside the customer branch.');
+      throw new CoreOperationsApplicationError(
+        'CORE_BRANCH_SCOPE_DENIED',
+        'Preferred professional is outside the customer branch.',
+      );
     }
   }
 }
 
-function authorizeCustomerAccess(context: RequestContext, permission: Permission, branchId?: string) {
+function authorizeCustomerAccess(
+  context: RequestContext,
+  permission: Permission,
+  branchId?: string,
+) {
   authorize(context, { permission, entitlement: coreOperationsEntitlement, branchId });
 }
 

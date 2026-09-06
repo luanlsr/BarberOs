@@ -17,9 +17,15 @@ export type AppointmentRouteService = {
   get(context: RequestContext, appointmentId: string): Promise<Appointment>;
   create(context: RequestContext, command: CreateAppointmentCommand): Promise<Appointment>;
   reschedule(context: RequestContext, command: RescheduleAppointmentCommand): Promise<Appointment>;
-  updateStatus(context: RequestContext, command: UpdateAppointmentStatusCommand): Promise<Appointment>;
+  updateStatus(
+    context: RequestContext,
+    command: UpdateAppointmentStatusCommand,
+  ): Promise<Appointment>;
   cancel(context: RequestContext, command: CancelAppointmentCommand): Promise<Appointment>;
-  listStatusHistory(context: RequestContext, appointmentId: string): Promise<AppointmentStatusHistory[]>;
+  listStatusHistory(
+    context: RequestContext,
+    appointmentId: string,
+  ): Promise<AppointmentStatusHistory[]>;
 };
 
 export type AppointmentRouteDependencies = {
@@ -32,7 +38,8 @@ export function createAppointmentRouteHandlers(dependencies: AppointmentRouteDep
     GET: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
@@ -48,7 +55,12 @@ export function createAppointmentRouteHandlers(dependencies: AppointmentRouteDep
 
         const query = listQueryFromUrl(url);
         if (!query) {
-          return jsonError('CORE_VALIDATION_ERROR', 'Branch, service and date window are required.', 400, context.requestId);
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Branch, service and date window are required.',
+            400,
+            context.requestId,
+          );
         }
 
         const appointments = await dependencies.service.list(context, query);
@@ -61,12 +73,16 @@ export function createAppointmentRouteHandlers(dependencies: AppointmentRouteDep
     POST: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as CreateAppointmentCommand;
         const appointment = await dependencies.service.create(context, command);
-        return NextResponse.json({ data: appointment, requestId: context.requestId }, { status: 201 });
+        return NextResponse.json(
+          { data: appointment, requestId: context.requestId },
+          { status: 201 },
+        );
       } catch (error) {
         return jsonFromError(error, context.requestId);
       }
@@ -75,12 +91,18 @@ export function createAppointmentRouteHandlers(dependencies: AppointmentRouteDep
     PATCH: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
-        const command = await request.json() as Partial<UpdateAppointmentStatusCommand & RescheduleAppointmentCommand>;
+        const command = (await request.json()) as Partial<
+          UpdateAppointmentStatusCommand & RescheduleAppointmentCommand
+        >;
         const appointment = command.status
-          ? await dependencies.service.updateStatus(context, command as UpdateAppointmentStatusCommand)
+          ? await dependencies.service.updateStatus(
+              context,
+              command as UpdateAppointmentStatusCommand,
+            )
           : await dependencies.service.reschedule(context, command as RescheduleAppointmentCommand);
         return NextResponse.json({ data: appointment, requestId: context.requestId });
       } catch (error) {
@@ -91,15 +113,27 @@ export function createAppointmentRouteHandlers(dependencies: AppointmentRouteDep
     DELETE: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
-        const body = await request.json().catch(() => null) as Partial<CancelAppointmentCommand> | null;
+        const body = (await request
+          .json()
+          .catch(() => null)) as Partial<CancelAppointmentCommand> | null;
         const id = body?.id ?? optionalParam(url, 'id');
-        if (!id) return jsonError('CORE_VALIDATION_ERROR', 'Appointment id is required.', 400, context.requestId);
+        if (!id)
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Appointment id is required.',
+            400,
+            context.requestId,
+          );
 
-        const appointment = await dependencies.service.cancel(context, { id, reason: body?.reason });
+        const appointment = await dependencies.service.cancel(context, {
+          id,
+          reason: body?.reason,
+        });
         return NextResponse.json({ data: appointment, requestId: context.requestId });
       } catch (error) {
         return jsonFromError(error, context.requestId);

@@ -8,7 +8,10 @@ import type {
 } from '@barberos/contracts';
 
 import type { ProfessionalListFilters, ProfessionalRepository } from '../domain';
-import { CoreOperationsApplicationError, ProfessionalApplicationService } from './professional-service';
+import {
+  CoreOperationsApplicationError,
+  ProfessionalApplicationService,
+} from './professional-service';
 
 const baseProfessional: Professional = {
   id: 'professional-1',
@@ -93,7 +96,11 @@ class FakeProfessionalRepository implements ProfessionalRepository {
   async archive(_context: RequestContext, professionalId: string) {
     this.archivedId = professionalId;
     const current = this.professionals.get(professionalId) ?? baseProfessional;
-    const archived = { ...current, status: 'ARCHIVED' as const, archivedAt: '2026-09-05T00:00:00.000Z' };
+    const archived = {
+      ...current,
+      status: 'ARCHIVED' as const,
+      archivedAt: '2026-09-05T00:00:00.000Z',
+    };
     this.professionals.set(professionalId, archived);
     return archived;
   }
@@ -109,7 +116,10 @@ describe('ProfessionalApplicationService', () => {
   });
 
   it('lists professionals when permission, entitlement and branch scope are allowed', async () => {
-    const professionals = await service.list(ownerContext, { branchId: 'branch-1', status: 'ACTIVE' });
+    const professionals = await service.list(ownerContext, {
+      branchId: 'branch-1',
+      status: 'ACTIVE',
+    });
 
     expect(professionals).toHaveLength(1);
     expect(repository.listedFilters).toEqual({ branchId: 'branch-1', status: 'ACTIVE' });
@@ -120,8 +130,12 @@ describe('ProfessionalApplicationService', () => {
     const tenantBResults = await service.list(tenantBContext, { branchId: 'branch-1' });
 
     expect(tenantAResults.map((professional) => professional.id)).toEqual(['professional-1']);
-    expect(tenantBResults.map((professional) => professional.id)).toEqual(['professional-tenant-b']);
-    await expect(service.update(tenantBContext, { id: 'professional-1', displayName: 'Tentativa externa' })).rejects.toEqual(
+    expect(tenantBResults.map((professional) => professional.id)).toEqual([
+      'professional-tenant-b',
+    ]);
+    await expect(
+      service.update(tenantBContext, { id: 'professional-1', displayName: 'Tentativa externa' }),
+    ).rejects.toEqual(
       new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Professional was not found.'),
     );
     expect(repository.updatedCommand).toBeNull();
@@ -148,7 +162,10 @@ describe('ProfessionalApplicationService', () => {
   });
 
   it('denies creation without the required permission', async () => {
-    const context = { ...ownerContext, permissions: ['professionals.read'] } satisfies RequestContext;
+    const context = {
+      ...ownerContext,
+      permissions: ['professionals.read'],
+    } satisfies RequestContext;
 
     await expect(
       service.create(context, { branchIds: ['branch-1'], displayName: 'Lucas Pereira' }),
@@ -174,7 +191,10 @@ describe('ProfessionalApplicationService', () => {
     });
 
     expect(professional.displayName).toBe('Carlos A.');
-    expect(repository.updatedCommand).toMatchObject({ id: 'professional-1', displayName: 'Carlos A.' });
+    expect(repository.updatedCommand).toMatchObject({
+      id: 'professional-1',
+      displayName: 'Carlos A.',
+    });
   });
 
   it('archives only professionals in authorized branches', async () => {

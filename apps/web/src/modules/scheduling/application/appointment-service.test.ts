@@ -21,7 +21,10 @@ import type {
   SchedulingServiceLookup,
   UpdateAppointmentStatusRecordCommand,
 } from '../domain';
-import { AppointmentApplicationService, CoreOperationsApplicationError } from './appointment-service';
+import {
+  AppointmentApplicationService,
+  CoreOperationsApplicationError,
+} from './appointment-service';
 
 const context: RequestContext = {
   requestId: 'request-1',
@@ -29,7 +32,12 @@ const context: RequestContext = {
   tenantId: 'tenant-1',
   membershipId: 'membership-1',
   role: 'RECEPTIONIST',
-  permissions: ['appointments.read', 'appointments.create', 'appointments.update', 'appointments.cancel'],
+  permissions: [
+    'appointments.read',
+    'appointments.create',
+    'appointments.update',
+    'appointments.cancel',
+  ],
   entitlements: ['core.operations'],
   branchScope: ['branch-1'],
 };
@@ -92,7 +100,15 @@ const appointment: Appointment = {
   endsAt: '2026-09-07T12:30:00.000Z',
   status: 'CONFIRMED',
   source: 'MANUAL',
-  services: [{ sequence: 1, serviceId: 'service-1', serviceName: 'Corte Masculino', durationMinutes: 30, priceCents: 5000 }],
+  services: [
+    {
+      sequence: 1,
+      serviceId: 'service-1',
+      serviceName: 'Corte Masculino',
+      durationMinutes: 30,
+      priceCents: 5000,
+    },
+  ],
 };
 
 const otherTenantAppointment: Appointment = {
@@ -297,7 +313,13 @@ describe('AppointmentApplicationService', () => {
     customers = new FakeCustomerLookup();
     professionals = new FakeProfessionalLookup();
     services = new FakeServiceLookup();
-    service = new AppointmentApplicationService(repository, activeAppointments, customers, professionals, services);
+    service = new AppointmentApplicationService(
+      repository,
+      activeAppointments,
+      customers,
+      professionals,
+      services,
+    );
   });
 
   it('isolates appointments by tenant for reads and writes', async () => {
@@ -316,7 +338,9 @@ describe('AppointmentApplicationService', () => {
     await expect(service.get(tenantBContext, 'appointment-1')).rejects.toEqual(
       new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Appointment was not found.'),
     );
-    await expect(service.cancel(tenantBContext, { id: 'appointment-1', reason: 'Tentativa externa' })).rejects.toEqual(
+    await expect(
+      service.cancel(tenantBContext, { id: 'appointment-1', reason: 'Tentativa externa' }),
+    ).rejects.toEqual(
       new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Appointment was not found.'),
     );
     expect(repository.lastCancel).toBeNull();
@@ -340,8 +364,20 @@ describe('AppointmentApplicationService', () => {
       source: 'MANUAL',
       endsAt: '2026-09-07T13:00:00.000Z',
       services: [
-        { sequence: 1, serviceId: 'service-1', serviceName: 'Corte Masculino', durationMinutes: 30, priceCents: 5000 },
-        { sequence: 2, serviceId: 'service-2', serviceName: 'Barba', durationMinutes: 30, priceCents: 3500 },
+        {
+          sequence: 1,
+          serviceId: 'service-1',
+          serviceName: 'Corte Masculino',
+          durationMinutes: 30,
+          priceCents: 5000,
+        },
+        {
+          sequence: 2,
+          serviceId: 'service-2',
+          serviceName: 'Barba',
+          durationMinutes: 30,
+          priceCents: 3500,
+        },
       ],
     });
     expect(activeAppointments.lastQuery).toMatchObject({
@@ -363,12 +399,23 @@ describe('AppointmentApplicationService', () => {
         startsAt: '2026-09-07T12:00:00.000Z',
         services: [{ serviceId: 'service-1' }],
       }),
-    ).rejects.toEqual(new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.'));
+    ).rejects.toEqual(
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Appointment overlaps an active appointment.',
+      ),
+    );
   });
 
   it('persists only one overlapping concurrent create for the same professional', async () => {
     repository = new ConflictAwareAppointmentRepository();
-    service = new AppointmentApplicationService(repository, activeAppointments, customers, professionals, services);
+    service = new AppointmentApplicationService(
+      repository,
+      activeAppointments,
+      customers,
+      professionals,
+      services,
+    );
     const command = {
       branchId: 'branch-1',
       customerId: 'customer-1',
@@ -381,14 +428,22 @@ describe('AppointmentApplicationService', () => {
       service.create(context, command),
       service.create(context, command),
     ]);
-    const rejected = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    const rejected = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
     const persisted = [...repository.appointments.values()].filter(
-      (item) => item.tenantId === 'tenant-1' && item.professionalId === 'professional-1' && item.startsAt === command.startsAt,
+      (item) =>
+        item.tenantId === 'tenant-1' &&
+        item.professionalId === 'professional-1' &&
+        item.startsAt === command.startsAt,
     );
 
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(rejected?.reason).toEqual(
-      new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.'),
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Appointment overlaps an active appointment.',
+      ),
     );
     expect(persisted).toHaveLength(1);
   });
@@ -419,7 +474,12 @@ describe('AppointmentApplicationService', () => {
         id: 'appointment-1',
         startsAt: '2026-09-07T13:00:00.000Z',
       }),
-    ).rejects.toEqual(new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.'));
+    ).rejects.toEqual(
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_CONFLICT',
+        'Appointment overlaps an active appointment.',
+      ),
+    );
 
     expect(repository.lastReschedule).toBeNull();
     expect(repository.appointments.get('appointment-1')?.startsAt).toBe('2026-09-07T12:00:00.000Z');
@@ -434,7 +494,10 @@ describe('AppointmentApplicationService', () => {
         status: 'CONFIRMED',
       }),
     ).rejects.toEqual(
-      new CoreOperationsApplicationError('APPOINTMENT_INVALID_TRANSITION', 'Appointment status transition is not allowed.'),
+      new CoreOperationsApplicationError(
+        'APPOINTMENT_INVALID_TRANSITION',
+        'Appointment status transition is not allowed.',
+      ),
     );
 
     expect(repository.lastStatus).toBeNull();
@@ -458,7 +521,11 @@ describe('AppointmentApplicationService', () => {
   });
 
   it('returns appointment status history after read authorization', async () => {
-    await service.updateStatus(context, { id: 'appointment-1', status: 'CHECKED_IN', reason: 'Chegou' });
+    await service.updateStatus(context, {
+      id: 'appointment-1',
+      status: 'CHECKED_IN',
+      reason: 'Chegou',
+    });
 
     const history = await service.listStatusHistory(context, 'appointment-1');
 

@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { CreateServiceCommand, RequestContext, Service, UpdateServiceCommand } from '@barberos/contracts';
+import type {
+  CreateServiceCommand,
+  RequestContext,
+  Service,
+  UpdateServiceCommand,
+} from '@barberos/contracts';
 
-import type { AssignServiceProfessionalCommand, ServiceListFilters, ServiceRepository } from '../domain';
+import type {
+  AssignServiceProfessionalCommand,
+  ServiceListFilters,
+  ServiceRepository,
+} from '../domain';
 import { CoreOperationsApplicationError, ServiceApplicationService } from './service-service';
 
 const activeService: Service = {
@@ -99,7 +108,11 @@ class FakeServiceRepository implements ServiceRepository {
   async archive(_context: RequestContext, serviceId: string) {
     this.archivedId = serviceId;
     const current = this.services.get(serviceId) ?? activeService;
-    const archived = { ...current, status: 'ARCHIVED' as const, archivedAt: '2026-09-05T00:00:00.000Z' };
+    const archived = {
+      ...current,
+      status: 'ARCHIVED' as const,
+      archivedAt: '2026-09-05T00:00:00.000Z',
+    };
     this.services.set(serviceId, archived);
     return archived;
   }
@@ -131,7 +144,9 @@ describe('ServiceApplicationService', () => {
 
     expect(tenantAResults.map((item) => item.id)).toEqual(['service-1', 'service-archived']);
     expect(tenantBResults.map((item) => item.id)).toEqual(['service-tenant-b']);
-    await expect(service.update(tenantBContext, { id: 'service-1', priceCents: 7000 })).rejects.toEqual(
+    await expect(
+      service.update(tenantBContext, { id: 'service-1', priceCents: 7000 }),
+    ).rejects.toEqual(
       new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.'),
     );
     expect(repository.updatedCommand).toBeNull();
@@ -140,8 +155,13 @@ describe('ServiceApplicationService', () => {
     );
     expect(repository.archivedId).toBeNull();
     await expect(
-      service.assignProfessional(tenantBContext, { serviceId: 'service-1', professionalId: 'professional-1' }),
-    ).rejects.toEqual(new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.'));
+      service.assignProfessional(tenantBContext, {
+        serviceId: 'service-1',
+        professionalId: 'professional-1',
+      }),
+    ).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.'),
+    );
     expect(repository.assignedCommand).toBeNull();
   });
 
@@ -163,10 +183,20 @@ describe('ServiceApplicationService', () => {
 
   it('rejects invalid service duration and price', async () => {
     await expect(
-      service.create(managerContext, { category: 'Cabelo', name: 'Curto', durationMinutes: 4, priceCents: 5000 }),
+      service.create(managerContext, {
+        category: 'Cabelo',
+        name: 'Curto',
+        durationMinutes: 4,
+        priceCents: 5000,
+      }),
     ).rejects.toThrow();
     await expect(
-      service.create(managerContext, { category: 'Cabelo', name: 'Curto', durationMinutes: 40, priceCents: -1 }),
+      service.create(managerContext, {
+        category: 'Cabelo',
+        name: 'Curto',
+        durationMinutes: 40,
+        priceCents: -1,
+      }),
     ).rejects.toThrow();
   });
 
@@ -174,7 +204,12 @@ describe('ServiceApplicationService', () => {
     const context = { ...managerContext, permissions: ['services.read'] } satisfies RequestContext;
 
     await expect(
-      service.create(context, { category: 'Cabelo', name: 'Corte', durationMinutes: 40, priceCents: 5000 }),
+      service.create(context, {
+        category: 'Cabelo',
+        name: 'Corte',
+        durationMinutes: 40,
+        priceCents: 5000,
+      }),
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
   });
 
@@ -186,8 +221,13 @@ describe('ServiceApplicationService', () => {
   });
 
   it('does not update archived services', async () => {
-    await expect(service.update(managerContext, { id: 'service-archived', priceCents: 5500 })).rejects.toEqual(
-      new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Archived services cannot be changed.'),
+    await expect(
+      service.update(managerContext, { id: 'service-archived', priceCents: 5500 }),
+    ).rejects.toEqual(
+      new CoreOperationsApplicationError(
+        'CORE_VALIDATION_ERROR',
+        'Archived services cannot be changed.',
+      ),
     );
   });
 
@@ -215,10 +255,18 @@ describe('ServiceApplicationService', () => {
       durationMinutes: 45,
     });
     await expect(
-      service.assignProfessional(managerContext, { serviceId: 'service-1', professionalId: 'professional-1', priceCents: -1 }),
+      service.assignProfessional(managerContext, {
+        serviceId: 'service-1',
+        professionalId: 'professional-1',
+        priceCents: -1,
+      }),
     ).rejects.toMatchObject({ code: 'CORE_VALIDATION_ERROR' });
     await expect(
-      service.assignProfessional(managerContext, { serviceId: 'service-1', professionalId: 'professional-1', durationMinutes: 4 }),
+      service.assignProfessional(managerContext, {
+        serviceId: 'service-1',
+        professionalId: 'professional-1',
+        durationMinutes: 4,
+      }),
     ).rejects.toMatchObject({ code: 'CORE_VALIDATION_ERROR' });
   });
 });

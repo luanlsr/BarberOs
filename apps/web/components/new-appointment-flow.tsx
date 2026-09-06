@@ -226,7 +226,13 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             <span>Horario</span>
             <select value={timeLabel} onChange={(event) => setTimeLabel(event.target.value)}>
               {model.timeOptions.map((time) => {
-                const occupied = findConflict(model, occupiedSlots, professionalId, dateIso, time.value);
+                const occupied = findConflict(
+                  model,
+                  occupiedSlots,
+                  professionalId,
+                  dateIso,
+                  time.value,
+                );
                 return (
                   <option key={time.value} value={time.value}>
                     {time.label}
@@ -252,7 +258,8 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             {submitState.createdSlot ? (
               <Button
                 onClick={() => {
-                  if (submitState.createdSlot) handleCancelCreatedAppointment(submitState.createdSlot);
+                  if (submitState.createdSlot)
+                    handleCancelCreatedAppointment(submitState.createdSlot);
                 }}
                 type="button"
                 variant="secondary"

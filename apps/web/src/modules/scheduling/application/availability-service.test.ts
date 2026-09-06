@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Appointment, ProfessionalSchedule, RequestContext, ScheduleBlock, Service } from '@barberos/contracts';
+import type {
+  Appointment,
+  ProfessionalSchedule,
+  RequestContext,
+  ScheduleBlock,
+  Service,
+} from '@barberos/contracts';
 
 import type {
   ScheduleRepository,
@@ -59,7 +65,15 @@ const appointment: Appointment = {
   endsAt: '2026-09-07T13:00:00.000Z',
   status: 'CONFIRMED',
   source: 'MANUAL',
-  services: [{ sequence: 1, serviceId: 'service-1', serviceName: 'Corte Masculino', durationMinutes: 30, priceCents: 5000 }],
+  services: [
+    {
+      sequence: 1,
+      serviceId: 'service-1',
+      serviceName: 'Corte Masculino',
+      durationMinutes: 30,
+      priceCents: 5000,
+    },
+  ],
 };
 
 class FakeScheduleRepository implements ScheduleRepository {

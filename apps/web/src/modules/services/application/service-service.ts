@@ -11,7 +11,11 @@ import {
 import { authorize } from '@barberos/permissions';
 
 import { CoreOperationsApplicationError } from '../../shared/application/errors';
-import type { AssignServiceProfessionalCommand, ServiceListFilters, ServiceRepository } from '../domain';
+import type {
+  AssignServiceProfessionalCommand,
+  ServiceListFilters,
+  ServiceRepository,
+} from '../domain';
 
 const coreOperationsEntitlement = 'core.operations' satisfies Entitlement;
 
@@ -72,22 +76,39 @@ function authorizeServiceAccess(context: RequestContext, permission: Permission)
 
 function assertServiceIsMutable(status: string) {
   if (status === 'ARCHIVED') {
-    throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Archived services cannot be changed.');
+    throw new CoreOperationsApplicationError(
+      'CORE_VALIDATION_ERROR',
+      'Archived services cannot be changed.',
+    );
   }
 }
 
 function assertValidServiceProfessionalAssignment(command: AssignServiceProfessionalCommand) {
   if (!command.serviceId.trim() || !command.professionalId.trim()) {
-    throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Service and professional are required.');
+    throw new CoreOperationsApplicationError(
+      'CORE_VALIDATION_ERROR',
+      'Service and professional are required.',
+    );
   }
-  if (command.priceCents !== undefined && (!Number.isInteger(command.priceCents) || command.priceCents < 0)) {
-    throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Price must be zero or greater.');
+  if (
+    command.priceCents !== undefined &&
+    (!Number.isInteger(command.priceCents) || command.priceCents < 0)
+  ) {
+    throw new CoreOperationsApplicationError(
+      'CORE_VALIDATION_ERROR',
+      'Price must be zero or greater.',
+    );
   }
   if (
     command.durationMinutes !== undefined &&
-    (!Number.isInteger(command.durationMinutes) || command.durationMinutes < 5 || command.durationMinutes > 720)
+    (!Number.isInteger(command.durationMinutes) ||
+      command.durationMinutes < 5 ||
+      command.durationMinutes > 720)
   ) {
-    throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Duration must be between 5 and 720 minutes.');
+    throw new CoreOperationsApplicationError(
+      'CORE_VALIDATION_ERROR',
+      'Duration must be between 5 and 720 minutes.',
+    );
   }
 }
 

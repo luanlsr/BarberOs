@@ -3,7 +3,11 @@ import { ProfessionalApplicationService } from '../../../../src/modules/professi
 import { SupabaseProfessionalRepository } from '../../../../src/modules/professionals/infrastructure/supabase-professional-repository';
 import { createProfessionalRouteHandlers } from '../../../../src/modules/professionals/presentation/professional-route-handlers';
 import { createSupabaseServerClient, getRequestContext } from '../../../../lib/auth/server';
-import type { CreateProfessionalCommand, RequestContext, UpdateProfessionalCommand } from '@barberos/contracts';
+import type {
+  CreateProfessionalCommand,
+  RequestContext,
+  UpdateProfessionalCommand,
+} from '@barberos/contracts';
 
 const handlers = createProfessionalRouteHandlers({
   resolveContext(request) {
@@ -38,7 +42,9 @@ export const DELETE = handlers.DELETE;
 async function getProfessionalService() {
   const client = await createSupabaseServerClient();
   if (!client) {
-    throw Object.assign(new Error('Persistence is not configured.'), { code: 'PERSISTENCE_NOT_CONFIGURED' });
+    throw Object.assign(new Error('Persistence is not configured.'), {
+      code: 'PERSISTENCE_NOT_CONFIGURED',
+    });
   }
   return new ProfessionalApplicationService(new SupabaseProfessionalRepository(client));
 }

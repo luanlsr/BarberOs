@@ -42,4 +42,4 @@
 - [x] 6.1 Add tenant isolation tests for professionals, services, customers, schedules and appointments; verify Tenant B cannot read or write Tenant A data.
 - [x] 6.2 Add appointment concurrency/conflict test that attempts overlapping creates for the same professional; verify only one appointment is persisted.
 - [x] 6.3 Add E2E flow for login -> agenda -> create operational prerequisites -> create appointment -> cancel appointment -> slot available; verify Playwright passes with one worker.
-- [ ] 6.4 Run `npm run validate`, `npm run validate:foundation`, migration validation and `openspec validate core-operations-scheduling`; verify all checks pass before marking tasks complete.
+- [x] 6.4 Run `npm run validate`, `npm run validate:foundation`, migration validation and `openspec validate core-operations-scheduling`; verify all checks pass before marking tasks complete.

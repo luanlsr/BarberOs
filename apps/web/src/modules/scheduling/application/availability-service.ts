@@ -30,7 +30,10 @@ export class AvailabilityApplicationService {
     private readonly services: SchedulingServiceLookup,
   ) {}
 
-  async findAvailableSlots(context: RequestContext, query: AvailabilityQuery): Promise<AvailabilitySlot[]> {
+  async findAvailableSlots(
+    context: RequestContext,
+    query: AvailabilityQuery,
+  ): Promise<AvailabilitySlot[]> {
     const parsed = availabilityQuerySchema.parse(query);
     authorizeAvailabilityAccess(context, 'schedules.read', parsed.branchId);
 
@@ -92,7 +95,13 @@ export class AvailabilityApplicationService {
           } satisfies AvailabilitySlot;
 
           if (
-            breakWindow && rangesOverlap(slot.startsAt, slot.endsAt, breakWindow.startsAt.toISOString(), breakWindow.endsAt.toISOString())
+            breakWindow &&
+            rangesOverlap(
+              slot.startsAt,
+              slot.endsAt,
+              breakWindow.startsAt.toISOString(),
+              breakWindow.endsAt.toISOString(),
+            )
           ) {
             continue;
           }
@@ -108,12 +117,19 @@ export class AvailabilityApplicationService {
   }
 }
 
-function authorizeAvailabilityAccess(context: RequestContext, permission: Permission, branchId: string) {
+function authorizeAvailabilityAccess(
+  context: RequestContext,
+  permission: Permission,
+  branchId: string,
+) {
   authorize(context, { permission, entitlement: coreOperationsEntitlement, branchId });
 }
 
 function isServiceEnabledForProfessional(service: Service, professionalId: string) {
-  return service.enabledProfessionalIds.length === 0 || service.enabledProfessionalIds.includes(professionalId);
+  return (
+    service.enabledProfessionalIds.length === 0 ||
+    service.enabledProfessionalIds.includes(professionalId)
+  );
 }
 
 function overlapsScheduleBlock(slot: AvailabilitySlot, blocks: readonly ScheduleBlock[]) {
@@ -131,13 +147,17 @@ function overlapsActiveAppointment(slot: AvailabilitySlot, appointments: readonl
     (appointment) =>
       appointment.branchId === slot.branchId &&
       appointment.professionalId === slot.professionalId &&
-      activeAppointmentStatuses.includes(appointment.status as (typeof activeAppointmentStatuses)[number]) &&
+      activeAppointmentStatuses.includes(
+        appointment.status as (typeof activeAppointmentStatuses)[number],
+      ) &&
       rangesOverlap(slot.startsAt, slot.endsAt, appointment.startsAt, appointment.endsAt),
   );
 }
 
 function rangesOverlap(leftStart: string, leftEnd: string, rightStart: string, rightEnd: string) {
-  return Date.parse(leftStart) < Date.parse(rightEnd) && Date.parse(rightStart) < Date.parse(leftEnd);
+  return (
+    Date.parse(leftStart) < Date.parse(rightEnd) && Date.parse(rightStart) < Date.parse(leftEnd)
+  );
 }
 
 function buildAvailabilityWindow(startsOn: string, endsOn: string, timezone: string) {
@@ -165,7 +185,9 @@ function weekdayForDate(date: string) {
 
 function zonedDateTimeToUtc(date: string, localTime: string, timezone: string) {
   const [hours, minutes] = localTime.split(':').map(Number);
-  const approximateUtc = new Date(`${date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`);
+  const approximateUtc = new Date(
+    `${date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`,
+  );
   const offsetMinutes = getTimeZoneOffsetMinutes(approximateUtc, timezone);
   return new Date(approximateUtc.getTime() - offsetMinutes * 60_000);
 }

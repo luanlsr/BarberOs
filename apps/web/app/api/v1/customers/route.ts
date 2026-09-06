@@ -1,4 +1,8 @@
-import type { CreateCustomerCommand, RequestContext, UpdateCustomerCommand } from '@barberos/contracts';
+import type {
+  CreateCustomerCommand,
+  RequestContext,
+  UpdateCustomerCommand,
+} from '@barberos/contracts';
 import { createSupabaseServerClient, getRequestContext } from '../../../../lib/auth/server';
 import { CustomerApplicationService } from '../../../../src/modules/customers/application/customer-service';
 import type { CustomerListFilters } from '../../../../src/modules/customers/domain';
@@ -38,7 +42,9 @@ export const DELETE = handlers.DELETE;
 async function getCustomerApplicationService() {
   const client = await createSupabaseServerClient();
   if (!client) {
-    throw Object.assign(new Error('Persistence is not configured.'), { code: 'PERSISTENCE_NOT_CONFIGURED' });
+    throw Object.assign(new Error('Persistence is not configured.'), {
+      code: 'PERSISTENCE_NOT_CONFIGURED',
+    });
   }
   return new CustomerApplicationService(new SupabaseCustomerRepository(client));
 }

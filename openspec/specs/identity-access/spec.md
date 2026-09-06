@@ -1,6 +1,7 @@
 # identity-access Specification
 
 ## Purpose
+
 Garantir que cada operacao do BarberOS seja executada por um usuario autenticado, dentro de um tenant e de filiais autorizadas, com permissoes verificadas no servidor e trilha de auditoria para eventos sensiveis.
 
 ## Requirements

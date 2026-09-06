@@ -27,7 +27,8 @@ export function createServiceRouteHandlers(dependencies: ServiceRouteDependencie
     GET: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
@@ -47,7 +48,8 @@ export function createServiceRouteHandlers(dependencies: ServiceRouteDependencie
     POST: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as CreateServiceCommand;
@@ -61,7 +63,8 @@ export function createServiceRouteHandlers(dependencies: ServiceRouteDependencie
     PATCH: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const command = (await request.json()) as UpdateServiceCommand;
@@ -75,13 +78,20 @@ export function createServiceRouteHandlers(dependencies: ServiceRouteDependencie
     DELETE: async (request: Request) => {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       const context = await dependencies.resolveContext(request);
-      if (!context) return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
+      if (!context)
+        return jsonError('UNAUTHENTICATED', 'Authentication is required.', 401, requestId);
 
       try {
         const url = new URL(request.url);
-        const body = await request.json().catch(() => null) as { id?: string } | null;
+        const body = (await request.json().catch(() => null)) as { id?: string } | null;
         const serviceId = body?.id ?? optionalParam(url, 'id');
-        if (!serviceId) return jsonError('CORE_VALIDATION_ERROR', 'Service id is required.', 400, context.requestId);
+        if (!serviceId)
+          return jsonError(
+            'CORE_VALIDATION_ERROR',
+            'Service id is required.',
+            400,
+            context.requestId,
+          );
         const service = await dependencies.service.archive(context, serviceId);
         return NextResponse.json({ data: service, requestId: context.requestId });
       } catch (error) {
@@ -96,5 +106,7 @@ function optionalParam(url: URL, key: string) {
 }
 
 function compactFilters(filters: ServiceListFilters) {
-  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined)) as ServiceListFilters;
+  return Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== undefined),
+  ) as ServiceListFilters;
 }

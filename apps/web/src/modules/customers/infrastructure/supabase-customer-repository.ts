@@ -47,7 +47,10 @@ export class SupabaseCustomerRepository implements CustomerRepository {
   constructor(private readonly client: SupabaseClient) {}
 
   async search(context: RequestContext, filters: CustomerListFilters = {}) {
-    let query = this.client.from('customers').select(customerSelect).eq('tenant_id', context.tenantId);
+    let query = this.client
+      .from('customers')
+      .select(customerSelect)
+      .eq('tenant_id', context.tenantId);
 
     if (filters.status) {
       query = query.eq('status', filters.status);
@@ -56,7 +59,8 @@ export class SupabaseCustomerRepository implements CustomerRepository {
     }
     if (filters.branchId) query = query.eq('branch_id', filters.branchId);
     if (filters.phone) query = query.ilike('phone', `%${filters.phone}%`);
-    if (filters.query) query = query.or(`name.ilike.%${filters.query}%,phone.ilike.%${filters.query}%`);
+    if (filters.query)
+      query = query.or(`name.ilike.%${filters.query}%,phone.ilike.%${filters.query}%`);
 
     const { data, error } = await query.order('name', { ascending: true });
     if (error) throw error;
@@ -114,7 +118,8 @@ export class SupabaseCustomerRepository implements CustomerRepository {
     if (changes.birthDate !== undefined) payload.birth_date = changes.birthDate;
     if (changes.notes !== undefined) payload.notes = changes.notes;
     if (changes.source !== undefined) payload.source = changes.source;
-    if (changes.preferredProfessionalId !== undefined) payload.preferred_professional_id = changes.preferredProfessionalId;
+    if (changes.preferredProfessionalId !== undefined)
+      payload.preferred_professional_id = changes.preferredProfessionalId;
     if (changes.status !== undefined) payload.status = changes.status;
     if (consents?.whatsapp !== undefined) payload.consent_whatsapp = consents.whatsapp;
     if (consents?.marketing !== undefined) payload.consent_marketing = consents.marketing;
@@ -134,7 +139,11 @@ export class SupabaseCustomerRepository implements CustomerRepository {
   async archive(context: RequestContext, customerId: string) {
     const { data, error } = await this.client
       .from('customers')
-      .update({ status: 'ARCHIVED', archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        status: 'ARCHIVED',
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('tenant_id', context.tenantId)
       .eq('id', customerId)
       .select(customerSelect)

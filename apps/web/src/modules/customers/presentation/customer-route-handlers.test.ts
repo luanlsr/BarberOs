@@ -43,14 +43,20 @@ describe('customer route handlers', () => {
       update: vi.fn(async () => ({ ...customer, name: 'Joao Atualizado' })),
       archive: vi.fn(async () => ({ ...customer, status: 'ARCHIVED' as const })),
     };
-    handlers = createCustomerRouteHandlers({ resolveContext: vi.fn(async () => context), service: customers });
+    handlers = createCustomerRouteHandlers({
+      resolveContext: vi.fn(async () => context),
+      service: customers,
+    });
   });
 
   it('searches customers with branch, text and phone filters', async () => {
     const response = await handlers.GET(
-      new Request('https://barberos.local/api/v1/customers?branchId=branch-1&search=Joao&phone=9999', {
-        headers: { 'x-request-id': 'request-1' },
-      }),
+      new Request(
+        'https://barberos.local/api/v1/customers?branchId=branch-1&search=Joao&phone=9999',
+        {
+          headers: { 'x-request-id': 'request-1' },
+        },
+      ),
     );
 
     expect(response.status).toBe(200);
@@ -90,12 +96,17 @@ describe('customer route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...customer, name: 'Joao Atualizado' }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...customer, name: 'Joao Atualizado' },
+      requestId: 'request-1',
+    });
     expect(customers.update).toHaveBeenCalledWith(context, body);
   });
 
   it('maps cross-tenant write denial to not found without leaking identifiers', async () => {
-    customers.update.mockRejectedValueOnce(new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Customer was not found.'));
+    customers.update.mockRejectedValueOnce(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Customer was not found.'),
+    );
 
     const response = await handlers.PATCH(
       new Request('https://barberos.local/api/v1/customers', {
@@ -124,7 +135,10 @@ describe('customer route handlers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: { ...customer, status: 'ARCHIVED' as const }, requestId: 'request-1' });
+    expect(await response.json()).toEqual({
+      data: { ...customer, status: 'ARCHIVED' as const },
+      requestId: 'request-1',
+    });
     expect(customers.archive).toHaveBeenCalledWith(context, 'customer-1');
   });
 });

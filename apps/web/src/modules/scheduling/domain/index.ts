@@ -34,17 +34,26 @@ export type ScheduleWindowQuery = {
 };
 
 export interface ScheduleRepository {
-  listProfessionalSchedules(context: RequestContext, branchId: string): Promise<ProfessionalSchedule[]>;
+  listProfessionalSchedules(
+    context: RequestContext,
+    branchId: string,
+  ): Promise<ProfessionalSchedule[]>;
   upsertProfessionalSchedule(
     context: RequestContext,
     command: CreateProfessionalScheduleCommand,
   ): Promise<ProfessionalSchedule>;
   listScheduleBlocks(context: RequestContext, branchId: string): Promise<ScheduleBlock[]>;
-  createScheduleBlock(context: RequestContext, command: CreateScheduleBlockCommand): Promise<ScheduleBlock>;
+  createScheduleBlock(
+    context: RequestContext,
+    command: CreateScheduleBlockCommand,
+  ): Promise<ScheduleBlock>;
 }
 
 export interface SchedulingAppointmentLookup {
-  listActiveAppointmentsForWindow(context: RequestContext, query: ScheduleWindowQuery): Promise<Appointment[]>;
+  listActiveAppointmentsForWindow(
+    context: RequestContext,
+    query: ScheduleWindowQuery,
+  ): Promise<Appointment[]>;
 }
 
 export interface SchedulingBranchLookup {
@@ -60,7 +69,10 @@ export interface SchedulingCustomerLookup {
 }
 
 export interface SchedulingProfessionalLookup {
-  findProfessionalById(context: RequestContext, professionalId: string): Promise<Professional | null>;
+  findProfessionalById(
+    context: RequestContext,
+    professionalId: string,
+  ): Promise<Professional | null>;
 }
 
 export type CreateAppointmentRecordCommand = Omit<CreateAppointmentCommand, 'services'> & {
@@ -88,12 +100,24 @@ export interface AppointmentRepository {
   list(context: RequestContext, query: AvailabilityQuery): Promise<Appointment[]>;
   findById(context: RequestContext, appointmentId: string): Promise<Appointment | null>;
   create(context: RequestContext, command: CreateAppointmentRecordCommand): Promise<Appointment>;
-  reschedule(context: RequestContext, command: RescheduleAppointmentRecordCommand): Promise<Appointment>;
-  updateStatus(context: RequestContext, command: UpdateAppointmentStatusRecordCommand): Promise<Appointment>;
+  reschedule(
+    context: RequestContext,
+    command: RescheduleAppointmentRecordCommand,
+  ): Promise<Appointment>;
+  updateStatus(
+    context: RequestContext,
+    command: UpdateAppointmentStatusRecordCommand,
+  ): Promise<Appointment>;
   cancel(context: RequestContext, command: CancelAppointmentRecordCommand): Promise<Appointment>;
-  listStatusHistory(context: RequestContext, appointmentId: string): Promise<AppointmentStatusHistory[]>;
+  listStatusHistory(
+    context: RequestContext,
+    appointmentId: string,
+  ): Promise<AppointmentStatusHistory[]>;
 }
 
 export interface AvailabilityRepository {
-  findAvailableSlots(context: RequestContext, query: AvailabilityQuery): Promise<AvailabilitySlot[]>;
+  findAvailableSlots(
+    context: RequestContext,
+    query: AvailabilityQuery,
+  ): Promise<AvailabilitySlot[]>;
 }
