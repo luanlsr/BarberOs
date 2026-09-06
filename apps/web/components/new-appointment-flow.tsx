@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { AlertTriangle, CalendarPlus, CheckCircle2, UserPlus } from 'lucide-react';
 import { Button } from '@barberos/ui';
-import type { AgendaNewAppointmentModel } from '../lib/agenda-data';
+import type { AgendaNewAppointmentModel, AgendaOccupiedSlot } from '../lib/agenda-data';
 
 type CustomerMode = 'existing' | 'quick';
 type SubmitState =
   | { type: 'idle' }
-  | { type: 'success'; message: string }
+  | { type: 'success'; message: string; createdSlot?: AgendaOccupiedSlot }
   | { type: 'error'; code: string; message: string; requestId: string };
 
 export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppointmentModel }>) {
@@ -20,16 +20,21 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
   const [professionalId, setProfessionalId] = React.useState(model.defaultProfessionalId);
   const [dateIso, setDateIso] = React.useState(model.dateIso);
   const [timeLabel, setTimeLabel] = React.useState('12:00');
+  const [createdSlots, setCreatedSlots] = React.useState<AgendaOccupiedSlot[]>([]);
   const [submitState, setSubmitState] = React.useState<SubmitState>({ type: 'idle' });
-
-  if (!model.isOpen) return null;
 
   const selectedCustomer = model.customers.find((customer) => customer.id === customerId);
   const selectedService = model.services.find((service) => service.id === serviceId);
   const selectedProfessional = model.professionals.find(
     (professional) => professional.id === professionalId,
   );
-  const conflict = findConflict(model, professionalId, dateIso, timeLabel);
+  const occupiedSlots = React.useMemo(
+    () => [...model.occupiedSlots, ...createdSlots],
+    [model.occupiedSlots, createdSlots],
+  );
+  const conflict = findConflict(model, occupiedSlots, professionalId, dateIso, timeLabel);
+
+  if (!model.isOpen) return null;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,9 +91,31 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
 
     const customerName =
       customerMode === 'quick' ? quickCustomerName.trim() : selectedCustomer?.name;
+    const createdSlot = {
+      professionalId,
+      timeLabel,
+      customerName: customerName ?? 'cliente',
+    };
+    setCreatedSlots((current) => [...current, createdSlot]);
     setSubmitState({
       type: 'success',
       message: `Agendamento criado para ${customerName ?? 'cliente'} com ${selectedProfessional.name} as ${timeLabel}.`,
+      createdSlot,
+    });
+  }
+
+  function handleCancelCreatedAppointment(slot: AgendaOccupiedSlot) {
+    setCreatedSlots((current) =>
+      current.filter(
+        (item) =>
+          item.professionalId !== slot.professionalId ||
+          item.timeLabel !== slot.timeLabel ||
+          item.customerName !== slot.customerName,
+      ),
+    );
+    setSubmitState({
+      type: 'success',
+      message: `Agendamento cancelado. Horario ${slot.timeLabel} liberado.`,
     });
   }
 
@@ -199,7 +226,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             <span>Horario</span>
             <select value={timeLabel} onChange={(event) => setTimeLabel(event.target.value)}>
               {model.timeOptions.map((time) => {
-                const occupied = findConflict(model, professionalId, dateIso, time.value);
+                const occupied = findConflict(model, occupiedSlots, professionalId, dateIso, time.value);
                 return (
                   <option key={time.value} value={time.value}>
                     {time.label}
@@ -222,6 +249,17 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
           <div className="new-appointment-feedback success" role="status">
             <CheckCircle2 size={16} aria-hidden="true" />
             <span>{submitState.message}</span>
+            {submitState.createdSlot ? (
+              <Button
+                onClick={() => {
+                  if (submitState.createdSlot) handleCancelCreatedAppointment(submitState.createdSlot);
+                }}
+                type="button"
+                variant="secondary"
+              >
+                Cancelar agendamento
+              </Button>
+            ) : null}
           </div>
         ) : null}
 
@@ -250,12 +288,13 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
 
 function findConflict(
   model: AgendaNewAppointmentModel,
+  occupiedSlots: readonly AgendaOccupiedSlot[],
   professionalId: string,
   dateIso: string,
   timeLabel: string,
 ) {
   if (dateIso !== model.dateIso) return undefined;
-  return model.occupiedSlots.find(
+  return occupiedSlots.find(
     (slot) => slot.professionalId === professionalId && slot.timeLabel === timeLabel,
   );
 }

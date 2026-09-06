@@ -1887,12 +1887,23 @@ button.mobile-add-button:disabled {
 .new-appointment-feedback {
   display: flex;
   min-height: 44px;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   font-size: 13px;
+}
+
+.new-appointment-feedback > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.new-appointment-feedback .button {
+  min-height: 36px;
+  padding: 6px 10px;
 }
 
 .new-appointment-feedback.success {
