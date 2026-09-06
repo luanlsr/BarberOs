@@ -1,19 +1,41 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Permission } from '@barberos/contracts';
+import { OperationsDirectoryView } from '../../components/operations-directory-view';
 import { getSessionContext } from '../../lib/auth/server';
+import {
+  getOperationsDirectoryModel,
+  isOperationsDirectoryArea,
+} from '../../lib/operations-directory-data';
 
 const areas: Record<string, { label: string; permission: Permission }> = {
-  agenda: { label: 'Agenda', permission: 'appointments.read' },
-  clientes: { label: 'Clientes', permission: 'customers.read' },
   financeiro: { label: 'Financeiro', permission: 'finance.read' },
   configuracoes: { label: 'Mais', permission: 'settings.read' },
 };
 
-export default async function AreaPage({ params }: { params: Promise<{ area: string }> }) {
+type AreaPageParams = Promise<{ area: string }>;
+type AreaSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function AreaPage({
+  params,
+  searchParams,
+}: {
+  params: AreaPageParams;
+  searchParams: AreaSearchParams;
+}) {
   const { area } = await params;
   const session = await getSessionContext();
   if (!session) redirect('/login');
+
+  if (isOperationsDirectoryArea(area)) {
+    const query = await searchParams;
+    const model = getOperationsDirectoryModel(session, area, {
+      mode: singleValue(query.mode),
+      state: singleValue(query.state),
+    });
+    return <OperationsDirectoryView model={model} />;
+  }
+
   const target = areas[area] ?? { label: 'Area', permission: 'dashboard.read' as Permission };
   if (!session.permissions.includes(target.permission)) redirect('/forbidden');
   return (
@@ -31,4 +53,8 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
       </div>
     </div>
   );
+}
+
+function singleValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
