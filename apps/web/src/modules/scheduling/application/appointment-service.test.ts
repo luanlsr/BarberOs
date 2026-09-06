@@ -201,6 +201,44 @@ class FakeAppointmentRepository implements AppointmentRepository {
   }
 }
 
+class ConflictAwareAppointmentRepository extends FakeAppointmentRepository {
+  private createdSequence = 0;
+
+  async create(context: RequestContext, command: CreateAppointmentRecordCommand) {
+    this.lastCreate = command;
+    const hasOverlap = [...this.appointments.values()].some(
+      (candidate) =>
+        candidate.tenantId === context.tenantId &&
+        candidate.branchId === command.branchId &&
+        candidate.professionalId === command.professionalId &&
+        ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_SERVICE'].includes(candidate.status) &&
+        Date.parse(candidate.startsAt) < Date.parse(command.endsAt) &&
+        Date.parse(command.startsAt) < Date.parse(candidate.endsAt),
+    );
+
+    if (hasOverlap) {
+      throw { code: '23P01', constraint: 'appointments_no_active_overlap' };
+    }
+
+    this.createdSequence += 1;
+    const created: Appointment = {
+      id: `appointment-concurrent-${this.createdSequence}`,
+      tenantId: context.tenantId,
+      branchId: command.branchId,
+      customerId: command.customerId,
+      professionalId: command.professionalId,
+      startsAt: command.startsAt,
+      endsAt: command.endsAt,
+      status: command.status ?? 'CONFIRMED',
+      source: command.source ?? 'MANUAL',
+      notes: command.notes,
+      services: command.services,
+    };
+    this.appointments.set(created.id, created);
+    return created;
+  }
+}
+
 class FakeAppointmentLookup implements SchedulingAppointmentLookup {
   appointments: Appointment[] = [];
   lastQuery: ScheduleWindowQuery | null = null;
@@ -326,6 +364,33 @@ describe('AppointmentApplicationService', () => {
         services: [{ serviceId: 'service-1' }],
       }),
     ).rejects.toEqual(new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.'));
+  });
+
+  it('persists only one overlapping concurrent create for the same professional', async () => {
+    repository = new ConflictAwareAppointmentRepository();
+    service = new AppointmentApplicationService(repository, activeAppointments, customers, professionals, services);
+    const command = {
+      branchId: 'branch-1',
+      customerId: 'customer-1',
+      professionalId: 'professional-1',
+      startsAt: '2026-09-07T14:00:00.000Z',
+      services: [{ serviceId: 'service-1' }],
+    };
+
+    const results = await Promise.allSettled([
+      service.create(context, command),
+      service.create(context, command),
+    ]);
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    const persisted = [...repository.appointments.values()].filter(
+      (item) => item.tenantId === 'tenant-1' && item.professionalId === 'professional-1' && item.startsAt === command.startsAt,
+    );
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(rejected?.reason).toEqual(
+      new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Appointment overlaps an active appointment.'),
+    );
+    expect(persisted).toHaveLength(1);
   });
 
   it('reschedules appointments to available slots and preserves duration', async () => {
