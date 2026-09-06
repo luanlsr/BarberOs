@@ -34,6 +34,13 @@ const context: RequestContext = {
   branchScope: ['branch-1'],
 };
 
+const tenantBContext: RequestContext = {
+  ...context,
+  requestId: 'request-tenant-b',
+  tenantId: 'tenant-2',
+  membershipId: 'membership-tenant-b',
+};
+
 const professional: Professional = {
   id: 'professional-1',
   tenantId: 'tenant-1',
@@ -88,6 +95,14 @@ const appointment: Appointment = {
   services: [{ sequence: 1, serviceId: 'service-1', serviceName: 'Corte Masculino', durationMinutes: 30, priceCents: 5000 }],
 };
 
+const otherTenantAppointment: Appointment = {
+  ...appointment,
+  id: 'appointment-tenant-b',
+  tenantId: 'tenant-2',
+  customerId: 'customer-tenant-b',
+  professionalId: 'professional-tenant-b',
+};
+
 const otherAppointment: Appointment = {
   ...appointment,
   id: 'appointment-2',
@@ -96,7 +111,10 @@ const otherAppointment: Appointment = {
 };
 
 class FakeAppointmentRepository implements AppointmentRepository {
-  appointments = new Map<string, Appointment>([[appointment.id, appointment]]);
+  appointments = new Map<string, Appointment>([
+    [appointment.id, appointment],
+    [otherTenantAppointment.id, otherTenantAppointment],
+  ]);
   history: AppointmentStatusHistory[] = [];
   lastCreate: CreateAppointmentRecordCommand | null = null;
   lastReschedule: RescheduleAppointmentRecordCommand | null = null;
@@ -242,6 +260,28 @@ describe('AppointmentApplicationService', () => {
     professionals = new FakeProfessionalLookup();
     services = new FakeServiceLookup();
     service = new AppointmentApplicationService(repository, activeAppointments, customers, professionals, services);
+  });
+
+  it('isolates appointments by tenant for reads and writes', async () => {
+    const query = {
+      branchId: 'branch-1',
+      serviceId: 'service-1',
+      startsOn: '2026-09-07',
+      endsOn: '2026-09-07',
+    };
+
+    const tenantAResults = await service.list(context, query);
+    const tenantBResults = await service.list(tenantBContext, query);
+
+    expect(tenantAResults.map((item) => item.id)).toEqual(['appointment-1']);
+    expect(tenantBResults.map((item) => item.id)).toEqual(['appointment-tenant-b']);
+    await expect(service.get(tenantBContext, 'appointment-1')).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Appointment was not found.'),
+    );
+    await expect(service.cancel(tenantBContext, { id: 'appointment-1', reason: 'Tentativa externa' })).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Appointment was not found.'),
+    );
+    expect(repository.lastCancel).toBeNull();
   });
 
   it('creates confirmed appointments with service snapshots and calculated end time', async () => {

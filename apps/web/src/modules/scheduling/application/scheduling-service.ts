@@ -1,11 +1,14 @@
 import {
   createProfessionalScheduleCommandSchema,
   createScheduleBlockCommandSchema,
+  type Appointment,
   type CreateProfessionalScheduleCommand,
   type CreateScheduleBlockCommand,
   type Entitlement,
   type Permission,
+  type ProfessionalSchedule,
   type RequestContext,
+  type ScheduleBlock,
 } from '@barberos/contracts';
 import { authorize } from '@barberos/permissions';
 
@@ -24,7 +27,8 @@ export class SchedulingApplicationService {
 
   async listProfessionalSchedules(context: RequestContext, branchId: string) {
     authorizeScheduleAccess(context, 'schedules.read', branchId);
-    return this.schedules.listProfessionalSchedules(context, branchId);
+    const schedules = await this.schedules.listProfessionalSchedules(context, branchId);
+    return schedules.filter((schedule) => isScheduleVisibleToContext(context, schedule));
   }
 
   async upsertProfessionalSchedule(context: RequestContext, command: CreateProfessionalScheduleCommand) {
@@ -35,7 +39,8 @@ export class SchedulingApplicationService {
 
   async listScheduleBlocks(context: RequestContext, branchId: string) {
     authorizeScheduleAccess(context, 'schedules.read', branchId);
-    return this.schedules.listScheduleBlocks(context, branchId);
+    const blocks = await this.schedules.listScheduleBlocks(context, branchId);
+    return blocks.filter((block) => isScheduleBlockVisibleToContext(context, block));
   }
 
   async createScheduleBlock(context: RequestContext, command: CreateScheduleBlockCommand) {
@@ -48,7 +53,7 @@ export class SchedulingApplicationService {
   async isWindowBlocked(context: RequestContext, query: ScheduleWindowQuery) {
     authorizeScheduleAccess(context, 'schedules.read', query.branchId);
     const blocks = await this.schedules.listScheduleBlocks(context, query.branchId);
-    return blocks.some(
+    return blocks.filter((block) => isScheduleBlockVisibleToContext(context, block)).some(
       (block) =>
         block.active &&
         (!block.professionalId || !query.professionalId || block.professionalId === query.professionalId) &&
@@ -66,7 +71,7 @@ export class SchedulingApplicationService {
       endsAt: block.endsAt,
     });
 
-    if (conflicts.length) {
+    if (conflicts.some((appointment) => isAppointmentVisibleToContext(context, appointment))) {
       throw new CoreOperationsApplicationError('APPOINTMENT_CONFLICT', 'Schedule block overlaps an active appointment.');
     }
   }
@@ -78,4 +83,16 @@ function authorizeScheduleAccess(context: RequestContext, permission: Permission
 
 function rangesOverlap(leftStart: string, leftEnd: string, rightStart: string, rightEnd: string) {
   return Date.parse(leftStart) < Date.parse(rightEnd) && Date.parse(rightStart) < Date.parse(leftEnd);
+}
+
+function isScheduleVisibleToContext(context: RequestContext, schedule: ProfessionalSchedule) {
+  return schedule.tenantId === context.tenantId && context.branchScope.includes(schedule.branchId);
+}
+
+function isScheduleBlockVisibleToContext(context: RequestContext, block: ScheduleBlock) {
+  return block.tenantId === context.tenantId && context.branchScope.includes(block.branchId);
+}
+
+function isAppointmentVisibleToContext(context: RequestContext, appointment: Appointment) {
+  return appointment.tenantId === context.tenantId && context.branchScope.includes(appointment.branchId);
 }

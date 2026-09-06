@@ -5,6 +5,7 @@ import {
   type Entitlement,
   type Permission,
   type RequestContext,
+  type Service,
   type UpdateServiceCommand,
 } from '@barberos/contracts';
 import { authorize } from '@barberos/permissions';
@@ -21,7 +22,8 @@ export class ServiceApplicationService {
 
   async list(context: RequestContext, filters: ServiceListFilters = {}) {
     authorizeServiceAccess(context, 'services.read');
-    return this.services.list(context, filters);
+    const services = await this.services.list(context, filters);
+    return services.filter((service) => isServiceVisibleToContext(context, service));
   }
 
   async create(context: RequestContext, command: CreateServiceCommand) {
@@ -33,20 +35,14 @@ export class ServiceApplicationService {
   async update(context: RequestContext, command: UpdateServiceCommand) {
     authorizeServiceAccess(context, 'services.update');
     const parsed = updateServiceCommandSchema.parse(command);
-    const current = await this.services.findById(context, parsed.id);
-    if (!current) {
-      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.');
-    }
+    const current = await this.findVisibleService(context, parsed.id);
     assertServiceIsMutable(current.status);
     return this.services.update(context, parsed);
   }
 
   async archive(context: RequestContext, serviceId: string) {
     authorizeServiceAccess(context, 'services.update');
-    const current = await this.services.findById(context, serviceId);
-    if (!current) {
-      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.');
-    }
+    const current = await this.findVisibleService(context, serviceId);
     if (current.status === 'ARCHIVED') {
       return current;
     }
@@ -56,12 +52,17 @@ export class ServiceApplicationService {
   async assignProfessional(context: RequestContext, command: AssignServiceProfessionalCommand) {
     authorizeServiceAccess(context, 'services.update');
     assertValidServiceProfessionalAssignment(command);
-    const current = await this.services.findById(context, command.serviceId);
-    if (!current) {
-      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.');
-    }
+    const current = await this.findVisibleService(context, command.serviceId);
     assertServiceIsMutable(current.status);
     return this.services.assignProfessional(context, command);
+  }
+
+  private async findVisibleService(context: RequestContext, serviceId: string) {
+    const service = await this.services.findById(context, serviceId);
+    if (!service || !isServiceVisibleToContext(context, service)) {
+      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.');
+    }
+    return service;
   }
 }
 
@@ -88,4 +89,8 @@ function assertValidServiceProfessionalAssignment(command: AssignServiceProfessi
   ) {
     throw new CoreOperationsApplicationError('CORE_VALIDATION_ERROR', 'Duration must be between 5 and 720 minutes.');
   }
+}
+
+function isServiceVisibleToContext(context: RequestContext, service: Service) {
+  return service.tenantId === context.tenantId;
 }

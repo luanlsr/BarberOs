@@ -24,6 +24,13 @@ const archivedService: Service = {
   archivedAt: '2026-09-05T00:00:00.000Z',
 };
 
+const otherTenantService: Service = {
+  ...activeService,
+  id: 'service-tenant-b',
+  tenantId: 'tenant-2',
+  name: 'Corte de outro tenant',
+};
+
 const managerContext: RequestContext = {
   requestId: 'request-1',
   userId: 'user-1',
@@ -35,10 +42,18 @@ const managerContext: RequestContext = {
   branchScope: ['branch-1'],
 };
 
+const tenantBContext: RequestContext = {
+  ...managerContext,
+  requestId: 'request-tenant-b',
+  tenantId: 'tenant-2',
+  membershipId: 'membership-tenant-b',
+};
+
 class FakeServiceRepository implements ServiceRepository {
   readonly services = new Map<string, Service>([
     [activeService.id, activeService],
     [archivedService.id, archivedService],
+    [otherTenantService.id, otherTenantService],
   ]);
   createdCommand: CreateServiceCommand | null = null;
   updatedCommand: UpdateServiceCommand | null = null;
@@ -108,6 +123,26 @@ describe('ServiceApplicationService', () => {
 
     expect(services).toHaveLength(2);
     expect(repository.listedFilters).toEqual({ status: 'ACTIVE', query: 'corte' });
+  });
+
+  it('isolates services by tenant for reads and writes', async () => {
+    const tenantAResults = await service.list(managerContext);
+    const tenantBResults = await service.list(tenantBContext);
+
+    expect(tenantAResults.map((item) => item.id)).toEqual(['service-1', 'service-archived']);
+    expect(tenantBResults.map((item) => item.id)).toEqual(['service-tenant-b']);
+    await expect(service.update(tenantBContext, { id: 'service-1', priceCents: 7000 })).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.'),
+    );
+    expect(repository.updatedCommand).toBeNull();
+    await expect(service.archive(tenantBContext, 'service-1')).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.'),
+    );
+    expect(repository.archivedId).toBeNull();
+    await expect(
+      service.assignProfessional(tenantBContext, { serviceId: 'service-1', professionalId: 'professional-1' }),
+    ).rejects.toEqual(new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Service was not found.'));
+    expect(repository.assignedCommand).toBeNull();
   });
 
   it('creates services with parsed defaults when authorized', async () => {

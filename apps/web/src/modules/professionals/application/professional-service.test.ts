@@ -21,6 +21,13 @@ const baseProfessional: Professional = {
   status: 'ACTIVE',
 };
 
+const otherTenantProfessional: Professional = {
+  ...baseProfessional,
+  id: 'professional-tenant-b',
+  tenantId: 'tenant-2',
+  displayName: 'Profissional de outro tenant',
+};
+
 const ownerContext: RequestContext = {
   requestId: 'request-1',
   userId: 'user-1',
@@ -32,8 +39,18 @@ const ownerContext: RequestContext = {
   branchScope: ['branch-1'],
 };
 
+const tenantBContext: RequestContext = {
+  ...ownerContext,
+  requestId: 'request-tenant-b',
+  tenantId: 'tenant-2',
+  membershipId: 'membership-tenant-b',
+};
+
 class FakeProfessionalRepository implements ProfessionalRepository {
-  readonly professionals = new Map<string, Professional>([[baseProfessional.id, baseProfessional]]);
+  readonly professionals = new Map<string, Professional>([
+    [baseProfessional.id, baseProfessional],
+    [otherTenantProfessional.id, otherTenantProfessional],
+  ]);
   createdCommand: CreateProfessionalCommand | null = null;
   updatedCommand: UpdateProfessionalCommand | null = null;
   listedFilters: ProfessionalListFilters | null = null;
@@ -96,6 +113,22 @@ describe('ProfessionalApplicationService', () => {
 
     expect(professionals).toHaveLength(1);
     expect(repository.listedFilters).toEqual({ branchId: 'branch-1', status: 'ACTIVE' });
+  });
+
+  it('isolates professionals by tenant for reads and writes', async () => {
+    const tenantAResults = await service.list(ownerContext, { branchId: 'branch-1' });
+    const tenantBResults = await service.list(tenantBContext, { branchId: 'branch-1' });
+
+    expect(tenantAResults.map((professional) => professional.id)).toEqual(['professional-1']);
+    expect(tenantBResults.map((professional) => professional.id)).toEqual(['professional-tenant-b']);
+    await expect(service.update(tenantBContext, { id: 'professional-1', displayName: 'Tentativa externa' })).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Professional was not found.'),
+    );
+    expect(repository.updatedCommand).toBeNull();
+    await expect(service.archive(tenantBContext, 'professional-1')).rejects.toEqual(
+      new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Professional was not found.'),
+    );
+    expect(repository.archivedId).toBeNull();
   });
 
   it('creates professionals with validated defaults when authorized', async () => {

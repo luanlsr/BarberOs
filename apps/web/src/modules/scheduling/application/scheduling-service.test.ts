@@ -22,6 +22,13 @@ const managerContext: RequestContext = {
   branchScope: ['branch-1'],
 };
 
+const tenantBContext: RequestContext = {
+  ...managerContext,
+  requestId: 'request-tenant-b',
+  tenantId: 'tenant-2',
+  membershipId: 'membership-tenant-b',
+};
+
 const baseSchedule: ProfessionalSchedule = {
   id: 'schedule-1',
   tenantId: 'tenant-1',
@@ -35,6 +42,13 @@ const baseSchedule: ProfessionalSchedule = {
   active: true,
 };
 
+const otherTenantSchedule: ProfessionalSchedule = {
+  ...baseSchedule,
+  id: 'schedule-tenant-b',
+  tenantId: 'tenant-2',
+  professionalId: 'professional-tenant-b',
+};
+
 const lunchBlock: ScheduleBlock = {
   id: 'block-1',
   tenantId: 'tenant-1',
@@ -45,6 +59,15 @@ const lunchBlock: ScheduleBlock = {
   type: 'MANUAL',
   reason: 'Treinamento',
   active: true,
+};
+
+const otherTenantBlock: ScheduleBlock = {
+  ...lunchBlock,
+  id: 'block-tenant-b',
+  tenantId: 'tenant-2',
+  professionalId: 'professional-tenant-b',
+  startsAt: '2026-09-07T16:00:00.000Z',
+  endsAt: '2026-09-07T16:30:00.000Z',
 };
 
 const activeAppointment: Appointment = {
@@ -61,8 +84,8 @@ const activeAppointment: Appointment = {
 };
 
 class FakeScheduleRepository implements ScheduleRepository {
-  readonly schedules = [baseSchedule];
-  readonly blocks = [lunchBlock];
+  readonly schedules = [baseSchedule, otherTenantSchedule];
+  readonly blocks = [lunchBlock, otherTenantBlock];
   upsertedSchedule: CreateProfessionalScheduleCommand | null = null;
   createdBlock: CreateScheduleBlockCommand | null = null;
 
@@ -150,6 +173,29 @@ describe('SchedulingApplicationService', () => {
 
     expect(existing).toEqual([baseSchedule]);
     expect(upserted).toMatchObject({ active: true, startsAtLocal: '10:00', endsAtLocal: '19:00' });
+  });
+
+  it('isolates schedules and blocks by tenant for reads and write-side conflict checks', async () => {
+    const tenantASchedules = await service.listProfessionalSchedules(managerContext, 'branch-1');
+    const tenantBSchedules = await service.listProfessionalSchedules(tenantBContext, 'branch-1');
+    const tenantABlocks = await service.listScheduleBlocks(managerContext, 'branch-1');
+    const tenantBBlocks = await service.listScheduleBlocks(tenantBContext, 'branch-1');
+
+    expect(tenantASchedules.map((schedule) => schedule.id)).toEqual(['schedule-1']);
+    expect(tenantBSchedules.map((schedule) => schedule.id)).toEqual(['schedule-tenant-b']);
+    expect(tenantABlocks.map((block) => block.id)).toEqual(['block-1']);
+    expect(tenantBBlocks.map((block) => block.id)).toEqual(['block-tenant-b']);
+
+    appointments.appointments = [activeAppointment];
+    const created = await service.createScheduleBlock(tenantBContext, {
+      branchId: 'branch-1',
+      professionalId: 'professional-1',
+      startsAt: '2026-09-07T14:10:00.000Z',
+      endsAt: '2026-09-07T14:30:00.000Z',
+      type: 'MANUAL',
+    });
+
+    expect(created).toMatchObject({ id: 'block-created', tenantId: 'tenant-2', branchId: 'branch-1' });
   });
 
   it('rejects invalid schedule breaks through the contract schema', async () => {

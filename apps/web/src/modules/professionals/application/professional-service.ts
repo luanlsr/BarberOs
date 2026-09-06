@@ -4,6 +4,7 @@ import {
   type CreateProfessionalCommand,
   type Entitlement,
   type Permission,
+  type Professional,
   type RequestContext,
   type UpdateProfessionalCommand,
 } from '@barberos/contracts';
@@ -21,7 +22,8 @@ export class ProfessionalApplicationService {
 
   async list(context: RequestContext, filters: ProfessionalListFilters = {}) {
     authorizeProfessionalAccess(context, 'professionals.read', filters.branchId ? [filters.branchId] : []);
-    return this.professionals.list(context, filters);
+    const professionals = await this.professionals.list(context, filters);
+    return professionals.filter((professional) => isProfessionalVisibleToContext(context, professional));
   }
 
   async create(context: RequestContext, command: CreateProfessionalCommand) {
@@ -32,28 +34,25 @@ export class ProfessionalApplicationService {
 
   async update(context: RequestContext, command: UpdateProfessionalCommand) {
     const parsed = updateProfessionalCommandSchema.parse(command);
-    if (parsed.branchIds?.length) {
-      authorizeProfessionalAccess(context, 'professionals.update', parsed.branchIds);
-      return this.professionals.update(context, parsed);
-    }
+    const current = await this.findVisibleProfessional(context, parsed.id);
 
-    const current = await this.professionals.findById(context, parsed.id);
-    if (!current) {
-      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Professional was not found.');
-    }
-
-    authorizeProfessionalAccess(context, 'professionals.update', current.branchIds);
+    authorizeProfessionalAccess(context, 'professionals.update', parsed.branchIds?.length ? parsed.branchIds : current.branchIds);
     return this.professionals.update(context, parsed);
   }
 
   async archive(context: RequestContext, professionalId: string) {
-    const current = await this.professionals.findById(context, professionalId);
-    if (!current) {
-      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Professional was not found.');
-    }
+    const current = await this.findVisibleProfessional(context, professionalId);
 
     authorizeProfessionalAccess(context, 'professionals.update', current.branchIds);
     return this.professionals.archive(context, professionalId);
+  }
+
+  private async findVisibleProfessional(context: RequestContext, professionalId: string) {
+    const professional = await this.professionals.findById(context, professionalId);
+    if (!professional || !isProfessionalVisibleToContext(context, professional)) {
+      throw new CoreOperationsApplicationError('CORE_NOT_FOUND', 'Professional was not found.');
+    }
+    return professional;
   }
 }
 
@@ -66,4 +65,11 @@ function authorizeProfessionalAccess(context: RequestContext, permission: Permis
   for (const branchId of branchIds) {
     authorize(context, { permission, entitlement: coreOperationsEntitlement, branchId });
   }
+}
+
+function isProfessionalVisibleToContext(context: RequestContext, professional: Professional) {
+  return (
+    professional.tenantId === context.tenantId &&
+    professional.branchIds.some((branchId) => context.branchScope.includes(branchId))
+  );
 }

@@ -59,7 +59,8 @@ export class AppointmentApplicationService {
   async list(context: RequestContext, query: AvailabilityQuery) {
     const parsed = availabilityQuerySchema.parse(query);
     authorizeAppointmentAccess(context, 'appointments.read', parsed.branchId);
-    return this.appointments.list(context, parsed);
+    const appointments = await this.appointments.list(context, parsed);
+    return appointments.filter((appointment) => isAppointmentVisibleToContext(context, appointment));
   }
 
   async get(context: RequestContext, appointmentId: string) {
@@ -240,7 +241,8 @@ export class AppointmentApplicationService {
   ) {
     const conflicts = await this.activeAppointments.listActiveAppointmentsForWindow(context, query);
     const hasConflict = conflicts.some(
-      (appointment) => appointment.id !== query.excludeAppointmentId,
+      (appointment) =>
+        appointment.id !== query.excludeAppointmentId && isAppointmentVisibleToContext(context, appointment),
     );
     if (hasConflict) {
       throw new CoreOperationsApplicationError(
@@ -257,6 +259,10 @@ function authorizeAppointmentAccess(
   branchId: string,
 ) {
   authorize(context, { permission, entitlement: coreOperationsEntitlement, branchId });
+}
+
+function isAppointmentVisibleToContext(context: RequestContext, appointment: Appointment) {
+  return appointment.tenantId === context.tenantId && context.branchScope.includes(appointment.branchId);
 }
 
 function assertServiceCanBeScheduled(
