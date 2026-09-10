@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   MoreHorizontal,
   Plus,
+  ReceiptText,
   Scissors,
   SunMoon,
   UserPlus,
@@ -35,6 +36,7 @@ import { WorkspaceSwitcher } from './workspace-switcher';
 const icons = {
   layout: LayoutDashboard,
   calendar: CalendarDays,
+  receipt: ReceiptText,
   users: Users,
   team: UserRoundCog,
   scissors: Scissors,
@@ -44,7 +46,10 @@ const icons = {
 
 const actionIcons = {
   appointment: CalendarPlus,
+  cash: WalletCards,
   customer: UserPlus,
+  order: ReceiptText,
+  payment: WalletCards,
 };
 
 function NavLink({ item }: Readonly<{ item: NavigationItem }>) {

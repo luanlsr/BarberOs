@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CalendarClock, PhoneCall, Scissors, ShieldCheck, XCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { StatusBadge } from '@barberos/ui';
+import { CheckInActionButton } from './check-in-action-button';
 import type { AgendaAppointmentAction, AgendaAppointmentDetail } from '../lib/agenda-data';
 
 type AppointmentDetailSurfaceProps = Readonly<{
@@ -92,7 +93,7 @@ export function AppointmentDetailSurface({ detail }: AppointmentDetailSurfacePro
         {detail.actions.length ? (
           <div className="appointment-action-grid">
             {detail.actions.map((action) => (
-              <AppointmentActionLink action={action} key={action.id} />
+              <AppointmentActionControl action={action} key={action.id} />
             ))}
           </div>
         ) : (
@@ -123,9 +124,20 @@ export function AppointmentDetailSurface({ detail }: AppointmentDetailSurfacePro
   );
 }
 
-function AppointmentActionLink({ action }: Readonly<{ action: AgendaAppointmentAction }>) {
+function AppointmentActionControl({ action }: Readonly<{ action: AgendaAppointmentAction }>) {
   const Icon = actionIcons[action.id];
   const className = `appointment-action appointment-action-${action.variant}`;
+
+  if (action.id === 'check-in' && action.appointmentId && !action.disabledReason) {
+    return (
+      <CheckInActionButton
+        appointmentId={action.appointmentId}
+        className={className}
+        description={action.description}
+        label={action.label}
+      />
+    );
+  }
 
   if (!action.href || action.disabledReason) {
     return (

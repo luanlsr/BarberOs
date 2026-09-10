@@ -133,7 +133,7 @@ describe('professional route handlers', () => {
     expect(await response.json()).toEqual({
       error: {
         code: 'CORE_PERMISSION_DENIED',
-        message: 'Missing professionals.update permission.',
+        message: 'Permission denied.',
         requestId: 'request-1',
       },
     });

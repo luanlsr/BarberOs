@@ -54,8 +54,15 @@ export type AgendaNewAppointmentModel = {
   occupiedSlots: readonly AgendaOccupiedSlot[];
 };
 
+export type AgendaCheckInAction = {
+  appointmentId: string;
+  label: string;
+  description: string;
+};
+
 export type AgendaAppointment = {
   id: string;
+  branchId: string;
   customerName: string;
   customerPhone: string;
   professionalId: string;
@@ -73,6 +80,7 @@ export type AgendaAppointment = {
   totalLabel: string;
   totalCents: number;
   notes?: string;
+  checkInAction?: AgendaCheckInAction;
 };
 
 export type AgendaAppointmentAction = {
@@ -80,6 +88,7 @@ export type AgendaAppointmentAction = {
   label: string;
   description: string;
   permission: Permission;
+  appointmentId?: string;
   href?: string;
   disabledReason?: string;
   variant: 'primary' | 'secondary' | 'danger';
@@ -181,6 +190,7 @@ type AppointmentSeed = {
   status: AppointmentStatus;
   sourceLabel: string;
   notes?: string;
+  checkInAction?: AgendaCheckInAction;
 };
 
 const appointmentSeeds: AppointmentSeed[] = [
@@ -326,7 +336,8 @@ export function buildAgendaViewModel({
             selectedProfessionalId === 'all' ||
             appointment.professionalId === selectedProfessionalId,
         )
-        .map((appointment) => toAgendaAppointment(appointment, dateIso))
+        .map((appointment) => toAgendaAppointment(appointment, dateIso, branchId))
+        .map((appointment) => withCheckInAction(session, appointment))
         .sort((left, right) => left.startsAt.localeCompare(right.startsAt))
     : [];
   const professionalColumns = visibleProfessionals.map((professional) => ({
@@ -383,7 +394,11 @@ export function buildAgendaViewModel({
   };
 }
 
-function toAgendaAppointment(seed: AppointmentSeed, dateIso: string): AgendaAppointment {
+function toAgendaAppointment(
+  seed: AppointmentSeed,
+  dateIso: string,
+  branchId: string,
+): AgendaAppointment {
   const professional = professionals.find((item) => item.id === seed.professionalId);
   const selectedServices = seed.serviceIds.flatMap(
     (serviceId) => services.find((service) => service.id === serviceId) ?? [],
@@ -398,6 +413,7 @@ function toAgendaAppointment(seed: AppointmentSeed, dateIso: string): AgendaAppo
 
   return {
     id: seed.id,
+    branchId,
     customerName: seed.customerName,
     customerPhone: seed.customerPhone,
     professionalId: seed.professionalId,
@@ -471,21 +487,49 @@ function buildAppointmentHistory(
   return baseHistory;
 }
 
+const checkInEligibleStatuses: readonly AppointmentStatus[] = ['PENDING', 'CONFIRMED'];
+const checkInRequiredPermissions: readonly Permission[] = [
+  'appointments.check_in',
+  'orders.create',
+  'orders.read',
+];
+
+function withCheckInAction(
+  session: SessionContext,
+  appointment: AgendaAppointment,
+): AgendaAppointment {
+  const canCheckIn =
+    checkInEligibleStatuses.includes(appointment.status) &&
+    (session.entitlements ?? []).includes('core.operations') &&
+    session.branchScope.includes(appointment.branchId) &&
+    checkInRequiredPermissions.every((permission) => hasPermission(session, permission));
+
+  if (!canCheckIn) return appointment;
+
+  return {
+    ...appointment,
+    checkInAction: {
+      appointmentId: appointment.id,
+      label: 'Check-in',
+      description: 'Iniciar atendimento e abrir a Comanda.',
+    },
+  };
+}
+
 function buildAppointmentActions(
   session: SessionContext,
   appointment: AgendaAppointment,
 ): AgendaAppointmentAction[] {
   const actions: AgendaAppointmentAction[] = [];
   const isActive = !['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(appointment.status);
-  const canCheckIn = ['PENDING', 'CONFIRMED'].includes(appointment.status);
 
-  if (hasPermission(session, 'appointments.update') && canCheckIn) {
+  if (appointment.checkInAction) {
     actions.push({
       id: 'check-in',
-      label: 'Check-in',
-      description: 'Iniciar atendimento e abrir a futura Comanda.',
-      permission: 'appointments.update',
-      href: `/agenda?appointmentId=${appointment.id}&mode=check-in`,
+      label: appointment.checkInAction.label,
+      description: appointment.checkInAction.description,
+      permission: 'appointments.check_in',
+      appointmentId: appointment.id,
       variant: 'primary',
     });
   }

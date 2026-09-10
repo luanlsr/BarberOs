@@ -3,7 +3,7 @@ import type { Entitlement, Permission } from '@barberos/contracts';
 export type NavigationItem = {
   href: string;
   label: string;
-  icon: 'layout' | 'calendar' | 'users' | 'team' | 'scissors' | 'wallet' | 'more';
+  icon: 'layout' | 'calendar' | 'receipt' | 'users' | 'team' | 'scissors' | 'wallet' | 'more';
   permission: Permission;
   entitlement?: Entitlement;
   mobile?: boolean;
@@ -12,7 +12,7 @@ export type NavigationItem = {
 export type PrimaryActionItem = {
   href: string;
   label: string;
-  icon: 'appointment' | 'customer';
+  icon: 'appointment' | 'cash' | 'customer' | 'order' | 'payment';
   permission: Permission;
   entitlement?: Entitlement;
 };
@@ -24,6 +24,14 @@ export const navigationItems: NavigationItem[] = [
     label: 'Agenda',
     icon: 'calendar',
     permission: 'appointments.read',
+    entitlement: 'core.operations',
+    mobile: true,
+  },
+  {
+    href: '/comandas',
+    label: 'Comandas',
+    icon: 'receipt',
+    permission: 'orders.read',
     entitlement: 'core.operations',
     mobile: true,
   },
@@ -58,10 +66,25 @@ export const navigationItems: NavigationItem[] = [
     permission: 'finance.read',
     entitlement: 'finance',
   },
+  {
+    href: '/caixa',
+    label: 'Caixa',
+    icon: 'wallet',
+    permission: 'finance.read',
+    entitlement: 'finance',
+    mobile: true,
+  },
   { href: '/configuracoes', label: 'Mais', icon: 'more', permission: 'settings.read' },
 ];
 
 export const primaryActionItems: PrimaryActionItem[] = [
+  {
+    href: '/comandas?mode=walk-in#nova-comanda',
+    label: 'Comanda',
+    icon: 'order',
+    permission: 'orders.create',
+    entitlement: 'core.operations',
+  },
   {
     href: '/agenda?mode=new',
     label: 'Agendamento',
@@ -75,6 +98,13 @@ export const primaryActionItems: PrimaryActionItem[] = [
     icon: 'customer',
     permission: 'customers.create',
     entitlement: 'core.operations',
+  },
+  {
+    href: '/caixa?mode=open',
+    label: 'Abrir caixa',
+    icon: 'cash',
+    permission: 'cash.open',
+    entitlement: 'finance',
   },
 ];
 
@@ -92,6 +122,28 @@ export function filterPrimaryActions(
   entitlements: readonly Entitlement[] = [],
 ) {
   return items.filter((item) => canAccess(item, permissions, entitlements));
+}
+
+export function buildReceivePaymentAction(
+  orderId: string,
+  options: {
+    canReceivePayment: boolean;
+    permissions: readonly Permission[];
+    entitlements?: readonly Entitlement[];
+  },
+): PrimaryActionItem | null {
+  const action: PrimaryActionItem = {
+    href: '/comandas?orderId=' + encodeURIComponent(orderId) + '#receber-pagamento',
+    label: 'Receber',
+    icon: 'payment',
+    permission: 'payments.receive',
+    entitlement: 'core.operations',
+  };
+
+  return options.canReceivePayment &&
+    canAccess(action, options.permissions, options.entitlements ?? [])
+    ? action
+    : null;
 }
 
 function canAccess(

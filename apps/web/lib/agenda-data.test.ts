@@ -96,6 +96,43 @@ describe('agenda data loading layer', () => {
 
     expect(agendaOnlyModel.selectedAppointmentDetail?.actions).toEqual([]);
   });
+  test('only exposes check-in for eligible statuses and complete permissions', () => {
+    const checkedInModel = buildAgendaViewModel({
+      session: developmentSession,
+      appointmentId: 'dev-appointment-1130',
+    });
+
+    expect(checkedInModel.selectedAppointmentDetail?.appointment.status).toBe('CHECKED_IN');
+    expect(checkedInModel.selectedAppointmentDetail?.appointment.checkInAction).toBeUndefined();
+    expect(
+      checkedInModel.selectedAppointmentDetail?.actions.map((action) => action.id),
+    ).not.toContain('check-in');
+
+    const legacyUpdateOnlyModel = buildAgendaViewModel({
+      session: sessionWith({
+        permissions: ['appointments.read', 'appointments.update', 'orders.create', 'orders.read'],
+        entitlements: ['core.operations'],
+      }),
+      appointmentId: 'dev-appointment-1530',
+    });
+
+    expect(
+      legacyUpdateOnlyModel.selectedAppointmentDetail?.appointment.checkInAction,
+    ).toBeUndefined();
+    expect(
+      legacyUpdateOnlyModel.selectedAppointmentDetail?.actions.map((action) => action.id),
+    ).not.toContain('check-in');
+
+    const missingOrdersModel = buildAgendaViewModel({
+      session: sessionWith({
+        permissions: ['appointments.read', 'appointments.check_in'],
+        entitlements: ['core.operations'],
+      }),
+      appointmentId: 'dev-appointment-1530',
+    });
+
+    expect(missingOrdersModel.selectedAppointmentDetail?.appointment.checkInAction).toBeUndefined();
+  });
   test('builds new appointment flow data with occupied slot feedback inputs', () => {
     const model = buildAgendaViewModel({ session: developmentSession, mode: 'new' });
 

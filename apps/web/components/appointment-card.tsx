@@ -2,6 +2,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Clock3, Scissors, UserRound } from 'lucide-react';
 import { StatusBadge } from '@barberos/ui';
+import { CheckInActionButton } from './check-in-action-button';
 import type { AgendaAppointment } from '../lib/agenda-data';
 
 type AppointmentCardProps = Readonly<{
@@ -41,9 +42,19 @@ export function AppointmentCard({
             {appointment.totalLabel}
           </span>
         </div>
-        <Link className="appointment-card-detail-link" href={detailHref}>
-          Ver detalhes
-        </Link>
+        <div className="appointment-card-actions">
+          {appointment.checkInAction ? (
+            <CheckInActionButton
+              appointmentId={appointment.checkInAction.appointmentId}
+              compact={compact}
+              description={appointment.checkInAction.description}
+              label={appointment.checkInAction.label}
+            />
+          ) : null}
+          <Link className="appointment-card-detail-link" href={detailHref}>
+            Ver detalhes
+          </Link>
+        </div>
       </div>
     </article>
   );

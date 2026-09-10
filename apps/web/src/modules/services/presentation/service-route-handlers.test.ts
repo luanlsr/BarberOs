@@ -173,7 +173,7 @@ describe('service route handlers', () => {
     expect(await response.json()).toEqual({
       error: {
         code: 'CORE_PERMISSION_DENIED',
-        message: 'Missing services.update permission.',
+        message: 'Permission denied.',
         requestId: 'request-1',
       },
     });

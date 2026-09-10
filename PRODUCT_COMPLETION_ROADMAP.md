@@ -4,12 +4,14 @@ Este arquivo organiza os proximos passos depois do PRD para transformar o Barber
 
 ## Estado atual
 
-Change em andamento: `core-operations-scheduling`
+Ultimo change concluido: payments-cash-register (arquivado em openspec/changes/archive/2026-09-08-payments-cash-register).
 
-Progresso conhecido: 28 de 28 tarefas concluidas.
-Progresso estimado do PRD: 20%.
+Change atual planejado: financial-ledger-commissions.
 
-O recorte atual cobre a fundacao operacional: contratos, permissoes, migration de Core Operations, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade e agendamentos, shell/navegacao e a primeira tela responsiva de Agenda, o AppointmentCard, a superficie de detalhes do agendamento com historico e acoes por permissao, o fluxo inicial de novo agendamento com cliente rapido e feedback de conflito, e as telas iniciais de Clientes, Equipe e Servicos com estados operacionais.
+Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions em implementacao com 33 de 49 tarefas concluidas.
+Progresso estimado do PRD: 53%.
+
+O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in e telas iniciais de Clientes, Equipe e Servicos com estados operacionais.
 
 ## Sequencia macro
 

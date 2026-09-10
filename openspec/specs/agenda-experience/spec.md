@@ -25,7 +25,7 @@ O sistema SHALL apresentar a agenda com composicao adaptada a smartphone, tablet
 
 ### Requirement: Appointment card and detail
 
-O sistema SHALL apresentar cards e detalhes de agendamento com horario, cliente, profissional, servicos, status e acoes permitidas como check-in futuro, reagendar, cancelar e contato.
+O sistema SHALL apresentar cards e detalhes de agendamento com horario, cliente, profissional, servicos, status e acoes permitidas como check-in, reagendar, cancelar e contato.
 
 #### Scenario: Appointment card visible information
 
@@ -41,6 +41,13 @@ O sistema SHALL apresentar cards e detalhes de agendamento com horario, cliente,
 
 - **WHEN** o usuario nao possui permissao para cancelar ou reagendar
 - **THEN** a interface oculta a acao quando possivel e impede a execucao caso a rota seja acionada diretamente
+
+#### Scenario: Check-in action opens Comanda
+
+- **WHEN** um usuario autorizado com permissoes de check-in e Comanda aciona check-in em um agendamento elegivel
+- **THEN** the UI sends the check-in request
+- **AND** navigates to the opened Comanda when the request succeeds
+- **AND** displays a clear recoverable error state if check-in fails.
 
 ### Requirement: Appointment creation flow
 

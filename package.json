@@ -20,13 +20,16 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "build": "npm run build --workspaces --if-present",
-    "validate": "npm run format:check \u0026\u0026 npm run lint \u0026\u0026 npm run typecheck \u0026\u0026 npm test \u0026\u0026 npm run build",
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
     "validate:foundation": "node scripts/validate-foundation-migration.mjs",
     "validate:client-secrets": "node scripts/check-client-secrets.mjs",
-    "validate:core-operations": "node scripts/validate-core-operations-migration.mjs"
+    "validate:core-operations": "node scripts/validate-core-operations-migration.mjs",
+    "validate:orders": "node scripts/validate-orders-migration.mjs",
+    "validate:payments": "node scripts/validate-payments-migration.mjs",
+    "validate:finance": "node scripts/validate-finance-migration.mjs"
   },
   "engines": {
-    "node": "\u003e=20.19.0"
+    "node": ">=20.19.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

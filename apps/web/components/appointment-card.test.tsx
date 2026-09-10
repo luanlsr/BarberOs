@@ -31,6 +31,20 @@ describe('appointment agenda components', () => {
     expect(html).toContain('Ver detalhes');
   });
 
+  test('renders permitted check-in as a button on the detail surface', () => {
+    const model = buildAgendaViewModel({
+      session: developmentSession,
+      appointmentId: 'dev-appointment-1530',
+    });
+
+    const html = renderToStaticMarkup(
+      <AppointmentDetailSurface detail={model.selectedAppointmentDetail} />,
+    );
+
+    expect(html).toContain('<button');
+    expect(html).toContain('Check-in');
+    expect(html).toContain('Iniciar atendimento e abrir a Comanda.');
+  });
   test('renders detail surface without denied actions', () => {
     const model = buildAgendaViewModel({
       session: {
