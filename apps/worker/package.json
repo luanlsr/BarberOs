@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@barberos/config": "0.1.0"
+    "@barberos/config": "0.1.0",
+    "@barberos/contracts": "0.1.0"
   }
 }

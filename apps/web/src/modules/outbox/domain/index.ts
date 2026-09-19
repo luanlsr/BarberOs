@@ -32,6 +32,13 @@ export type WorkerJobFilters = {
   cursor?: string;
 };
 
+export type WorkerJobClaimInput = {
+  workerId: string;
+  limit?: number;
+  leaseTtlMs?: number;
+  now?: Date;
+};
+
 export interface OutboxRepository {
   createEvent(context: RequestContext, command: CreateOutboxEventCommand): Promise<OutboxEvent>;
   findEventById(context: RequestContext, eventId: string): Promise<OutboxEvent | null>;
@@ -50,6 +57,7 @@ export interface WorkerJobRepository {
     idempotencyKey: string,
   ): Promise<WorkerJob | null>;
   listJobs(context: RequestContext, filters?: WorkerJobFilters): Promise<WorkerJob[]>;
+  claimAvailableJobs(input: WorkerJobClaimInput): Promise<WorkerJob[]>;
   listJobAttempts(context: RequestContext, jobId: string): Promise<WorkerJobAttempt[]>;
 }
 export type OutboxEventIdentityInput = {
