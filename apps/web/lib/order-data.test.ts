@@ -36,12 +36,49 @@ describe('Comanda data loading layer', () => {
     ]);
     expect(model.order?.notes).toContain('acabamento');
     expect(model.order?.items[0]).toMatchObject({
+      sourceType: 'SERVICE',
+      sourceLabel: 'Servico do catalogo',
       quantity: 1,
       unitPriceAmountCents: 6000,
       finalAmountCents: 6000,
     });
+    expect(model.order?.items[2]).toMatchObject({
+      sourceType: 'PRODUCT',
+      sourceId: 'dev-product-pomade',
+      sourceLabel: 'Produto de catalogo',
+      isCatalogProduct: true,
+      costAmountCents: 1800,
+      finalAmountCents: 3200,
+    });
+    expect(model.order?.itemBreakdown).toEqual({
+      serviceCount: 2,
+      productCount: 1,
+      manualCount: 0,
+      serviceTotalLabel: 'R$ 95,00',
+      productTotalLabel: 'R$ 32,00',
+      manualTotalLabel: 'R$ 0,00',
+    });
   });
 
+  test('models product catalog suggestions with source ids and disabled reasons', () => {
+    const model = getDevelopmentComandaViewModel(developmentSession);
+
+    expect(model.itemSuggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Pomada matte',
+          sourceType: 'PRODUCT',
+          sourceId: 'dev-product-pomade',
+          sourceLabel: 'Produto de catalogo',
+        }),
+        expect.objectContaining({
+          name: 'Shampoo indisponivel',
+          sourceType: 'PRODUCT',
+          disabledReason: 'Indisponivel para esta filial',
+        }),
+      ]),
+    );
+  });
   test('builds partially paid and paid payment summaries', () => {
     const partial = getDevelopmentComandaViewModel(developmentSession, { state: 'partial' });
     expect(partial.order?.paymentSummary).toMatchObject({

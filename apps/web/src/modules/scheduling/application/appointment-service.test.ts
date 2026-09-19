@@ -17,6 +17,7 @@ import type {
   ScheduleWindowQuery,
   SchedulingAppointmentLookup,
   SchedulingCustomerLookup,
+  SchedulingOutboxProducer,
   SchedulingProfessionalLookup,
   SchedulingServiceLookup,
   UpdateAppointmentStatusRecordCommand,
@@ -288,6 +289,20 @@ class FakeProfessionalLookup implements SchedulingProfessionalLookup {
   }
 }
 
+class FakeOutbox implements SchedulingOutboxProducer {
+  readonly events = new Map<string, Parameters<SchedulingOutboxProducer['createEvent']>[1]>();
+  attempts = 0;
+
+  async createEvent(
+    _context: RequestContext,
+    command: Parameters<SchedulingOutboxProducer['createEvent']>[1],
+  ) {
+    this.attempts += 1;
+    if (!this.events.has(command.idempotencyKey)) this.events.set(command.idempotencyKey, command);
+    return this.events.get(command.idempotencyKey);
+  }
+}
+
 class FakeServiceLookup implements SchedulingServiceLookup {
   services = new Map<string, Service>([
     [corte.id, corte],
@@ -305,6 +320,7 @@ describe('AppointmentApplicationService', () => {
   let customers: FakeCustomerLookup;
   let professionals: FakeProfessionalLookup;
   let services: FakeServiceLookup;
+  let outbox: FakeOutbox;
   let service: AppointmentApplicationService;
 
   beforeEach(() => {
@@ -313,12 +329,14 @@ describe('AppointmentApplicationService', () => {
     customers = new FakeCustomerLookup();
     professionals = new FakeProfessionalLookup();
     services = new FakeServiceLookup();
+    outbox = new FakeOutbox();
     service = new AppointmentApplicationService(
       repository,
       activeAppointments,
       customers,
       professionals,
       services,
+      outbox,
     );
   });
 
@@ -386,6 +404,13 @@ describe('AppointmentApplicationService', () => {
       startsAt: '2026-09-07T12:00:00.000Z',
       endsAt: '2026-09-07T13:00:00.000Z',
     });
+    expect(outbox.events.size).toBe(1);
+    expect([...outbox.events.values()]).toEqual([
+      expect.objectContaining({
+        eventType: 'APPOINTMENT_CONFIRMED',
+        sourceId: 'appointment-created',
+      }),
+    ]);
   });
 
   it('maps database exclusion violations from concurrent create to appointment conflict', async () => {
@@ -518,6 +543,17 @@ describe('AppointmentApplicationService', () => {
       actorId: 'user-1',
       reason: 'Cliente cancelou',
     });
+    expect([...outbox.events.values()]).toEqual([
+      expect.objectContaining({ eventType: 'APPOINTMENT_CANCELLED', sourceId: 'appointment-1' }),
+    ]);
+  });
+
+  it('does not duplicate a reminder event on an idempotent cancellation retry', async () => {
+    await service.cancel(context, { id: 'appointment-1', reason: 'Cliente cancelou' });
+    await service.cancel(context, { id: 'appointment-1', reason: 'Retry do cancelamento' });
+
+    expect(outbox.events.size).toBe(1);
+    expect(outbox.attempts).toBe(2);
   });
 
   it('returns appointment status history after read authorization', async () => {

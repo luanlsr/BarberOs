@@ -3,6 +3,7 @@ import type {
   CheckInAppointmentCommand,
   CreateOrderItemCommand,
   CreateWalkInOrderCommand,
+  CreateOutboxEventCommand,
   Order,
   OrderDetail,
   OrderHistory,
@@ -65,6 +66,19 @@ export interface OrderAppointmentRepository {
     context: RequestContext,
     appointmentId: string,
   ): Promise<CheckInAppointmentSnapshot | null>;
+}
+export interface OrderOutboxProducer {
+  createEvent(
+    context: RequestContext,
+    command: Pick<
+      CreateOutboxEventCommand,
+      'tenantId' | 'branchId' | 'payload' | 'idempotencyKey' | 'correlationId'
+    > & {
+      eventType: 'ORDER_OPENED' | 'ORDER_PAID';
+      sourceType: 'ORDER';
+      sourceId: string;
+    },
+  ): Promise<unknown>;
 }
 
 export interface OrderAuditSink {

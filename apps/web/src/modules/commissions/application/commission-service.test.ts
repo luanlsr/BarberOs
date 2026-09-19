@@ -217,7 +217,8 @@ class FakeCommissionRepository implements CommissionRepository {
   async updateRule(context: RequestContext, ruleId: string, command: UpdateCommissionRuleCommand) {
     this.updatedCommand = command;
     const current = this.rulesById.get(ruleId) ?? commissionRule;
-    const { id: _id, ...changes } = command;
+    const { id: ignoredId, ...changes } = command;
+    void ignoredId;
     const updated: CommissionRule = {
       ...current,
       ...changes,
@@ -653,6 +654,99 @@ describe('CommissionApplicationService', () => {
     });
   });
 
+  it('generates commission accruals for paid product items when a product rule matches', async () => {
+    const productOrder: OrderDetail = {
+      ...paidOrder,
+      id: 'order-product-paid-1',
+      subtotalAmountCents: 6_000,
+      discountAmountCents: 0,
+      totalAmountCents: 6_000,
+      items: [
+        {
+          id: 'item-product-1',
+          tenantId: 'tenant-1',
+          branchId: 'branch-1',
+          orderId: 'order-product-paid-1',
+          sourceType: 'PRODUCT',
+          sourceId: 'product-pomade-1',
+          nameSnapshot: 'Pomada matte',
+          quantity: 2,
+          unitPriceAmountCents: 3_000,
+          discountAmountCents: 0,
+          finalAmountCents: 6_000,
+          professionalId: 'professional-1',
+          createdBy: 'user-1',
+          createdAt: '2026-09-08T12:00:00.000Z',
+        },
+      ],
+    };
+    orders.orders.set(productOrder.id, productOrder);
+    repository.rulesById.set('rule-product-1', {
+      ...commissionRule,
+      id: 'rule-product-1',
+      scope: 'PRODUCT',
+      sourceType: 'PRODUCT',
+      sourceId: 'product-pomade-1',
+      percentageBps: 1000,
+    });
+
+    const generated = await service.generateAccrualsForPaidOrder(context, {
+      orderId: productOrder.id,
+      paymentId: 'payment-product-1',
+      idempotencyKey: 'commission-product-1',
+    });
+
+    expect(generated).toHaveLength(1);
+    expect(generated[0]).toMatchObject({
+      id: 'commission-product-1:item-product-1',
+      orderId: productOrder.id,
+      orderItemId: 'item-product-1',
+      paymentId: 'payment-product-1',
+      ruleId: 'rule-product-1',
+      ruleScopeSnapshot: 'PRODUCT',
+      baseAmountCents: 6_000,
+      commissionAmountCents: 600,
+    });
+  });
+
+  it('does not generate product commission accruals when no product rule matches', async () => {
+    const productOrder: OrderDetail = {
+      ...paidOrder,
+      id: 'order-product-without-rule-1',
+      subtotalAmountCents: 6_000,
+      discountAmountCents: 0,
+      totalAmountCents: 6_000,
+      items: [
+        {
+          id: 'item-product-without-rule-1',
+          tenantId: 'tenant-1',
+          branchId: 'branch-1',
+          orderId: 'order-product-without-rule-1',
+          sourceType: 'PRODUCT',
+          sourceId: 'product-without-rule-1',
+          nameSnapshot: 'Shampoo',
+          quantity: 1,
+          unitPriceAmountCents: 6_000,
+          discountAmountCents: 0,
+          finalAmountCents: 6_000,
+          professionalId: 'professional-1',
+          createdBy: 'user-1',
+          createdAt: '2026-09-08T12:00:00.000Z',
+        },
+      ],
+    };
+    orders.orders.set(productOrder.id, productOrder);
+    repository.rulesById.clear();
+
+    const generated = await service.generateAccrualsForPaidOrder(context, {
+      orderId: productOrder.id,
+      paymentId: 'payment-product-without-rule-1',
+      idempotencyKey: 'commission-product-without-rule-1',
+    });
+
+    expect(generated).toEqual([]);
+    expect(repository.generatedAccruals).toBeNull();
+  });
   it('does not duplicate accruals for an order item that already has a source record', async () => {
     repository.accruals = [existingAccrual];
 

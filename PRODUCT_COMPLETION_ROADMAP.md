@@ -4,12 +4,12 @@ Este arquivo organiza os proximos passos depois do PRD para transformar o Barber
 
 ## Estado atual
 
-Ultimo change concluido: payments-cash-register (arquivado em openspec/changes/archive/2026-09-08-payments-cash-register).
+Ultimo change concluido e arquivado: inventory-products (47 de 47 tarefas; archive OpenSpec em 2026-09-18).
 
-Change atual planejado: financial-ledger-commissions.
+Change ativo planejado: worker-outbox-notifications (a criar; proximo da sequencia macro).
 
-Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions em implementacao com 33 de 49 tarefas concluidas.
-Progresso estimado do PRD: 53%.
+Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas.
+Progresso estimado do PRD: 63%.
 
 O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in e telas iniciais de Clientes, Equipe e Servicos com estados operacionais.
 

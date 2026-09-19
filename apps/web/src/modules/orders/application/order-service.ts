@@ -10,6 +10,7 @@ import {
   type Entitlement,
   type Order,
   type OrderDetail,
+  type Product,
   type Permission,
   type RemoveOrderItemCommand,
   type RequestContext,
@@ -18,10 +19,29 @@ import {
 } from '@barberos/contracts';
 import { authorize } from '@barberos/permissions';
 
+import {
+  createProductSaleSnapshot,
+  isProductVisibleForSale,
+  productAppliesToBranch,
+} from '../../catalog/domain';
+
 import { CoreOperationsApplicationError } from '../../shared/application/errors';
-import type { OrderAuditSink, OrderListFilters, OrderRepository } from '../domain';
+import type {
+  OrderAuditSink,
+  OrderListFilters,
+  OrderOutboxProducer,
+  OrderRepository,
+} from '../domain';
 
 const coreOperationsEntitlement = 'core.operations' satisfies Entitlement;
+
+export interface OrderProductCatalog {
+  findProductForSale(
+    context: RequestContext,
+    productId: string,
+    branchId: string,
+  ): Promise<Product | null>;
+}
 
 export { CoreOperationsApplicationError } from '../../shared/application/errors';
 
@@ -29,6 +49,8 @@ export class OrderApplicationService {
   constructor(
     private readonly orders: OrderRepository,
     private readonly audit?: OrderAuditSink,
+    private readonly products?: OrderProductCatalog,
+    private readonly outbox?: OrderOutboxProducer,
   ) {}
 
   async list(context: RequestContext, filters: OrderListFilters = {}) {
@@ -61,13 +83,15 @@ export class OrderApplicationService {
       metadata: { source: 'walk_in' },
       afterState: order,
     });
+    await this.enqueueOrderOpened(context, order, 'walk-in');
     return order;
   }
 
   async addItem(context: RequestContext, command: CreateOrderItemCommand) {
     const parsed = createOrderItemCommandSchema.parse(command);
     const order = await this.getMutableOrder(context, parsed.orderId, 'orders.item.add');
-    const updated = await this.orders.addItem(context, parsed);
+    const itemCommand = await this.prepareItemCommand(context, order, parsed);
+    const updated = await this.orders.addItem(context, itemCommand);
     assertReturnedOrderIsVisible(context, updated);
     assertOrderIdentity(order.id, updated.id);
     await this.recordHistoryAndAudit(context, updated, {
@@ -77,8 +101,8 @@ export class OrderApplicationService {
       entityId: findNewItemId(order, updated) ?? parsed.orderId,
       metadata: {
         orderId: parsed.orderId,
-        sourceType: parsed.sourceType,
-        sourceId: parsed.sourceId,
+        sourceType: itemCommand.sourceType,
+        sourceId: itemCommand.sourceId,
       },
       beforeState: order,
       afterState: updated,
@@ -158,6 +182,66 @@ export class OrderApplicationService {
     return updated;
   }
 
+  private async enqueueOrderOpened(
+    context: RequestContext,
+    order: Pick<OrderDetail, 'tenantId' | 'branchId' | 'id' | 'items' | 'totalAmountCents'>,
+    source: string,
+  ) {
+    if (!this.outbox) return;
+    await this.outbox.createEvent(context, {
+      tenantId: order.tenantId,
+      branchId: order.branchId,
+      eventType: 'ORDER_OPENED',
+      sourceType: 'ORDER',
+      sourceId: order.id,
+      payload: {
+        orderId: order.id,
+        itemCount: order.items.length,
+        totalAmountCents: order.totalAmountCents,
+        source,
+      },
+      idempotencyKey: 'order:' + order.id + ':opened',
+      correlationId: context.requestId,
+    });
+  }
+
+  private async prepareItemCommand(
+    context: RequestContext,
+    order: OrderDetail,
+    command: CreateOrderItemCommand,
+  ): Promise<CreateOrderItemCommand> {
+    if (command.sourceType !== 'PRODUCT') return command;
+
+    if (!command.sourceId) {
+      throw new CoreOperationsApplicationError(
+        'ORDER_ITEM_INVALID',
+        'Product order items require a source product.',
+      );
+    }
+
+    const product = await this.products?.findProductForSale(
+      context,
+      command.sourceId,
+      order.branchId,
+    );
+    assertProductAvailableForOrder(context, order, product);
+
+    const snapshot = createProductSaleSnapshot(product, {
+      quantity: command.quantity,
+      discountAmountCents: command.discountAmountCents,
+    });
+
+    return {
+      ...command,
+      sourceId: snapshot.sourceId,
+      name: snapshot.nameSnapshot,
+      quantity: snapshot.quantity,
+      unitPriceAmountCents: snapshot.unitPriceAmountCents,
+      costAmountCents: snapshot.costAmountCents,
+      discountAmountCents: snapshot.discountAmountCents,
+    };
+  }
+
   private async getMutableOrder(context: RequestContext, orderId: string, permission: Permission) {
     const order = await this.get(context, orderId);
     authorizeOrderAccess(context, permission, order.branchId);
@@ -208,6 +292,25 @@ export class OrderApplicationService {
       beforeState: event.beforeState,
       afterState: event.afterState,
     });
+  }
+}
+
+function assertProductAvailableForOrder(
+  context: RequestContext,
+  order: Pick<OrderDetail, 'tenantId' | 'branchId'>,
+  product: Product | null | undefined,
+): asserts product is Product {
+  if (
+    !product ||
+    product.tenantId !== context.tenantId ||
+    product.tenantId !== order.tenantId ||
+    !productAppliesToBranch(product, order.branchId) ||
+    !isProductVisibleForSale(product)
+  ) {
+    throw new CoreOperationsApplicationError(
+      'PRODUCT_UNAVAILABLE',
+      'Product is not available for this order branch.',
+    );
   }
 }
 

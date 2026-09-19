@@ -30,7 +30,7 @@ import {
 const orderSelect =
   'id, tenant_id, branch_id, appointment_id, customer_id, professional_id, status, subtotal_amount_cents, discount_amount_cents, total_amount_cents, notes, opened_at, closed_at, created_by, updated_by, created_at, updated_at';
 const orderItemSelect =
-  'id, tenant_id, branch_id, order_id, source_type, source_id, name_snapshot, quantity, unit_price_amount_cents, discount_amount_cents, final_amount_cents, professional_id, notes, created_by, created_at';
+  'id, tenant_id, branch_id, order_id, source_type, source_id, name_snapshot, quantity, unit_price_amount_cents, discount_amount_cents, final_amount_cents, cost_amount_cents, professional_id, notes, created_by, created_at';
 const orderHistorySelect =
   'id, tenant_id, branch_id, order_id, event_type, actor_id, reason, metadata, created_at';
 const appointmentSelect =
@@ -68,6 +68,7 @@ type OrderItemRow = {
   unit_price_amount_cents: number;
   discount_amount_cents: number;
   final_amount_cents: number;
+  cost_amount_cents?: number | null;
   professional_id?: string | null;
   notes?: string | null;
   created_by?: string | null;
@@ -213,6 +214,7 @@ export class SupabaseOrderRepository implements OrderRepository, OrderAppointmen
       unit_price_amount_cents: command.unitPriceAmountCents,
       discount_amount_cents: discountAmountCents,
       final_amount_cents: calculateOrderItemFinalAmount(command),
+      cost_amount_cents: command.costAmountCents,
       professional_id: command.professionalId,
       notes: command.notes,
       created_by: context.userId,
@@ -395,6 +397,7 @@ function toOrderItem(row: OrderItemRow): OrderItem {
     unitPriceAmountCents: row.unit_price_amount_cents,
     discountAmountCents: row.discount_amount_cents,
     finalAmountCents: row.final_amount_cents,
+    costAmountCents: row.cost_amount_cents ?? undefined,
     professionalId: row.professional_id ?? undefined,
     notes: row.notes ?? undefined,
     createdBy: row.created_by ?? 'system',

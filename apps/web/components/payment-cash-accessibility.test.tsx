@@ -18,10 +18,10 @@ describe('payment and cash accessibility affordances', () => {
       />,
     );
 
-    expect(html).toContain('aria-label="Valor da forma 1"');
-    expect(html).toContain('aria-label="Dinheiro recebido na forma 1"');
-    expect(html).toContain('aria-live="polite"');
-    expect(html).toContain('aria-describedby=');
+    expect(html).toContain('order-payment-open-button');
+    expect(html).not.toContain('aria-label="Valor da forma 1"');
+    expect(html).not.toContain('aria-label="Dinheiro recebido na forma 1"');
+    expect(html).not.toContain('order-payment-form');
 
     const denied = getDevelopmentComandaViewModel({
       ...developmentSession,
@@ -36,7 +36,7 @@ describe('payment and cash accessibility affordances', () => {
     );
 
     expect(deniedHtml).toContain('Seu perfil nao pode receber pagamentos.');
-    expect(deniedHtml).toContain('<fieldset disabled="">');
+    expect(deniedHtml).toContain('disabled=""');
   });
 
   test('renders explicit cash register labels and disabled controls', () => {
@@ -48,8 +48,9 @@ describe('payment and cash accessibility affordances', () => {
       />,
     );
 
-    expect(openHtml).toContain('aria-label="Troco inicial do caixa"');
-    expect(openHtml).toContain('aria-label="Observacao da abertura"');
+    expect(openHtml).toContain('Informe troco inicial e observacao em um modal seguro.');
+    expect(openHtml).not.toContain('aria-label="Troco inicial do caixa"');
+    expect(openHtml).not.toContain('aria-label="Observacao da abertura"');
     expect(openHtml).toContain('Abrir caixa');
 
     const readOnlyHtml = renderToStaticMarkup(
@@ -62,9 +63,9 @@ describe('payment and cash accessibility affordances', () => {
       />,
     );
 
-    expect(readOnlyHtml).toContain('aria-label="Valor de Sangria"');
-    expect(readOnlyHtml).toContain('aria-label="Motivo de Reforco"');
-    expect(readOnlyHtml).toContain('<fieldset disabled="">');
+    expect(readOnlyHtml).toContain('Sangria e reforco');
+    expect(readOnlyHtml).not.toContain('aria-label="Valor de Sangria"');
+    expect(readOnlyHtml).not.toContain('aria-label="Motivo de Reforco"');
   });
 
   test('keeps payment and cash controls touch-sized with visible focus states', () => {

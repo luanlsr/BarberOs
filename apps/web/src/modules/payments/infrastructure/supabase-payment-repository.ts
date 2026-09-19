@@ -123,7 +123,7 @@ export class SupabasePaymentRepository implements PaymentRepository {
     const order = await this.findOrderForPayment(context, command.orderId);
     if (!order) throw new Error('Order was not found.');
 
-    const { error } = await this.client.rpc('receive_order_payment_with_money_effects', {
+    const { error } = await this.client.rpc('receive_order_payment_with_inventory_effects', {
       p_tenant_id: context.tenantId,
       p_branch_id: order.branch_id,
       p_order_id: command.orderId,

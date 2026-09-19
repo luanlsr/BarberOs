@@ -1,24 +1,52 @@
-import type { Entitlement, Permission } from '@barberos/contracts';
+import type { Entitlement, Permission, SessionContext } from '@barberos/contracts';
+
+type NavigationRole = SessionContext['role'];
 
 export type NavigationItem = {
   href: string;
   label: string;
-  icon: 'layout' | 'calendar' | 'receipt' | 'users' | 'team' | 'scissors' | 'wallet' | 'more';
+  icon:
+    | 'layout'
+    | 'calendar'
+    | 'receipt'
+    | 'users'
+    | 'team'
+    | 'scissors'
+    | 'wallet'
+    | 'package'
+    | 'boxes'
+    | 'more';
   permission: Permission;
   entitlement?: Entitlement;
+  entitlements?: readonly Entitlement[];
+  roles?: readonly NavigationRole[];
   mobile?: boolean;
+  group?: 'Operacao' | 'Gestao' | 'Sistema';
 };
 
 export type PrimaryActionItem = {
   href: string;
   label: string;
-  icon: 'appointment' | 'cash' | 'customer' | 'order' | 'payment';
+  icon: 'appointment' | 'cash' | 'customer' | 'expense' | 'order' | 'payment' | 'product';
   permission: Permission;
   entitlement?: Entitlement;
+  entitlements?: readonly Entitlement[];
+  roles?: readonly NavigationRole[];
+};
+
+type NavigationFilterOptions = {
+  role?: NavigationRole;
 };
 
 export const navigationItems: NavigationItem[] = [
-  { href: '/', label: 'Visao geral', icon: 'layout', permission: 'dashboard.read' },
+  {
+    href: '/',
+    label: 'Visao geral',
+    icon: 'layout',
+    permission: 'dashboard.read',
+    group: 'Operacao',
+    mobile: true,
+  },
   {
     href: '/agenda',
     label: 'Agenda',
@@ -26,6 +54,7 @@ export const navigationItems: NavigationItem[] = [
     permission: 'appointments.read',
     entitlement: 'core.operations',
     mobile: true,
+    group: 'Operacao',
   },
   {
     href: '/comandas',
@@ -34,6 +63,7 @@ export const navigationItems: NavigationItem[] = [
     permission: 'orders.read',
     entitlement: 'core.operations',
     mobile: true,
+    group: 'Operacao',
   },
   {
     href: '/clientes',
@@ -42,6 +72,7 @@ export const navigationItems: NavigationItem[] = [
     permission: 'customers.read',
     entitlement: 'core.operations',
     mobile: true,
+    group: 'Operacao',
   },
   {
     href: '/equipe',
@@ -50,6 +81,7 @@ export const navigationItems: NavigationItem[] = [
     permission: 'professionals.read',
     entitlement: 'core.operations',
     mobile: true,
+    group: 'Operacao',
   },
   {
     href: '/servicos',
@@ -58,6 +90,26 @@ export const navigationItems: NavigationItem[] = [
     permission: 'services.read',
     entitlement: 'core.operations',
     mobile: true,
+    group: 'Operacao',
+  },
+  {
+    href: '/produtos',
+    label: 'Produtos',
+    icon: 'package',
+    permission: 'inventory.read',
+    entitlement: 'inventory',
+    roles: ['OWNER', 'MANAGER', 'FINANCE', 'RECEPTIONIST'],
+    group: 'Gestao',
+  },
+  {
+    href: '/estoque',
+    label: 'Estoque',
+    icon: 'boxes',
+    permission: 'inventory.read',
+    entitlement: 'inventory',
+    roles: ['OWNER', 'MANAGER', 'FINANCE', 'RECEPTIONIST'],
+    mobile: true,
+    group: 'Gestao',
   },
   {
     href: '/financeiro',
@@ -65,6 +117,36 @@ export const navigationItems: NavigationItem[] = [
     icon: 'wallet',
     permission: 'finance.read',
     entitlement: 'finance',
+    roles: ['OWNER', 'FINANCE', 'MANAGER'],
+    group: 'Gestao',
+  },
+  {
+    href: '/financeiro/despesas',
+    label: 'Despesas',
+    icon: 'receipt',
+    permission: 'finance.read',
+    entitlement: 'finance',
+    roles: ['OWNER', 'FINANCE', 'MANAGER'],
+    group: 'Gestao',
+  },
+  {
+    href: '/financeiro/comissoes',
+    label: 'Comissoes/Repasses',
+    icon: 'wallet',
+    permission: 'commission.manage',
+    entitlement: 'finance',
+    roles: ['OWNER', 'FINANCE'],
+    group: 'Gestao',
+  },
+  {
+    href: '/minha-carteira',
+    label: 'Minha carteira',
+    icon: 'wallet',
+    permission: 'commission.read',
+    entitlement: 'finance',
+    roles: ['PROFESSIONAL'],
+    mobile: true,
+    group: 'Operacao',
   },
   {
     href: '/caixa',
@@ -72,9 +154,26 @@ export const navigationItems: NavigationItem[] = [
     icon: 'wallet',
     permission: 'finance.read',
     entitlement: 'finance',
+    roles: ['OWNER', 'FINANCE', 'RECEPTIONIST'],
     mobile: true,
+    group: 'Operacao',
   },
-  { href: '/configuracoes', label: 'Mais', icon: 'more', permission: 'settings.read' },
+  {
+    href: '/operacoes/falhas',
+    label: 'Falhas operacionais',
+    icon: 'boxes',
+    permission: 'worker.failures.read',
+    entitlement: 'worker.operations',
+    roles: ['OWNER', 'MANAGER'],
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes',
+    label: 'Mais',
+    icon: 'more',
+    permission: 'settings.read',
+    group: 'Sistema',
+  },
 ];
 
 export const primaryActionItems: PrimaryActionItem[] = [
@@ -100,11 +199,28 @@ export const primaryActionItems: PrimaryActionItem[] = [
     entitlement: 'core.operations',
   },
   {
+    href: '/venda-produto',
+    label: 'Venda produto',
+    icon: 'product',
+    permission: 'orders.item.add',
+    entitlements: ['core.operations', 'inventory'],
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST'],
+  },
+  {
+    href: '/financeiro/despesas?mode=new',
+    label: 'Despesa',
+    icon: 'expense',
+    permission: 'finance.write',
+    entitlement: 'finance',
+    roles: ['OWNER', 'FINANCE', 'MANAGER'],
+  },
+  {
     href: '/caixa?mode=open',
     label: 'Abrir caixa',
     icon: 'cash',
     permission: 'cash.open',
     entitlement: 'finance',
+    roles: ['OWNER', 'FINANCE', 'RECEPTIONIST'],
   },
 ];
 
@@ -112,16 +228,18 @@ export function filterNavigation(
   items: NavigationItem[],
   permissions: readonly Permission[],
   entitlements: readonly Entitlement[] = [],
+  options: NavigationFilterOptions = {},
 ) {
-  return items.filter((item) => canAccess(item, permissions, entitlements));
+  return items.filter((item) => canAccess(item, permissions, entitlements, options));
 }
 
 export function filterPrimaryActions(
   items: PrimaryActionItem[],
   permissions: readonly Permission[],
   entitlements: readonly Entitlement[] = [],
+  options: NavigationFilterOptions = {},
 ) {
-  return items.filter((item) => canAccess(item, permissions, entitlements));
+  return items.filter((item) => canAccess(item, permissions, entitlements, options));
 }
 
 export function buildReceivePaymentAction(
@@ -130,6 +248,7 @@ export function buildReceivePaymentAction(
     canReceivePayment: boolean;
     permissions: readonly Permission[];
     entitlements?: readonly Entitlement[];
+    role?: NavigationRole;
   },
 ): PrimaryActionItem | null {
   const action: PrimaryActionItem = {
@@ -141,18 +260,29 @@ export function buildReceivePaymentAction(
   };
 
   return options.canReceivePayment &&
-    canAccess(action, options.permissions, options.entitlements ?? [])
+    canAccess(action, options.permissions, options.entitlements ?? [], { role: options.role })
     ? action
     : null;
 }
 
 function canAccess(
-  item: { permission: Permission; entitlement?: Entitlement },
+  item: {
+    permission: Permission;
+    entitlement?: Entitlement;
+    entitlements?: readonly Entitlement[];
+    roles?: readonly NavigationRole[];
+  },
   permissions: readonly Permission[],
   entitlements: readonly Entitlement[],
+  options: NavigationFilterOptions,
 ) {
+  const requiredEntitlements = [
+    ...(item.entitlement ? [item.entitlement] : []),
+    ...(item.entitlements ?? []),
+  ];
   return (
     permissions.includes(item.permission) &&
-    (!item.entitlement || entitlements.includes(item.entitlement))
+    requiredEntitlements.every((entitlement) => entitlements.includes(entitlement)) &&
+    (!item.roles || !options.role || item.roles.includes(options.role))
   );
 }

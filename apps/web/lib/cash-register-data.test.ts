@@ -20,35 +20,52 @@ describe('Cash register data loading layer', () => {
     expect(model.session).toMatchObject({
       status: 'OPEN',
       statusLabel: 'Aberto',
-      openingBalanceAmountCents: 20_000,
-      openingBalanceLabel: 'R$ 200,00',
-      expectedBalanceAmountCents: 28_500,
-      expectedBalanceLabel: 'R$ 285,00',
+      openingBalanceAmountCents: 80_000,
+      openingBalanceLabel: 'R$\u00a0800,00',
+      expectedBalanceAmountCents: 23_500,
+      expectedBalanceLabel: 'R$\u00a0235,00',
       differenceAmountCents: 0,
-      differenceLabel: 'R$ 0,00',
+      differenceLabel: 'R$\u00a00,00',
     });
     expect(model.methodTotals).toEqual([
       {
         method: 'CASH',
         methodLabel: 'Dinheiro',
         amountCents: 8_500,
-        amountLabel: 'R$ 85,00',
+        amountLabel: 'R$\u00a085,00',
         count: 1,
       },
-      { method: 'PIX', methodLabel: 'PIX', amountCents: 7_000, amountLabel: 'R$ 70,00', count: 1 },
+      {
+        method: 'PIX',
+        methodLabel: 'PIX',
+        amountCents: 7_000,
+        amountLabel: 'R$\u00a070,00',
+        count: 1,
+      },
       {
         method: 'CREDIT_CARD',
         methodLabel: 'Credito',
         amountCents: 12_000,
-        amountLabel: 'R$ 120,00',
+        amountLabel: 'R$\u00a0120,00',
         count: 1,
       },
     ]);
-    expect(model.movements.map((movement) => movement.type)).toEqual(['SALE', 'OPENING_BALANCE']);
+    expect(model.movements.map((movement) => movement.type)).toEqual([
+      'EXPENSE',
+      'SALE',
+      'OPENING_BALANCE',
+    ]);
     expect(model.movements[0]).toMatchObject({
+      typeLabel: 'Despesa',
+      amountLabel: 'R$\u00a0650,00',
+      signedAmountLabel: '-R$\u00a0650,00',
+      tone: 'danger',
+      reason: 'Despesa paga em dinheiro: Honorarios contabeis de agosto.',
+    });
+    expect(model.movements[1]).toMatchObject({
       typeLabel: 'Venda',
-      amountLabel: 'R$ 85,00',
-      signedAmountLabel: '+R$ 85,00',
+      amountLabel: 'R$\u00a085,00',
+      signedAmountLabel: '+R$\u00a085,00',
       tone: 'success',
     });
   });
@@ -73,21 +90,22 @@ describe('Cash register data loading layer', () => {
     expect(model.session).toMatchObject({
       status: 'CLOSED',
       statusLabel: 'Fechado',
-      expectedBalanceAmountCents: 28_500,
-      actualBalanceAmountCents: 28_000,
-      actualBalanceLabel: 'R$ 280,00',
+      expectedBalanceAmountCents: 23_500,
+      actualBalanceAmountCents: 23_000,
+      actualBalanceLabel: 'R$\u00a0230,00',
       differenceAmountCents: -500,
-      differenceLabel: '-R$ 5,00',
+      differenceLabel: '-R$\u00a05,00',
       closingNotes: 'Diferenca conferida no fechamento.',
     });
     expect(model.movements.map((movement) => movement.type)).toEqual([
       'WITHDRAWAL',
+      'EXPENSE',
       'SALE',
       'OPENING_BALANCE',
     ]);
     expect(model.movements[0]).toMatchObject({
       typeLabel: 'Sangria',
-      signedAmountLabel: '-R$ 5,00',
+      signedAmountLabel: '-R$\u00a05,00',
       tone: 'warning',
     });
   });

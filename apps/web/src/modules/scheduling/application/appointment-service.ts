@@ -26,6 +26,7 @@ import type {
   SchedulingAppointmentLookup,
   SchedulingCustomerLookup,
   SchedulingProfessionalLookup,
+  SchedulingOutboxProducer,
   SchedulingServiceLookup,
 } from '../domain';
 
@@ -54,6 +55,7 @@ export class AppointmentApplicationService {
     private readonly customers: SchedulingCustomerLookup,
     private readonly professionals: SchedulingProfessionalLookup,
     private readonly services: SchedulingServiceLookup,
+    private readonly outbox?: SchedulingOutboxProducer,
   ) {}
 
   async list(context: RequestContext, query: AvailabilityQuery) {
@@ -89,13 +91,15 @@ export class AppointmentApplicationService {
       endsAt,
     });
 
-    return mapAppointmentPersistenceConflict(() =>
+    const created = await mapAppointmentPersistenceConflict(() =>
       this.appointments.create(context, {
         ...parsed,
         endsAt,
         services: serviceSnapshots,
       }),
     );
+    await this.enqueueReminderEvent(context, created);
+    return created;
   }
 
   async reschedule(context: RequestContext, command: RescheduleAppointmentCommand) {
@@ -115,13 +119,15 @@ export class AppointmentApplicationService {
       excludeAppointmentId: current.id,
     });
 
-    return mapAppointmentPersistenceConflict(() =>
+    const updated = await mapAppointmentPersistenceConflict(() =>
       this.appointments.reschedule(context, {
         ...parsed,
         professionalId,
         endsAt,
       }),
     );
+    await this.enqueueReminderEvent(context, updated);
+    return updated;
   }
 
   async updateStatus(context: RequestContext, command: UpdateAppointmentStatusCommand) {
@@ -131,15 +137,18 @@ export class AppointmentApplicationService {
     const current = await this.getAuthorizedAppointment(context, parsed.id, permission);
 
     if (current.status === parsed.status) {
+      await this.enqueueReminderEvent(context, current);
       return current;
     }
 
     assertValidStatusTransition(current.status, parsed.status);
-    return this.appointments.updateStatus(context, {
+    const updated = await this.appointments.updateStatus(context, {
       ...parsed,
       previousStatus: current.status,
       actorId: context.userId,
     });
+    await this.enqueueReminderEvent(context, updated, parsed.reason);
+    return updated;
   }
 
   async cancel(context: RequestContext, command: CancelAppointmentCommand) {
@@ -147,15 +156,46 @@ export class AppointmentApplicationService {
     const current = await this.getAuthorizedAppointment(context, parsed.id, 'appointments.cancel');
 
     if (current.status === 'CANCELLED') {
+      await this.enqueueReminderEvent(context, current, parsed.reason);
       return current;
     }
 
     assertValidStatusTransition(current.status, 'CANCELLED');
-    return this.appointments.cancel(context, {
+    const cancelled = await this.appointments.cancel(context, {
       ...parsed,
       status: 'CANCELLED',
       previousStatus: current.status,
       actorId: context.userId,
+    });
+    await this.enqueueReminderEvent(context, cancelled, parsed.reason);
+    return cancelled;
+  }
+
+  private async enqueueReminderEvent(
+    context: RequestContext,
+    appointment: Appointment,
+    reason?: string,
+  ) {
+    if (!this.outbox || !['CONFIRMED', 'CANCELLED'].includes(appointment.status)) return;
+    const cancelled = appointment.status === 'CANCELLED';
+    await this.outbox.createEvent(context, {
+      tenantId: appointment.tenantId,
+      branchId: appointment.branchId,
+      eventType: cancelled ? 'APPOINTMENT_CANCELLED' : 'APPOINTMENT_CONFIRMED',
+      sourceType: 'APPOINTMENT',
+      sourceId: appointment.id,
+      payload: {
+        appointmentId: appointment.id,
+        customerId: appointment.customerId,
+        professionalId: appointment.professionalId,
+        startsAt: appointment.startsAt,
+        endsAt: appointment.endsAt,
+        status: appointment.status,
+        reason,
+      },
+      idempotencyKey:
+        'appointment:' + appointment.id + ':' + (cancelled ? 'cancelled' : appointment.startsAt),
+      correlationId: context.requestId,
     });
   }
 

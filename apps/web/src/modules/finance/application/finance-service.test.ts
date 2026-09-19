@@ -100,10 +100,6 @@ function entryWith(overrides: Partial<FinancialEntry>): FinancialEntry {
   return { ...entry, ...overrides };
 }
 
-function expenseWith(overrides: Partial<Expense>): Expense {
-  return { ...expense, ...overrides };
-}
-
 const cashSession: CashRegisterSummary = {
   id: 'cash-session-1',
   tenantId: 'tenant-1',
@@ -224,7 +220,8 @@ class FakeFinanceRepository implements FinanceRepository {
   async updateExpense(context: RequestContext, expenseId: string, command: UpdateExpenseCommand) {
     this.updatedCommand = command;
     const current = this.expensesById.get(expenseId) ?? openExpense;
-    const { id: _id, recurrence, ...changes } = command;
+    const { id: ignoredId, recurrence, ...changes } = command;
+    void ignoredId;
     const updated: Expense = {
       ...current,
       ...changes,

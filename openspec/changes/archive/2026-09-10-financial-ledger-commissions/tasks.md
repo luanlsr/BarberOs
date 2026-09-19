@@ -50,25 +50,25 @@
 ## 6. UX/UI Data Loading
 
 - [x] 6.1 Add Financeiro data loading model with period, revenue, expenses, estimated result, commission liability, payout totals, cash-flow totals and allowed actions, and verify data tests cover populated, empty, error, offline and permission-denied states.
-- [ ] 6.2 Add Despesas data loading model with categories, expense statuses, recurrence labels, paid/open totals and allowed actions, and verify data tests cover open, paid, overdue and permission-denied states.
-- [ ] 6.3 Add Comissoes/Repasses data loading model with rules, open accruals, payout periods, payout status and allowed actions, and verify data tests cover no-rule, open accrual, closed payout and paid payout states.
-- [ ] 6.4 Add Minha carteira data loading model for professionals with own production, open commission, paid payouts and expected balance, and verify tests deny cross-professional wallet data.
-- [ ] 6.5 Update navigation models to expose Financeiro, Nova despesa, Comissoes/Repasses and Minha carteira only when permissions and entitlements allow them, and verify navigation tests cover owner, finance, manager, receptionist and professional roles.
+- [x] 6.2 Add Despesas data loading model with categories, expense statuses, recurrence labels, paid/open totals and allowed actions, and verify data tests cover open, paid, overdue and permission-denied states.
+- [x] 6.3 Add Comissoes/Repasses data loading model with rules, open accruals, payout periods, payout status and allowed actions, and verify data tests cover no-rule, open accrual, closed payout and paid payout states.
+- [x] 6.4 Add Minha carteira data loading model for professionals with own production, open commission, paid payouts and expected balance, and verify tests deny cross-professional wallet data.
+- [x] 6.5 Update navigation models to expose Financeiro, Nova despesa, Comissoes/Repasses and Minha carteira only when permissions and entitlements allow them, and verify navigation tests cover owner, finance, manager, receptionist and professional roles.
 
 ## 7. UX/UI Screens And Components
 
-- [ ] 7.1 Build `/financeiro` responsive summary screen with period controls, revenue/expense/result KPIs, cash-flow summary, commission liability and payout summary, and verify component tests cover mobile, tablet and desktop structural rendering.
-- [ ] 7.2 Build expense list and expense form/drawer with category, dates, recurrence, payment method, attachment metadata and pay/cancel actions, and verify component tests cover loading, empty, error, disabled, offline and permission-denied states.
-- [ ] 7.3 Build commission rule management and payout workspace with rule precedence display, open accruals, close payout and pay payout flows, and verify component tests cover no-rule diagnostics, paid payout immutability and cash-payment warnings.
-- [ ] 7.4 Build `/minha-carteira` professional wallet screen with own production, open commissions, paid payouts and expected balance, and verify component tests cover professional-only and elevated viewer states.
-- [ ] 7.5 Update Comanda payment completion feedback to indicate finance and commission updates when applicable without showing paid totals as due, and verify `OrderView` or payment panel tests cover the updated feedback.
-- [ ] 7.6 Add accessible form labels, focus states and touch-sized controls for finance, expense, commission and wallet screens, and verify tests or snapshots cover key labels and disabled controls.
+- [x] 7.1 Build `/financeiro` responsive summary screen with period controls, revenue/expense/result KPIs, cash-flow summary, commission liability and payout summary, and verify component tests cover mobile, tablet and desktop structural rendering.
+- [x] 7.2 Build expense list and expense form/drawer with category, dates, recurrence, payment method, attachment metadata and pay/cancel actions, and verify component tests cover loading, empty, error, disabled, offline and permission-denied states.
+- [x] 7.3 Build commission rule management and payout workspace with rule precedence display, open accruals, close payout and pay payout flows, and verify component tests cover no-rule diagnostics, paid payout immutability and cash-payment warnings.
+- [x] 7.4 Build `/minha-carteira` professional wallet screen with own production, open commissions, paid payouts and expected balance, and verify component tests cover professional-only and elevated viewer states.
+- [x] 7.5 Update Comanda payment completion feedback to indicate finance and commission updates when applicable without showing paid totals as due, and verify `OrderView` or payment panel tests cover the updated feedback.
+- [x] 7.6 Add accessible form labels, focus states and touch-sized controls for finance, expense, commission and wallet screens, and verify tests or snapshots cover key labels and disabled controls.
 
 ## 8. E2E And Validation
 
-- [ ] 8.1 Add E2E coverage for `agenda -> check-in -> Comanda -> pagamento -> financeiro -> comissao -> payout` and verify the Playwright test passes on mobile and desktop viewports.
-- [ ] 8.2 Add E2E coverage for `despesa -> pagamento em dinheiro -> caixa -> financeiro` and verify the Playwright test passes on mobile and desktop viewports.
-- [ ] 8.3 Add migration validation script or extend existing validators for finance/commission schema, RLS, indexes, idempotency, source uniqueness and seed checks, and verify `npm run validate:finance` or equivalent passes.
-- [ ] 8.4 Run focused unit/API/component tests for contracts, finance, commissions, payments, cash register, order data, navigation and finance/commission UI, and verify the selected `npx vitest run` command passes.
-- [ ] 8.5 Run `openspec validate financial-ledger-commissions --strict` and verify the change remains valid after implementation task updates.
-- [ ] 8.6 Run the full validation gate with `npm run validate` and verify format, lint, typecheck, unit tests and build all pass.
+- [x] 8.1 Add E2E coverage for `agenda -> check-in -> Comanda -> pagamento -> financeiro -> comissao -> payout` and verify the Playwright test passes on mobile and desktop viewports.
+- [x] 8.2 Add E2E coverage for `despesa -> pagamento em dinheiro -> caixa -> financeiro` and verify the Playwright test passes on mobile and desktop viewports.
+- [x] 8.3 Add migration validation script or extend existing validators for finance/commission schema, RLS, indexes, idempotency, source uniqueness and seed checks, and verify `npm run validate:finance` or equivalent passes.
+- [x] 8.4 Run focused unit/API/component tests for contracts, finance, commissions, payments, cash register, order data, navigation and finance/commission UI, and verify the selected `npx vitest run` command passes.
+- [x] 8.5 Run `openspec validate financial-ledger-commissions --strict` and verify the change remains valid after implementation task updates.
+- [x] 8.6 Run the full validation gate with `npm run validate` and verify format, lint, typecheck, unit tests and build all pass.

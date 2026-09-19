@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   activeAppointmentStatuses,
   apiErrorSchema,
+  createNotificationIntentCommandSchema,
+  createOutboxEventCommandSchema,
+  createWorkerJobCommandSchema,
+  notificationDeliveryAttemptSchema,
+  notificationIntentSchema,
+  outboxEventSchema,
+  recordNotificationDeliveryAttemptCommandSchema,
+  workerErrorCodeSchema,
+  workerJobAttemptSchema,
+  workerJobSchema,
+  workerSanitizedErrorSchema,
+  archiveProductCategoryCommandSchema,
+  archiveProductCommandSchema,
   appointmentSchema,
   branchScopedAuthorizationRequirementSchema,
   canTransitionOrderStatus,
@@ -29,7 +42,16 @@ import {
   createWalkInOrderCommandSchema,
   cancelExpenseCommandSchema,
   createExpenseCommandSchema,
+  createProductCategoryCommandSchema,
+  createProductCommandSchema,
+  createStockAdjustmentCommandSchema,
+  createStockConsumptionCommandSchema,
+  createStockEntryCommandSchema,
+  createStockLossCommandSchema,
+  createStockSaleEffectCommandSchema,
+  createStockTransferCommandSchema,
   expenseStatusSchema,
+  entitlementSchema,
   expenseRecurrenceFrequencySchema,
   expenseCategorySchema,
   expenseSchema,
@@ -43,7 +65,14 @@ import {
   generateCommissionAccrualsCommandSchema,
   openCashRegisterCommandSchema,
   orderDetailSchema,
+  inventoryLocationSchema,
+  lowStockAlertSchema,
   orderItemSchema,
+  productCategorySchema,
+  productDetailResponseSchema,
+  productListResponseSchema,
+  productSchema,
+  productStatusSchema,
   orderStatusSchema,
   paymentAllocationSchema,
   paymentMethodSchema,
@@ -61,10 +90,18 @@ import {
   receivePaymentCommandSchema,
   refundPaymentCommandSchema,
   refundStatusSchema,
+  stockAlertStateSchema,
+  stockBalanceSchema,
+  stockMovementSchema,
+  stockMovementTypeSchema,
+  stockSourceTypeSchema,
+  stockTrackingPolicySchema,
   updateOrderItemCommandSchema,
   updateOrderStatusCommandSchema,
   updateCommissionRuleCommandSchema,
   updateExpenseCommandSchema,
+  updateProductCategoryCommandSchema,
+  updateProductCommandSchema,
 } from './index';
 
 describe('core operations contracts', () => {
@@ -76,6 +113,10 @@ describe('core operations contracts', () => {
     expect(permissionSchema.parse('appointments.check_in')).toBe('appointments.check_in');
     expect(permissionSchema.parse('payments.receive')).toBe('payments.receive');
     expect(permissionSchema.parse('cash.close')).toBe('cash.close');
+    expect(permissionSchema.parse('worker.failures.read')).toBe('worker.failures.read');
+    expect(permissionSchema.parse('notifications.status.read')).toBe('notifications.status.read');
+    expect(entitlementSchema.parse('worker.operations')).toBe('worker.operations');
+    expect(entitlementSchema.parse('notifications')).toBe('notifications');
     expect(coreOperationsErrorCodeSchema.parse('APPOINTMENT_CONFLICT')).toBe(
       'APPOINTMENT_CONFLICT',
     );
@@ -116,6 +157,28 @@ describe('core operations contracts', () => {
     expect(coreOperationsErrorCodeSchema.parse('PAYOUT_CASH_REGISTER_NOT_OPEN')).toBe(
       'PAYOUT_CASH_REGISTER_NOT_OPEN',
     );
+    expect(coreOperationsErrorCodeSchema.parse('CATALOG_PERMISSION_DENIED')).toBe(
+      'CATALOG_PERMISSION_DENIED',
+    );
+    expect(coreOperationsErrorCodeSchema.parse('CATALOG_ENTITLEMENT_DENIED')).toBe(
+      'CATALOG_ENTITLEMENT_DENIED',
+    );
+    expect(coreOperationsErrorCodeSchema.parse('PRODUCT_UNAVAILABLE')).toBe('PRODUCT_UNAVAILABLE');
+    expect(coreOperationsErrorCodeSchema.parse('INVENTORY_PERMISSION_DENIED')).toBe(
+      'INVENTORY_PERMISSION_DENIED',
+    );
+    expect(coreOperationsErrorCodeSchema.parse('INVENTORY_BRANCH_SCOPE_DENIED')).toBe(
+      'INVENTORY_BRANCH_SCOPE_DENIED',
+    );
+    expect(coreOperationsErrorCodeSchema.parse('INVENTORY_INSUFFICIENT_STOCK')).toBe(
+      'INVENTORY_INSUFFICIENT_STOCK',
+    );
+    expect(coreOperationsErrorCodeSchema.parse('INVENTORY_IDEMPOTENCY_CONFLICT')).toBe(
+      'INVENTORY_IDEMPOTENCY_CONFLICT',
+    );
+    expect(coreOperationsErrorCodeSchema.parse('INVENTORY_IMMUTABLE_MOVEMENT')).toBe(
+      'INVENTORY_IMMUTABLE_MOVEMENT',
+    );
     expect(coreOperationsErrorCodeSchema.safeParse('FINANCE_DATA_LEAK').success).toBe(false);
 
     expect(
@@ -127,6 +190,50 @@ describe('core operations contracts', () => {
         },
       }).error.code,
     ).toBe('FINANCE_PERMISSION_DENIED');
+
+    const inventoryError = apiErrorSchema.parse({
+      error: {
+        code: 'INVENTORY_INSUFFICIENT_STOCK',
+        message: 'Insufficient stock.',
+        requestId: 'request-inventory-a',
+      },
+    });
+    expect(inventoryError.error).toEqual({
+      code: 'INVENTORY_INSUFFICIENT_STOCK',
+      message: 'Insufficient stock.',
+      requestId: 'request-inventory-a',
+    });
+  });
+
+  it('recognizes catalog and inventory enum contracts', () => {
+    expect(productStatusSchema.parse('ACTIVE')).toBe('ACTIVE');
+    expect(productStatusSchema.parse('INACTIVE')).toBe('INACTIVE');
+    expect(productStatusSchema.parse('ARCHIVED')).toBe('ARCHIVED');
+    expect(productStatusSchema.safeParse('DELETED').success).toBe(false);
+
+    expect(stockTrackingPolicySchema.parse('TRACKED')).toBe('TRACKED');
+    expect(stockTrackingPolicySchema.parse('NOT_TRACKED')).toBe('NOT_TRACKED');
+    expect(stockTrackingPolicySchema.safeParse('OPTIONAL').success).toBe(false);
+
+    expect(stockMovementTypeSchema.parse('ENTRY')).toBe('ENTRY');
+    expect(stockMovementTypeSchema.parse('SALE')).toBe('SALE');
+    expect(stockMovementTypeSchema.parse('LOSS')).toBe('LOSS');
+    expect(stockMovementTypeSchema.parse('CONSUMPTION')).toBe('CONSUMPTION');
+    expect(stockMovementTypeSchema.parse('ADJUSTMENT')).toBe('ADJUSTMENT');
+    expect(stockMovementTypeSchema.parse('TRANSFER_IN')).toBe('TRANSFER_IN');
+    expect(stockMovementTypeSchema.parse('TRANSFER_OUT')).toBe('TRANSFER_OUT');
+    expect(stockMovementTypeSchema.safeParse('DIRECT_EDIT').success).toBe(false);
+
+    expect(stockSourceTypeSchema.parse('MANUAL')).toBe('MANUAL');
+    expect(stockSourceTypeSchema.parse('ORDER_ITEM')).toBe('ORDER_ITEM');
+    expect(stockSourceTypeSchema.parse('PAYMENT')).toBe('PAYMENT');
+    expect(stockSourceTypeSchema.parse('TRANSFER')).toBe('TRANSFER');
+    expect(stockSourceTypeSchema.parse('SYSTEM')).toBe('SYSTEM');
+    expect(stockSourceTypeSchema.safeParse('TENANT').success).toBe(false);
+
+    expect(stockAlertStateSchema.parse('ACTIVE')).toBe('ACTIVE');
+    expect(stockAlertStateSchema.parse('RESOLVED')).toBe('RESOLVED');
+    expect(stockAlertStateSchema.safeParse('IGNORED').success).toBe(false);
   });
 
   it('rejects invalid service duration and price', () => {
@@ -201,6 +308,338 @@ describe('core operations contracts', () => {
     const branchId = requirement.branchId ?? '';
     expect(hasBranchAccess({ branchScope: ['branch-a'] }, branchId)).toBe(true);
     expect(hasBranchAccess({ branchScope: ['branch-b'] }, branchId)).toBe(false);
+  });
+
+  it('accepts catalog and inventory records with tenant and branch scope', () => {
+    const category = productCategorySchema.parse({
+      id: 'category-a',
+      tenantId: 'tenant-a',
+      branchIds: ['branch-a'],
+      name: 'Finalizadores',
+      status: 'ACTIVE',
+      createdBy: 'user-a',
+      updatedBy: 'user-a',
+      createdAt: '2026-09-05T13:00:00.000Z',
+      updatedAt: '2026-09-05T13:00:00.000Z',
+    });
+    const product = productSchema.parse({
+      id: 'product-a',
+      tenantId: 'tenant-a',
+      branchIds: ['branch-a'],
+      categoryId: category.id,
+      sku: 'POMADA-01',
+      name: 'Pomada matte',
+      status: 'ACTIVE',
+      salePriceAmountCents: 3200,
+      costAmountCents: 1400,
+      stockTrackingPolicy: 'TRACKED',
+      minimumStockQuantity: 3,
+      supplierMetadata: { supplierName: 'Distribuidora Centro', contactPhone: '11999999999' },
+      createdBy: 'user-a',
+      updatedBy: 'user-a',
+      createdAt: '2026-09-05T13:00:00.000Z',
+      updatedAt: '2026-09-05T13:00:00.000Z',
+    });
+    const location = inventoryLocationSchema.parse({
+      id: 'location-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      name: 'Vitrine',
+      createdBy: 'user-a',
+      updatedBy: 'user-a',
+      createdAt: '2026-09-05T13:00:00.000Z',
+      updatedAt: '2026-09-05T13:00:00.000Z',
+    });
+    const movement = stockMovementSchema.parse({
+      id: 'movement-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      locationId: location.id,
+      productId: product.id,
+      type: 'ENTRY',
+      quantity: 10,
+      balanceAfterQuantity: 10,
+      sourceType: 'MANUAL',
+      idempotencyKey: 'stock-entry-a',
+      reason: 'Compra inicial',
+      createdBy: 'user-a',
+      createdAt: '2026-09-05T13:00:00.000Z',
+    });
+    const balance = stockBalanceSchema.parse({
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      locationId: location.id,
+      productId: product.id,
+      currentQuantity: 2,
+      minimumStockQuantity: 3,
+      lowStock: true,
+      lastMovementAt: movement.createdAt,
+      updatedAt: '2026-09-05T13:00:00.000Z',
+    });
+    const alert = lowStockAlertSchema.parse({
+      id: 'alert-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      productId: product.id,
+      state: 'ACTIVE',
+      currentQuantity: 2,
+      minimumStockQuantity: 3,
+      triggeredAt: '2026-09-05T13:00:00.000Z',
+    });
+
+    expect(product.allowNegativeStock).toBe(false);
+    expect(location.active).toBe(true);
+    expect(balance.lowStock).toBe(true);
+    expect(alert.state).toBe('ACTIVE');
+
+    const list = productListResponseSchema.parse({
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      products: [product],
+      categories: [category],
+      balances: [balance],
+      alerts: [alert],
+    });
+    const detail = productDetailResponseSchema.parse({
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      product,
+      category,
+      balances: [balance],
+      movements: [movement],
+      alerts: [alert],
+    });
+
+    expect(list.products[0]?.name).toBe('Pomada matte');
+    expect(detail.movements[0]?.quantity).toBe(10);
+  });
+
+  it('rejects invalid catalog and inventory record shapes', () => {
+    expect(
+      productCategorySchema.safeParse({
+        id: 'category-a',
+        tenantId: 'tenant-a',
+        branchIds: [],
+        name: 'Finalizadores',
+        status: 'ACTIVE',
+        createdBy: 'user-a',
+        updatedBy: 'user-a',
+        createdAt: '2026-09-05T13:00:00.000Z',
+        updatedAt: '2026-09-05T13:00:00.000Z',
+      }).success,
+    ).toBe(false);
+
+    expect(
+      productSchema.safeParse({
+        id: 'product-a',
+        tenantId: 'tenant-a',
+        branchIds: ['branch-a'],
+        name: '',
+        status: 'ACTIVE',
+        salePriceAmountCents: -1,
+        costAmountCents: -1,
+        stockTrackingPolicy: 'TRACKED',
+        createdBy: 'user-a',
+        updatedBy: 'user-a',
+        createdAt: '2026-09-05T13:00:00.000Z',
+        updatedAt: '2026-09-05T13:00:00.000Z',
+      }).success,
+    ).toBe(false);
+
+    expect(
+      inventoryLocationSchema.safeParse({
+        id: 'location-a',
+        tenantId: 'tenant-a',
+        name: 'Vitrine',
+        createdBy: 'user-a',
+        updatedBy: 'user-a',
+        createdAt: '2026-09-05T13:00:00.000Z',
+        updatedAt: '2026-09-05T13:00:00.000Z',
+      }).success,
+    ).toBe(false);
+
+    expect(
+      stockMovementSchema.safeParse({
+        id: 'movement-a',
+        tenantId: 'tenant-a',
+        branchId: 'branch-a',
+        productId: 'product-a',
+        type: 'SALE',
+        quantity: 1,
+        sourceType: 'ORDER_ITEM',
+        createdBy: 'user-a',
+        createdAt: '2026-09-05T13:00:00.000Z',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts product category and product mutation commands', () => {
+    const category = createProductCategoryCommandSchema.parse({
+      branchIds: ['branch-a'],
+      name: 'Finalizadores',
+    });
+    const categoryUpdate = updateProductCategoryCommandSchema.parse({
+      id: 'category-a',
+      status: 'INACTIVE',
+    });
+    const categoryArchive = archiveProductCategoryCommandSchema.parse({
+      id: 'category-a',
+      reason: 'Categoria substituida',
+    });
+    const product = createProductCommandSchema.parse({
+      branchIds: ['branch-a', 'branch-b'],
+      categoryId: 'category-a',
+      name: 'Pomada matte',
+      salePriceAmountCents: 3200,
+      costAmountCents: 1400,
+      supplierMetadata: { supplierName: 'Distribuidora Centro' },
+    });
+    const inactiveProduct = updateProductCommandSchema.parse({
+      id: 'product-a',
+      status: 'INACTIVE',
+      allowNegativeStock: true,
+      minimumStockQuantity: 2,
+    });
+    const productArchive = archiveProductCommandSchema.parse({ id: 'product-a' });
+
+    expect(category.status).toBe('ACTIVE');
+    expect(categoryUpdate.status).toBe('INACTIVE');
+    expect(categoryArchive.reason).toContain('substituida');
+    expect(product.stockTrackingPolicy).toBe('TRACKED');
+    expect(product.allowNegativeStock).toBe(false);
+    expect(inactiveProduct.status).toBe('INACTIVE');
+    expect(productArchive.id).toBe('product-a');
+  });
+
+  it('rejects invalid product mutation commands', () => {
+    expect(
+      createProductCategoryCommandSchema.safeParse({ branchIds: [], name: 'Finalizadores' })
+        .success,
+    ).toBe(false);
+    expect(updateProductCategoryCommandSchema.safeParse({ id: 'category-a' }).success).toBe(false);
+    expect(
+      createProductCommandSchema.safeParse({
+        branchIds: ['branch-a'],
+        name: 'Pomada matte',
+        status: 'ARCHIVED',
+        salePriceAmountCents: 3200,
+      }).success,
+    ).toBe(false);
+    expect(
+      createProductCommandSchema.safeParse({
+        branchIds: ['branch-a'],
+        name: 'P',
+        salePriceAmountCents: 0,
+        minimumStockQuantity: -1,
+      }).success,
+    ).toBe(false);
+    expect(updateProductCommandSchema.safeParse({ id: 'product-a' }).success).toBe(false);
+  });
+
+  it('accepts stock movement command shapes with idempotency keys', () => {
+    const entry = createStockEntryCommandSchema.parse({
+      branchId: 'branch-a',
+      locationId: 'location-a',
+      productId: 'product-a',
+      quantity: 10,
+      unitCostAmountCents: 1400,
+      idempotencyKey: 'stock-entry-a',
+    });
+    const sale = createStockSaleEffectCommandSchema.parse({
+      branchId: 'branch-a',
+      productId: 'product-a',
+      quantity: -1,
+      orderId: 'order-a',
+      orderItemId: 'item-a',
+      paymentId: 'payment-a',
+      idempotencyKey: 'stock-sale-a',
+    });
+    const loss = createStockLossCommandSchema.parse({
+      branchId: 'branch-a',
+      productId: 'product-a',
+      quantity: -2,
+      reason: 'Produto quebrado',
+      idempotencyKey: 'stock-loss-a',
+    });
+    const consumption = createStockConsumptionCommandSchema.parse({
+      branchId: 'branch-a',
+      productId: 'product-a',
+      quantity: -1,
+      reason: 'Uso interno',
+      idempotencyKey: 'stock-consumption-a',
+    });
+    const adjustment = createStockAdjustmentCommandSchema.parse({
+      branchId: 'branch-a',
+      productId: 'product-a',
+      quantity: 3,
+      reason: 'Contagem fisica',
+      idempotencyKey: 'stock-adjustment-a',
+    });
+    const transfer = createStockTransferCommandSchema.parse({
+      branchId: 'branch-a',
+      productId: 'product-a',
+      fromLocationId: 'location-a',
+      toLocationId: 'location-b',
+      quantity: 4,
+      reason: 'Reposicao da vitrine',
+      idempotencyKey: 'stock-transfer-a',
+    });
+
+    expect(entry.quantity).toBe(10);
+    expect(sale.quantity).toBe(-1);
+    expect(loss.reason).toContain('quebrado');
+    expect(consumption.reason).toContain('interno');
+    expect(adjustment.quantity).toBe(3);
+    expect(transfer.toLocationId).toBe('location-b');
+  });
+
+  it('rejects invalid stock movement command shapes', () => {
+    expect(
+      createStockEntryCommandSchema.safeParse({
+        branchId: 'branch-a',
+        productId: 'product-a',
+        quantity: -10,
+        idempotencyKey: 'stock-entry-a',
+      }).success,
+    ).toBe(false);
+    expect(
+      createStockSaleEffectCommandSchema.safeParse({
+        branchId: 'branch-a',
+        productId: 'product-a',
+        quantity: 1,
+        orderId: 'order-a',
+        orderItemId: 'item-a',
+        paymentId: 'payment-a',
+        idempotencyKey: 'stock-sale-a',
+      }).success,
+    ).toBe(false);
+    expect(
+      createStockLossCommandSchema.safeParse({
+        branchId: 'branch-a',
+        productId: 'product-a',
+        quantity: -1,
+        idempotencyKey: 'stock-loss-a',
+      }).success,
+    ).toBe(false);
+    expect(
+      createStockAdjustmentCommandSchema.safeParse({
+        branchId: 'branch-a',
+        productId: 'product-a',
+        quantity: 0,
+        reason: 'Contagem',
+        idempotencyKey: 'stock-adjustment-a',
+      }).success,
+    ).toBe(false);
+    expect(
+      createStockTransferCommandSchema.safeParse({
+        branchId: 'branch-a',
+        productId: 'product-a',
+        fromLocationId: 'location-a',
+        toLocationId: 'location-b',
+        quantity: 1,
+        reason: 'Reposicao',
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects schedule breaks outside working hours', () => {
@@ -1016,6 +1455,175 @@ describe('core operations contracts', () => {
     expect(updateItem.notes).toContain('acabamento');
     expect(
       updateOrderItemCommandSchema.safeParse({ orderId: 'order-a', itemId: 'item-a' }).success,
+    ).toBe(false);
+  });
+  it('accepts worker outbox, job and notification payload contracts', () => {
+    const createdAt = '2026-09-18T12:00:00.000Z';
+    const outbox = outboxEventSchema.parse({
+      id: 'outbox-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      eventType: 'PAYMENT_COMPLETED',
+      sourceType: 'PAYMENT',
+      sourceId: 'payment-a',
+      payload: { paymentId: 'payment-a', orderId: 'order-a' },
+      idempotencyKey: 'payment-completed-a',
+      status: 'PENDING',
+      correlationId: 'request-payment-a',
+      availableAt: createdAt,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    const job = workerJobSchema.parse({
+      id: 'job-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      type: 'NOTIFICATION_DELIVERY',
+      status: 'PENDING',
+      sourceType: 'PAYMENT',
+      sourceId: 'payment-a',
+      outboxEventId: outbox.id,
+      payload: { notificationIntentId: 'notification-a' },
+      idempotencyKey: 'notification-delivery-a',
+      correlationId: outbox.correlationId,
+      runAt: createdAt,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    const attempt = workerJobAttemptSchema.parse({
+      id: 'attempt-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      jobId: job.id,
+      outboxEventId: outbox.id,
+      status: 'RUNNING',
+      attemptNumber: 1,
+      workerId: 'worker-local-a',
+      startedAt: createdAt,
+    });
+    const intent = notificationIntentSchema.parse({
+      id: 'notification-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      recipientType: 'CUSTOMER',
+      recipientId: 'customer-a',
+      channel: 'LOCAL',
+      templateKey: 'appointment.reminder.v1',
+      sourceType: 'APPOINTMENT',
+      sourceId: 'appointment-a',
+      payload: { appointmentId: 'appointment-a' },
+      status: 'PENDING',
+      idempotencyKey: 'appointment-reminder-a',
+      correlationId: 'request-appointment-a',
+      createdAt,
+      updatedAt: createdAt,
+    });
+    const delivery = notificationDeliveryAttemptSchema.parse({
+      id: 'delivery-a',
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      notificationIntentId: intent.id,
+      channel: 'LOCAL',
+      status: 'SENT',
+      attemptNumber: 1,
+      provider: 'local',
+      providerMessageId: 'local-message-a',
+      sentAt: createdAt,
+      createdAt,
+    });
+
+    expect(outbox.schemaVersion).toBe(1);
+    expect(job.priority).toBe(50);
+    expect(job.maxAttempts).toBe(5);
+    expect(attempt.workerId).toBe('worker-local-a');
+    expect(intent.channel).toBe('LOCAL');
+    expect(delivery.status).toBe('SENT');
+  });
+
+  it('validates worker creation commands, scope and unsupported versions', () => {
+    const outboxCommand = createOutboxEventCommandSchema.parse({
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      eventType: 'ORDER_PAID',
+      sourceType: 'ORDER',
+      sourceId: 'order-a',
+      payload: { orderId: 'order-a' },
+      idempotencyKey: 'order-paid-a',
+      correlationId: 'request-order-a',
+    });
+    const jobCommand = createWorkerJobCommandSchema.parse({
+      tenantId: 'tenant-a',
+      type: 'FINANCE_RECALCULATION',
+      sourceType: 'PAYMENT',
+      sourceId: 'payment-a',
+      payload: { paymentId: 'payment-a' },
+      idempotencyKey: 'finance-recalc-a',
+      correlationId: 'request-finance-a',
+    });
+    const intentCommand = createNotificationIntentCommandSchema.parse({
+      tenantId: 'tenant-a',
+      branchId: 'branch-a',
+      recipientType: 'CUSTOMER',
+      recipientId: 'customer-a',
+      channel: 'LOCAL',
+      templateKey: 'post_service.follow_up.v1',
+      sourceType: 'ORDER',
+      sourceId: 'order-a',
+      idempotencyKey: 'post-service-followup-a',
+      correlationId: 'request-order-a',
+    });
+    const attemptCommand = recordNotificationDeliveryAttemptCommandSchema.parse({
+      tenantId: 'tenant-a',
+      notificationIntentId: 'notification-a',
+      channel: 'LOCAL',
+      status: 'RETRY_SCHEDULED',
+      attemptNumber: 2,
+      error: {
+        code: 'WORKER_PROVIDER_UNAVAILABLE',
+        message: 'Provider unavailable.',
+        retryable: true,
+      },
+    });
+
+    expect(outboxCommand.eventType).toBe('ORDER_PAID');
+    expect(jobCommand.schemaVersion).toBe(1);
+    expect(intentCommand.payload).toEqual({});
+    expect(attemptCommand.error?.retryable).toBe(true);
+    expect(workerErrorCodeSchema.parse('WORKER_UNSUPPORTED_JOB_VERSION')).toBe(
+      'WORKER_UNSUPPORTED_JOB_VERSION',
+    );
+    expect(
+      createOutboxEventCommandSchema.safeParse({ ...outboxCommand, tenantId: '' }).success,
+    ).toBe(false);
+    expect(
+      createWorkerJobCommandSchema.safeParse({ ...jobCommand, schemaVersion: 2 }).success,
+    ).toBe(false);
+  });
+
+  it('keeps worker error envelopes stable and sanitized', () => {
+    const sanitized = workerSanitizedErrorSchema.parse({
+      code: 'WORKER_RETRY_EXHAUSTED',
+      message: 'Retry limit reached for notification delivery.',
+      retryable: false,
+      stack: 'secret stack trace',
+      providerResponse: { token: 'secret-token' },
+    });
+    const apiError = apiErrorSchema.parse({
+      error: {
+        code: 'WORKER_RETRY_EXHAUSTED',
+        message: sanitized.message,
+        requestId: 'request-worker-a',
+      },
+    });
+
+    expect(sanitized).toEqual({
+      code: 'WORKER_RETRY_EXHAUSTED',
+      message: 'Retry limit reached for notification delivery.',
+      retryable: false,
+    });
+    expect(apiError.error.requestId).toBe('request-worker-a');
+    expect(
+      workerSanitizedErrorSchema.safeParse({ code: 'WORKER_SECRET', message: 'Nope' }).success,
     ).toBe(false);
   });
 });

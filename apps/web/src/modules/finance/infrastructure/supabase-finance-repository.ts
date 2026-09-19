@@ -96,6 +96,10 @@ type AmountRow = {
   total_amount_cents?: number | null;
 };
 
+type BranchScopedQuery<Query> = {
+  eq(column: string, value: unknown): Query;
+  in(column: string, values: unknown[]): Query;
+};
 export class SupabaseFinanceRepository implements FinanceRepository {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -111,6 +115,7 @@ export class SupabaseFinanceRepository implements FinanceRepository {
       .limit(filters.limit ?? 100);
 
     request = applyBranchScope(request, context, filters.branchId);
+    if (filters.type) request = request.eq('type', filters.type);
     if (filters.sourceType) request = request.eq('source_type', filters.sourceType);
     if (filters.sourceId) request = request.eq('source_id', filters.sourceId);
     if (filters.cursor) request = request.lt('created_at', filters.cursor);
@@ -461,7 +466,7 @@ function toVisibleExpense(context: RequestContext, row: ExpenseRow) {
   return toExpense(row);
 }
 
-function applyBranchScope<Query extends { eq: Function; in: Function }>(
+function applyBranchScope<Query extends BranchScopedQuery<Query>>(
   request: Query,
   context: RequestContext,
   branchId?: string,

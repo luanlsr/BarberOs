@@ -1,25 +1,68 @@
+'use client';
+
+import * as React from 'react';
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  CalendarPlus,
-  ChevronLeft,
-  ChevronRight,
-  Clock3,
-  Users,
-  WifiOff,
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import { AlertTriangle, CalendarPlus, Clock3, Users, WifiOff, X } from 'lucide-react';
 import { Button } from '@barberos/ui';
-import { AppointmentCard } from './appointment-card';
 import { AppointmentDetailSurface } from './appointment-detail-surface';
 import { NewAppointmentFlow } from './new-appointment-flow';
-import type {
-  AgendaAppointment,
-  AgendaProfessionalColumn,
-  AgendaTimelineSlot,
-  AgendaViewModel,
-} from '../lib/agenda-data';
+import type { AgendaAppointment, AgendaCalendarView, AgendaViewModel } from '../lib/agenda-data';
+
+type FullCalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
+
+const fullCalendarViews: Record<AgendaCalendarView, FullCalendarView> = {
+  month: 'dayGridMonth',
+  week: 'timeGridWeek',
+  day: 'timeGridDay',
+};
+
+const agendaViews: Record<FullCalendarView, AgendaCalendarView> = {
+  dayGridMonth: 'month',
+  timeGridWeek: 'week',
+  timeGridDay: 'day',
+};
 
 export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
+  const router = useRouter();
+  const calendarRef = React.useRef(null);
+  const [calendarView, setCalendarView] = React.useState<AgendaCalendarView>(agenda.calendarView);
+  const selectedDetail = agenda.selectedAppointmentDetail;
+  const events = React.useMemo(
+    () => buildCalendarEvents(agenda.appointments),
+    [agenda.appointments],
+  );
+
+  function navigateTo(params: Record<string, string | undefined>) {
+    router.push(agendaHref(agenda, { view: calendarView, ...params }));
+  }
+
+  function changeView(view: AgendaCalendarView) {
+    setCalendarView(view);
+    const calendarApi = calendarRef.current as {
+      getApi: () => { changeView: (viewName: string) => void };
+    } | null;
+    calendarApi?.getApi().changeView(fullCalendarViews[view]);
+    router.replace(agendaHref(agenda, { view }));
+  }
+
+  function handleDateClick(arg: { date: Date }) {
+    navigateTo({ mode: 'new', date: toDateIso(arg.date), time: toTimeLabel(arg.date) });
+  }
+
+  function handleSelect(arg: { start: Date }) {
+    navigateTo({ mode: 'new', date: toDateIso(arg.start), time: toTimeLabel(arg.start) });
+  }
+
+  function handleEventClick(arg: { event: { id: string; start: Date | null } }) {
+    const appointmentId = String(arg.event.id);
+    navigateTo({ appointmentId, date: toDateIso(arg.event.start ?? new Date(agenda.dateIso)) });
+  }
+
   return (
     <div className="agenda-page">
       <div className="agenda-heading">
@@ -31,26 +74,36 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
           </p>
         </div>
         <div className="agenda-heading-actions" aria-label="Acoes da agenda">
-          <Link
-            className="icon-button"
-            href={`/agenda?date=${agenda.dateIso}`}
-            aria-label="Dia anterior"
-            title="Dia anterior"
-          >
-            <ChevronLeft size={18} aria-hidden="true" />
-          </Link>
-          <Link
-            className="icon-button"
-            href={`/agenda?date=${agenda.dateIso}`}
-            aria-label="Proximo dia"
-            title="Proximo dia"
-          >
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
+          <div className="agenda-view-switcher" aria-label="Visao da agenda">
+            <button
+              aria-pressed={calendarView === 'day'}
+              className="agenda-view-button"
+              type="button"
+              onClick={() => changeView('day')}
+            >
+              Dia
+            </button>
+            <button
+              aria-pressed={calendarView === 'week'}
+              className="agenda-view-button"
+              type="button"
+              onClick={() => changeView('week')}
+            >
+              Semana
+            </button>
+            <button
+              aria-pressed={calendarView === 'month'}
+              className="agenda-view-button"
+              type="button"
+              onClick={() => changeView('month')}
+            >
+              Mes
+            </button>
+          </div>
           {agenda.canCreateAppointment ? (
             <Link
               className="button button-primary"
-              href={`/agenda?mode=new&date=${agenda.dateIso}`}
+              href={agendaHref(agenda, { mode: 'new', view: calendarView })}
             >
               <CalendarPlus size={16} aria-hidden="true" />
               Novo agendamento
@@ -60,6 +113,7 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
       </div>
 
       <form className="agenda-filterbar" method="get" aria-label="Filtros da agenda">
+        <input type="hidden" name="view" value={calendarView} />
         <label>
           <span>Data</span>
           <input type="date" name="date" defaultValue={agenda.dateIso} />
@@ -93,7 +147,7 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
       <div className="agenda-state-strip" aria-label="Estado da agenda">
         <span>
           <Clock3 size={15} aria-hidden="true" />
-          Atualizada para hoje
+          Clique em um horario para criar
         </span>
         <span>
           <WifiOff size={15} aria-hidden="true" />
@@ -105,178 +159,148 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
         </span>
       </div>
 
-      <NewAppointmentFlow model={agenda.newAppointment} />
-
-      <div className="agenda-workspace">
-        <div className="agenda-schedule-pane">
-          {agenda.appointments.length ? (
-            <>
-              <section className="agenda-mobile-timeline" aria-labelledby="agenda-mobile-title">
-                <div className="agenda-section-title">
-                  <h2 id="agenda-mobile-title">Timeline do dia</h2>
-                  <span>{agenda.appointments.length} agendamentos</span>
-                </div>
-                <div className="agenda-timeline-list">
-                  {agenda.timeline.map((slot) => (
-                    <TimelineSlot agenda={agenda} key={slot.timeLabel} slot={slot} />
-                  ))}
-                </div>
-              </section>
-
-              <section className="agenda-tablet-columns" aria-labelledby="agenda-tablet-title">
-                <div className="agenda-section-title">
-                  <h2 id="agenda-tablet-title">Agenda por profissional</h2>
-                  <span>{agenda.appointments.length} agendamentos</span>
-                </div>
-                <div className="agenda-column-grid">
-                  {agenda.professionalColumns.map((column) => (
-                    <ProfessionalColumn
-                      agenda={agenda}
-                      column={column}
-                      key={column.professional.id}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section className="agenda-desktop-grid" aria-labelledby="agenda-desktop-title">
-                <div className="agenda-section-title">
-                  <h2 id="agenda-desktop-title">Grade operacional</h2>
-                  <span>{agenda.appointments.length} agendamentos</span>
-                </div>
-                <div
-                  className="agenda-grid-table"
-                  style={{
-                    gridTemplateColumns: `76px repeat(${Math.max(agenda.professionalColumns.length, 1)}, minmax(180px, 1fr))`,
-                  }}
-                >
-                  <div className="agenda-grid-corner" aria-hidden="true" />
-                  {agenda.professionalColumns.map((column) => (
-                    <div className="agenda-grid-header" key={column.professional.id}>
-                      <strong>{column.professional.name}</strong>
-                      <span>{column.professional.roleLabel}</span>
-                    </div>
-                  ))}
-                  {agenda.timeline.map((slot) => (
-                    <DesktopRow
-                      agenda={agenda}
-                      columns={agenda.professionalColumns}
-                      key={slot.timeLabel}
-                      slot={slot}
-                    />
-                  ))}
-                </div>
-              </section>
-            </>
-          ) : (
-            <section className="agenda-empty-state" aria-labelledby="agenda-empty-title">
-              <AlertTriangle size={24} aria-hidden="true" />
-              <div>
-                <h2 id="agenda-empty-title">Agenda vazia</h2>
-                <p>{agenda.emptyMessage}</p>
-              </div>
-            </section>
-          )}
+      <section className="agenda-calendar-panel" aria-labelledby="agenda-calendar-title">
+        <div className="agenda-section-title">
+          <h2 id="agenda-calendar-title">Calendario operacional</h2>
+          <span>{agenda.appointments.length} agendamentos</span>
         </div>
-        {agenda.appointments.length ? (
-          <AppointmentDetailSurface detail={agenda.selectedAppointmentDetail} />
-        ) : null}
-      </div>
+        {agenda.appointments.length || agenda.hasReadPermission ? (
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin] as never}
+            initialView={fullCalendarViews[agenda.calendarView]}
+            initialDate={agenda.dateIso}
+            events={events as never}
+            selectable={agenda.canCreateAppointment}
+            selectMirror
+            nowIndicator
+            allDaySlot={false}
+            slotMinTime="08:00:00"
+            slotMaxTime="19:00:00"
+            slotDuration="00:30:00"
+            locale="pt-br"
+            height="auto"
+            headerToolbar={false}
+            dayMaxEvents={3}
+            eventClick={handleEventClick}
+            select={handleSelect}
+            dateClick={handleDateClick}
+            eventContent={renderEventContent}
+            datesSet={(arg) =>
+              setCalendarView(agendaViews[arg.view.type as FullCalendarView] ?? 'day')
+            }
+          />
+        ) : (
+          <section className="agenda-empty-state" aria-labelledby="agenda-empty-title">
+            <AlertTriangle size={24} aria-hidden="true" />
+            <div>
+              <h2 id="agenda-empty-title">Agenda vazia</h2>
+              <p>{agenda.emptyMessage}</p>
+            </div>
+          </section>
+        )}
+      </section>
+
+      {agenda.newAppointment.isOpen ? (
+        <AgendaModal title="Novo agendamento" onCloseHref={agendaBaseHref(agenda, calendarView)}>
+          <NewAppointmentFlow model={agenda.newAppointment} />
+        </AgendaModal>
+      ) : null}
+
+      {selectedDetail ? (
+        <AgendaModal
+          title={'Detalhes de ' + selectedDetail.appointment.customerName}
+          onCloseHref={agendaBaseHref(agenda, calendarView)}
+        >
+          <AppointmentDetailSurface detail={selectedDetail} />
+        </AgendaModal>
+      ) : null}
     </div>
   );
 }
 
-function TimelineSlot({
-  agenda,
-  slot,
-}: Readonly<{ agenda: AgendaViewModel; slot: AgendaTimelineSlot }>) {
+function AgendaModal({
+  children,
+  onCloseHref,
+  title,
+}: Readonly<{ children: React.ReactNode; onCloseHref: string; title: string }>) {
   return (
-    <div className="agenda-timeline-slot">
-      <time>{slot.timeLabel}</time>
-      <div className="agenda-timeline-items">
-        {slot.appointments.length ? (
-          slot.appointments.map((appointment) => (
-            <AppointmentCard
-              appointment={appointment}
-              detailHref={appointmentDetailHref(agenda, appointment)}
-              key={appointment.id}
-            />
-          ))
-        ) : (
-          <span className="agenda-free-slot">Livre</span>
-        )}
-      </div>
+    <div className="app-dialog-backdrop" role="presentation">
+      <section
+        aria-label={title}
+        aria-modal="true"
+        className="app-dialog agenda-dialog"
+        role="dialog"
+      >
+        <div className="agenda-dialog-close">
+          <Link className="icon-button" href={onCloseHref} aria-label="Fechar" title="Fechar">
+            <X size={18} aria-hidden="true" />
+          </Link>
+        </div>
+        {children}
+      </section>
     </div>
   );
 }
 
-function ProfessionalColumn({
-  agenda,
-  column,
-}: Readonly<{ agenda: AgendaViewModel; column: AgendaProfessionalColumn }>) {
+function buildCalendarEvents(appointments: readonly AgendaAppointment[]) {
+  return appointments.map((appointment) => ({
+    id: appointment.id,
+    title: appointment.customerName,
+    start: appointment.startsAt,
+    end: appointment.endsAt,
+    classNames: ['agenda-calendar-event', 'agenda-calendar-event-' + appointment.statusTone],
+    extendedProps: {
+      appointment,
+    },
+  }));
+}
+
+function renderEventContent(arg: {
+  event: { title: string; extendedProps: { appointment?: AgendaAppointment } };
+}) {
+  const appointment = arg.event.extendedProps.appointment as AgendaAppointment | undefined;
+  if (!appointment) return <span>{arg.event.title}</span>;
   return (
-    <article className="agenda-professional-column">
-      <header>
-        <div>
-          <h3>{column.professional.name}</h3>
-          <span>{column.professional.roleLabel}</span>
-        </div>
-        <strong>{String(column.appointments.length).padStart(2, '0')}</strong>
-      </header>
-      <div className="agenda-column-items">
-        {column.appointments.length ? (
-          column.appointments.map((appointment) => (
-            <AppointmentCard
-              appointment={appointment}
-              detailHref={appointmentDetailHref(agenda, appointment)}
-              key={appointment.id}
-            />
-          ))
-        ) : (
-          <span className="agenda-free-slot">Sem agendamentos</span>
-        )}
-      </div>
-    </article>
+    <div className="agenda-calendar-event-content">
+      <strong>{appointment.customerName}</strong>
+      <span>{appointment.serviceNames.join(' + ')}</span>
+      <small>
+        {appointment.startLabel} · {appointment.professionalName}
+      </small>
+    </div>
   );
 }
 
-function DesktopRow({
-  agenda,
-  columns,
-  slot,
-}: Readonly<{
-  agenda: AgendaViewModel;
-  columns: readonly AgendaProfessionalColumn[];
-  slot: AgendaTimelineSlot;
-}>) {
-  return (
-    <>
-      <time className="agenda-grid-time">{slot.timeLabel}</time>
-      {columns.map((column) => {
-        const appointments = slot.appointments.filter(
-          (appointment) => appointment.professionalId === column.professional.id,
-        );
-        return (
-          <div className="agenda-grid-cell" key={`${slot.timeLabel}-${column.professional.id}`}>
-            {appointments.map((appointment) => (
-              <AppointmentCard
-                appointment={appointment}
-                compact
-                detailHref={appointmentDetailHref(agenda, appointment)}
-                key={appointment.id}
-              />
-            ))}
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-function appointmentDetailHref(agenda: AgendaViewModel, appointment: AgendaAppointment) {
-  const params = new URLSearchParams({ date: agenda.dateIso, appointmentId: appointment.id });
+function agendaHref(
+  agenda: AgendaViewModel,
+  overrides: Partial<Record<'appointmentId' | 'date' | 'mode' | 'time' | 'view', string>> = {},
+) {
+  const params = new URLSearchParams({
+    date: overrides.date ?? agenda.dateIso,
+    view: overrides.view ?? agenda.calendarView,
+  });
   if (agenda.selectedProfessionalId !== 'all') {
     params.set('professionalId', agenda.selectedProfessionalId);
   }
+  if (overrides.mode) params.set('mode', overrides.mode);
+  if (overrides.time) params.set('time', overrides.time);
+  if (overrides.appointmentId) params.set('appointmentId', overrides.appointmentId);
   return `/agenda?${params.toString()}`;
+}
+
+function agendaBaseHref(agenda: AgendaViewModel, view: AgendaCalendarView) {
+  return agendaHref(agenda, { view });
+}
+
+function toDateIso(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
+}
+
+function toTimeLabel(date: Date) {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return hours === '00' && minutes === '00' ? '12:00' : `${hours}:${minutes}`;
 }

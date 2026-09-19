@@ -3,6 +3,7 @@ import type {
   FinanceSummary,
   FinancialEntry,
   FinancialEntrySourceType,
+  FinancialEntryType,
   RequestContext,
 } from '@barberos/contracts';
 
@@ -77,6 +78,7 @@ function financialEntryFiltersFromUrl(url: URL): FinancialEntryFilters {
     periodStart: requiredDateParam(url, 'periodStart'),
     periodEnd: requiredDateParam(url, 'periodEnd'),
     branchId: optionalParam(url, 'branchId'),
+    type: optionalParam(url, 'type') as FinancialEntryType | undefined,
     sourceType: optionalParam(url, 'sourceType') as FinancialEntrySourceType | undefined,
     sourceId: optionalParam(url, 'sourceId'),
     limit: optionalNumberParam(url, 'limit'),

@@ -13,7 +13,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const session = await getSessionContext();
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider>
           <AppShell session={session}>{children}</AppShell>
         </ThemeProvider>

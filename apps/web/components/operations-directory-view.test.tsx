@@ -13,7 +13,9 @@ describe('OperationsDirectoryView', () => {
     expect(html).toContain('Servicos');
     expect(html).toContain('Corte classico');
     expect(html).toContain('Novo servico');
-    expect(html).toContain('Salvar rascunho');
+    expect(html).not.toContain('CRUD habilitado');
+    expect(html).toContain('Editar');
+    expect(html).toContain('Arquivar');
   });
 
   test('renders permission denied without protected records', () => {

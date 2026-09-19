@@ -45,6 +45,22 @@ const safePublicMessages: Partial<Record<ApiErrorCode, string>> = {
   PAYOUT_CASH_REGISTER_NOT_OPEN: 'Cash register session is not open.',
   PAYOUT_VALIDATION_ERROR: 'Payout request payload is invalid.',
   PAYOUT_INVALID_STATUS: 'Payout status does not allow this operation.',
+  CATALOG_PERMISSION_DENIED: 'Permission denied.',
+  CATALOG_BRANCH_SCOPE_DENIED: 'Catalog data is outside the authorized scope.',
+  CATALOG_ENTITLEMENT_DENIED: 'Entitlement denied.',
+  CATALOG_NOT_FOUND: 'Catalog record was not found.',
+  CATALOG_VALIDATION_ERROR: 'Catalog request payload is invalid.',
+  PRODUCT_UNAVAILABLE: 'Product is unavailable for sale.',
+  CATALOG_IDEMPOTENCY_CONFLICT: 'Catalog request conflicts with an existing idempotency key.',
+  INVENTORY_PERMISSION_DENIED: 'Permission denied.',
+  INVENTORY_BRANCH_SCOPE_DENIED: 'Inventory data is outside the authorized scope.',
+  INVENTORY_ENTITLEMENT_DENIED: 'Entitlement denied.',
+  INVENTORY_NOT_FOUND: 'Inventory record was not found.',
+  INVENTORY_VALIDATION_ERROR: 'Inventory request payload is invalid.',
+  INVENTORY_PRODUCT_UNAVAILABLE: 'Inventory product is unavailable.',
+  INVENTORY_INSUFFICIENT_STOCK: 'Insufficient stock for this product and branch.',
+  INVENTORY_IDEMPOTENCY_CONFLICT: 'Inventory request conflicts with an existing idempotency key.',
+  INVENTORY_IMMUTABLE_MOVEMENT: 'Inventory history cannot be changed destructively.',
 };
 
 export function jsonError(code: ApiErrorCode, message: string, status: number, requestId?: string) {
@@ -107,6 +123,8 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'COMMISSION_NOT_FOUND':
     case 'COMMISSION_RULE_NOT_FOUND':
     case 'PAYOUT_NOT_FOUND':
+    case 'CATALOG_NOT_FOUND':
+    case 'INVENTORY_NOT_FOUND':
       return jsonError(code, getPublicErrorMessage(error, code), 404, requestId);
     case 'APPOINTMENT_CONFLICT':
     case 'ORDER_ALREADY_OPEN_FOR_APPOINTMENT':
@@ -122,6 +140,9 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'PAYOUT_IDEMPOTENCY_CONFLICT':
     case 'PAYOUT_IMMUTABLE':
     case 'PAYOUT_CASH_REGISTER_NOT_OPEN':
+    case 'CATALOG_IDEMPOTENCY_CONFLICT':
+    case 'INVENTORY_IDEMPOTENCY_CONFLICT':
+    case 'INVENTORY_IMMUTABLE_MOVEMENT':
       return jsonError(code, getPublicErrorMessage(error, code), 409, requestId);
     case 'ORDER_PERMISSION_DENIED':
     case 'ORDER_BRANCH_SCOPE_DENIED':
@@ -138,6 +159,12 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'PAYOUT_PERMISSION_DENIED':
     case 'PAYOUT_BRANCH_SCOPE_DENIED':
     case 'PAYOUT_ENTITLEMENT_DENIED':
+    case 'CATALOG_PERMISSION_DENIED':
+    case 'CATALOG_BRANCH_SCOPE_DENIED':
+    case 'CATALOG_ENTITLEMENT_DENIED':
+    case 'INVENTORY_PERMISSION_DENIED':
+    case 'INVENTORY_BRANCH_SCOPE_DENIED':
+    case 'INVENTORY_ENTITLEMENT_DENIED':
       return jsonError(code, getPublicErrorMessage(error, code), 403, requestId);
     case 'APPOINTMENT_INVALID_TRANSITION':
     case 'CHECK_IN_INVALID_APPOINTMENT_STATUS':
@@ -155,6 +182,11 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'PAYOUT_VALIDATION_ERROR':
     case 'PAYOUT_INVALID_STATUS':
     case 'CORE_VALIDATION_ERROR':
+    case 'CATALOG_VALIDATION_ERROR':
+    case 'PRODUCT_UNAVAILABLE':
+    case 'INVENTORY_VALIDATION_ERROR':
+    case 'INVENTORY_PRODUCT_UNAVAILABLE':
+    case 'INVENTORY_INSUFFICIENT_STOCK':
       return jsonError(code, getPublicErrorMessage(error, code), 400, requestId);
     default:
       return jsonError('CORE_VALIDATION_ERROR', 'Request could not be processed.', 400, requestId);

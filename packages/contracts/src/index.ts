@@ -44,12 +44,15 @@ export type Permission =
   | 'commission.manage'
   | 'inventory.read'
   | 'inventory.write'
+  | 'worker.failures.read'
+  | 'notifications.status.read'
   | 'settings.read'
   | 'memberships.read'
   | 'memberships.manage'
   | 'audit.read';
 
-export type Entitlement = 'core.operations' | 'finance' | 'inventory' | 'ai';
+export type Entitlement =
+  'core.operations' | 'finance' | 'inventory' | 'worker.operations' | 'notifications' | 'ai';
 export type AuthState = 'authenticated' | 'unauthenticated' | 'expired';
 
 export type WorkspaceContext = {
@@ -128,13 +131,22 @@ export const permissionSchema = z.enum([
   'commission.manage',
   'inventory.read',
   'inventory.write',
+  'worker.failures.read',
+  'notifications.status.read',
   'settings.read',
   'memberships.read',
   'memberships.manage',
   'audit.read',
 ]);
 
-export const entitlementSchema = z.enum(['core.operations', 'finance', 'inventory', 'ai']);
+export const entitlementSchema = z.enum([
+  'core.operations',
+  'finance',
+  'inventory',
+  'worker.operations',
+  'notifications',
+  'ai',
+]);
 export const nonEmptyIdSchema = z.string().trim().min(1);
 export const optionalTextSchema = z.string().trim().max(2000).optional();
 export const moneyCentsSchema = z.number().int().min(0);
@@ -278,6 +290,35 @@ export const payoutStatusSchema = z.enum([
   'CORRECTED',
 ]);
 export type PayoutStatus = z.infer<typeof payoutStatusSchema>;
+export const productStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']);
+export type ProductStatus = z.infer<typeof productStatusSchema>;
+
+export const stockTrackingPolicySchema = z.enum(['TRACKED', 'NOT_TRACKED']);
+export type StockTrackingPolicy = z.infer<typeof stockTrackingPolicySchema>;
+
+export const stockMovementTypeSchema = z.enum([
+  'ENTRY',
+  'SALE',
+  'LOSS',
+  'CONSUMPTION',
+  'ADJUSTMENT',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
+]);
+export type StockMovementType = z.infer<typeof stockMovementTypeSchema>;
+
+export const stockSourceTypeSchema = z.enum([
+  'MANUAL',
+  'ORDER_ITEM',
+  'PAYMENT',
+  'TRANSFER',
+  'SYSTEM',
+]);
+export type StockSourceType = z.infer<typeof stockSourceTypeSchema>;
+
+export const stockAlertStateSchema = z.enum(['ACTIVE', 'RESOLVED']);
+export type StockAlertState = z.infer<typeof stockAlertStateSchema>;
+
 export const orderItemSourceTypeSchema = z.enum(['SERVICE', 'PRODUCT', 'MANUAL']);
 export type OrderItemSourceType = z.infer<typeof orderItemSourceTypeSchema>;
 
@@ -302,6 +343,127 @@ export const scheduleBlockTypeSchema = z.enum([
   'MANUAL',
 ]);
 export type ScheduleBlockType = z.infer<typeof scheduleBlockTypeSchema>;
+
+export const outboxEventStatusSchema = z.enum([
+  'PENDING',
+  'DISPATCHING',
+  'DISPATCHED',
+  'FAILED',
+  'DEAD_LETTERED',
+  'CANCELLED',
+]);
+export type OutboxEventStatus = z.infer<typeof outboxEventStatusSchema>;
+
+export const outboxEventTypeSchema = z.enum([
+  'APPOINTMENT_CREATED',
+  'APPOINTMENT_CONFIRMED',
+  'APPOINTMENT_CANCELLED',
+  'ORDER_OPENED',
+  'ORDER_PAID',
+  'PAYMENT_COMPLETED',
+  'PAYMENT_REFUNDED',
+  'FINANCE_RECALCULATION_REQUESTED',
+  'STOCK_LOW_DETECTED',
+  'NOTIFICATION_DELIVERY_REQUESTED',
+]);
+export type OutboxEventType = z.infer<typeof outboxEventTypeSchema>;
+
+export const outboxSourceTypeSchema = z.enum([
+  'APPOINTMENT',
+  'ORDER',
+  'PAYMENT',
+  'CASH_REGISTER',
+  'FINANCIAL_ENTRY',
+  'COMMISSION',
+  'PAYOUT',
+  'PRODUCT',
+  'STOCK_MOVEMENT',
+  'NOTIFICATION_INTENT',
+  'SYSTEM',
+]);
+export type OutboxSourceType = z.infer<typeof outboxSourceTypeSchema>;
+
+export const workerJobTypeSchema = z.enum([
+  'OUTBOX_DISPATCH',
+  'APPOINTMENT_REMINDER',
+  'POST_SERVICE_FOLLOW_UP',
+  'FINANCE_RECALCULATION',
+  'STOCK_ALERT',
+  'EXPIRED_RECORD_CLEANUP',
+  'NOTIFICATION_DELIVERY',
+]);
+export type WorkerJobType = z.infer<typeof workerJobTypeSchema>;
+
+export const workerJobStatusSchema = z.enum([
+  'PENDING',
+  'CLAIMED',
+  'RUNNING',
+  'SUCCEEDED',
+  'RETRY_SCHEDULED',
+  'FAILED',
+  'DEAD_LETTERED',
+  'CANCELLED',
+]);
+export type WorkerJobStatus = z.infer<typeof workerJobStatusSchema>;
+
+export const workerJobAttemptStatusSchema = z.enum([
+  'RUNNING',
+  'SUCCEEDED',
+  'FAILED',
+  'RETRY_SCHEDULED',
+  'DEAD_LETTERED',
+]);
+export type WorkerJobAttemptStatus = z.infer<typeof workerJobAttemptStatusSchema>;
+
+export const workerErrorCodeSchema = z.enum([
+  'WORKER_VALIDATION_ERROR',
+  'WORKER_PERMISSION_DENIED',
+  'WORKER_BRANCH_SCOPE_DENIED',
+  'WORKER_UNSUPPORTED_JOB_TYPE',
+  'WORKER_UNSUPPORTED_JOB_VERSION',
+  'WORKER_LOCK_NOT_ACQUIRED',
+  'WORKER_RATE_LIMITED',
+  'WORKER_PROVIDER_UNAVAILABLE',
+  'WORKER_RETRY_EXHAUSTED',
+  'WORKER_HANDLER_FAILED',
+  'OUTBOX_VALIDATION_ERROR',
+  'OUTBOX_IDEMPOTENCY_CONFLICT',
+  'NOTIFICATION_VALIDATION_ERROR',
+  'NOTIFICATION_DELIVERY_FAILED',
+]);
+export type WorkerErrorCode = z.infer<typeof workerErrorCodeSchema>;
+
+export const notificationChannelSchema = z.enum(['WHATSAPP', 'SMS', 'EMAIL', 'IN_APP', 'LOCAL']);
+export type NotificationChannel = z.infer<typeof notificationChannelSchema>;
+
+export const notificationIntentStatusSchema = z.enum([
+  'PENDING',
+  'READY',
+  'DISPATCHING',
+  'SENT',
+  'FAILED',
+  'CANCELLED',
+]);
+export type NotificationIntentStatus = z.infer<typeof notificationIntentStatusSchema>;
+
+export const notificationDeliveryAttemptStatusSchema = z.enum([
+  'PENDING',
+  'SENT',
+  'RETRY_SCHEDULED',
+  'FAILED',
+  'DEAD_LETTERED',
+]);
+export type NotificationDeliveryAttemptStatus = z.infer<
+  typeof notificationDeliveryAttemptStatusSchema
+>;
+
+export const notificationRecipientTypeSchema = z.enum([
+  'CUSTOMER',
+  'PROFESSIONAL',
+  'MEMBERSHIP',
+  'TENANT_OPERATOR',
+]);
+export type NotificationRecipientType = z.infer<typeof notificationRecipientTypeSchema>;
 
 export const coreOperationsErrorCodeSchema = z.enum([
   'CORE_VALIDATION_ERROR',
@@ -360,8 +522,45 @@ export const coreOperationsErrorCodeSchema = z.enum([
   'PAYOUT_IDEMPOTENCY_CONFLICT',
   'PAYOUT_IMMUTABLE',
   'PAYOUT_CASH_REGISTER_NOT_OPEN',
+  'CATALOG_VALIDATION_ERROR',
+  'CATALOG_PERMISSION_DENIED',
+  'CATALOG_BRANCH_SCOPE_DENIED',
+  'CATALOG_ENTITLEMENT_DENIED',
+  'CATALOG_NOT_FOUND',
+  'CATALOG_IDEMPOTENCY_CONFLICT',
+  'PRODUCT_UNAVAILABLE',
+  'INVENTORY_VALIDATION_ERROR',
+  'INVENTORY_PERMISSION_DENIED',
+  'INVENTORY_BRANCH_SCOPE_DENIED',
+  'INVENTORY_ENTITLEMENT_DENIED',
+  'INVENTORY_NOT_FOUND',
+  'INVENTORY_PRODUCT_UNAVAILABLE',
+  'INVENTORY_INSUFFICIENT_STOCK',
+  'INVENTORY_IDEMPOTENCY_CONFLICT',
+  'INVENTORY_IMMUTABLE_MOVEMENT',
+  'WORKER_VALIDATION_ERROR',
+  'WORKER_PERMISSION_DENIED',
+  'WORKER_BRANCH_SCOPE_DENIED',
+  'WORKER_UNSUPPORTED_JOB_TYPE',
+  'WORKER_UNSUPPORTED_JOB_VERSION',
+  'WORKER_LOCK_NOT_ACQUIRED',
+  'WORKER_RATE_LIMITED',
+  'WORKER_PROVIDER_UNAVAILABLE',
+  'WORKER_RETRY_EXHAUSTED',
+  'WORKER_HANDLER_FAILED',
+  'OUTBOX_VALIDATION_ERROR',
+  'OUTBOX_IDEMPOTENCY_CONFLICT',
+  'NOTIFICATION_VALIDATION_ERROR',
+  'NOTIFICATION_DELIVERY_FAILED',
 ]);
 export type CoreOperationsErrorCode = z.infer<typeof coreOperationsErrorCodeSchema>;
+
+export const workerSanitizedErrorSchema = z.object({
+  code: workerErrorCodeSchema,
+  message: z.string().trim().min(1).max(500),
+  retryable: z.boolean().default(false),
+});
+export type WorkerSanitizedError = z.infer<typeof workerSanitizedErrorSchema>;
 
 export const apiErrorSchema = z.object({
   error: z.object({
@@ -371,6 +570,174 @@ export const apiErrorSchema = z.object({
   }),
 });
 export type ApiError = z.infer<typeof apiErrorSchema>;
+
+export const workerJobSchemaVersionSchema = z.literal(1);
+export type WorkerJobSchemaVersion = z.infer<typeof workerJobSchemaVersionSchema>;
+
+const workerMetadataSchema = z.record(z.string(), z.unknown()).default({});
+
+export const outboxEventSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  eventType: outboxEventTypeSchema,
+  sourceType: outboxSourceTypeSchema,
+  sourceId: nonEmptyIdSchema,
+  payload: workerMetadataSchema,
+  idempotencyKey: idempotencyKeySchema,
+  status: outboxEventStatusSchema,
+  correlationId: nonEmptyIdSchema,
+  schemaVersion: workerJobSchemaVersionSchema.default(1),
+  attemptCount: z.number().int().min(0).default(0),
+  availableAt: isoDateTimeSchema,
+  lockedBy: z.string().trim().min(1).max(120).optional(),
+  lockedUntil: isoDateTimeSchema.optional(),
+  lastError: workerSanitizedErrorSchema.optional(),
+  dispatchedAt: isoDateTimeSchema.optional(),
+  createdBy: nonEmptyIdSchema.optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type OutboxEvent = z.infer<typeof outboxEventSchema>;
+
+export const workerJobSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  type: workerJobTypeSchema,
+  status: workerJobStatusSchema,
+  schemaVersion: workerJobSchemaVersionSchema.default(1),
+  sourceType: outboxSourceTypeSchema.optional(),
+  sourceId: nonEmptyIdSchema.optional(),
+  outboxEventId: nonEmptyIdSchema.optional(),
+  notificationIntentId: nonEmptyIdSchema.optional(),
+  payload: workerMetadataSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+  priority: z.number().int().min(0).max(100).default(50),
+  attemptCount: z.number().int().min(0).default(0),
+  maxAttempts: z.number().int().min(1).max(25).default(5),
+  runAt: isoDateTimeSchema,
+  lockedBy: z.string().trim().min(1).max(120).optional(),
+  lockedUntil: isoDateTimeSchema.optional(),
+  lastError: workerSanitizedErrorSchema.optional(),
+  completedAt: isoDateTimeSchema.optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type WorkerJob = z.infer<typeof workerJobSchema>;
+
+export const workerJobAttemptSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  jobId: nonEmptyIdSchema,
+  outboxEventId: nonEmptyIdSchema.optional(),
+  status: workerJobAttemptStatusSchema,
+  attemptNumber: z.number().int().min(1),
+  workerId: z.string().trim().min(1).max(120),
+  startedAt: isoDateTimeSchema,
+  finishedAt: isoDateTimeSchema.optional(),
+  error: workerSanitizedErrorSchema.optional(),
+});
+export type WorkerJobAttempt = z.infer<typeof workerJobAttemptSchema>;
+
+export const notificationIntentSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  recipientType: notificationRecipientTypeSchema,
+  recipientId: nonEmptyIdSchema,
+  channel: notificationChannelSchema,
+  templateKey: z.string().trim().min(2).max(120),
+  sourceType: outboxSourceTypeSchema,
+  sourceId: nonEmptyIdSchema,
+  payload: workerMetadataSchema,
+  status: notificationIntentStatusSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type NotificationIntent = z.infer<typeof notificationIntentSchema>;
+
+export const notificationDeliveryAttemptSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  notificationIntentId: nonEmptyIdSchema,
+  channel: notificationChannelSchema,
+  status: notificationDeliveryAttemptStatusSchema,
+  attemptNumber: z.number().int().min(1),
+  provider: z.string().trim().min(2).max(80).optional(),
+  providerMessageId: z.string().trim().min(1).max(160).optional(),
+  error: workerSanitizedErrorSchema.optional(),
+  sentAt: isoDateTimeSchema.optional(),
+  createdAt: isoDateTimeSchema,
+});
+export type NotificationDeliveryAttempt = z.infer<typeof notificationDeliveryAttemptSchema>;
+
+export const createOutboxEventCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  eventType: outboxEventTypeSchema,
+  sourceType: outboxSourceTypeSchema,
+  sourceId: nonEmptyIdSchema,
+  payload: workerMetadataSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+  availableAt: isoDateTimeSchema.optional(),
+});
+export type CreateOutboxEventCommand = z.input<typeof createOutboxEventCommandSchema>;
+
+export const createWorkerJobCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  type: workerJobTypeSchema,
+  schemaVersion: workerJobSchemaVersionSchema.default(1),
+  sourceType: outboxSourceTypeSchema.optional(),
+  sourceId: nonEmptyIdSchema.optional(),
+  outboxEventId: nonEmptyIdSchema.optional(),
+  notificationIntentId: nonEmptyIdSchema.optional(),
+  payload: workerMetadataSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+  priority: z.number().int().min(0).max(100).default(50),
+  maxAttempts: z.number().int().min(1).max(25).default(5),
+  runAt: isoDateTimeSchema.optional(),
+});
+export type CreateWorkerJobCommand = z.input<typeof createWorkerJobCommandSchema>;
+
+export const createNotificationIntentCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  recipientType: notificationRecipientTypeSchema,
+  recipientId: nonEmptyIdSchema,
+  channel: notificationChannelSchema,
+  templateKey: z.string().trim().min(2).max(120),
+  sourceType: outboxSourceTypeSchema,
+  sourceId: nonEmptyIdSchema,
+  payload: workerMetadataSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+});
+export type CreateNotificationIntentCommand = z.input<typeof createNotificationIntentCommandSchema>;
+
+export const recordNotificationDeliveryAttemptCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  notificationIntentId: nonEmptyIdSchema,
+  channel: notificationChannelSchema,
+  status: notificationDeliveryAttemptStatusSchema,
+  attemptNumber: z.number().int().min(1),
+  provider: z.string().trim().min(2).max(80).optional(),
+  providerMessageId: z.string().trim().min(1).max(160).optional(),
+  error: workerSanitizedErrorSchema.optional(),
+  sentAt: isoDateTimeSchema.optional(),
+});
+export type RecordNotificationDeliveryAttemptCommand = z.input<
+  typeof recordNotificationDeliveryAttemptCommandSchema
+>;
 
 export const professionalSchema = z.object({
   id: nonEmptyIdSchema,
@@ -423,6 +790,137 @@ export const customerSchema = z.object({
   archivedAt: isoDateTimeSchema.optional(),
 });
 export type Customer = z.infer<typeof customerSchema>;
+
+export const supplierMetadataSchema = z
+  .object({
+    supplierName: z.string().trim().min(2).max(160).optional(),
+    supplierDocument: z.string().trim().min(3).max(40).optional(),
+    contactName: z.string().trim().min(2).max(120).optional(),
+    contactPhone: z.string().trim().min(8).max(32).optional(),
+    purchaseUrl: z.string().url().optional(),
+    notes: z.string().trim().max(1000).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'Supplier metadata cannot be empty.',
+  });
+export type SupplierMetadata = z.infer<typeof supplierMetadataSchema>;
+
+export const productCategorySchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchIds: z.array(nonEmptyIdSchema).min(1),
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).optional(),
+  status: productStatusSchema,
+  archivedAt: isoDateTimeSchema.optional(),
+  createdBy: nonEmptyIdSchema,
+  updatedBy: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type ProductCategory = z.infer<typeof productCategorySchema>;
+
+export const productSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchIds: z.array(nonEmptyIdSchema).min(1),
+  categoryId: nonEmptyIdSchema.optional(),
+  sku: z.string().trim().min(1).max(80).optional(),
+  barcode: z.string().trim().min(3).max(80).optional(),
+  name: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(1000).optional(),
+  status: productStatusSchema,
+  salePriceAmountCents: positiveMoneyCentsSchema,
+  costAmountCents: moneyCentsSchema.optional(),
+  stockTrackingPolicy: stockTrackingPolicySchema,
+  allowNegativeStock: z.boolean().default(false),
+  minimumStockQuantity: z.number().int().min(0).default(0),
+  supplierMetadata: supplierMetadataSchema.optional(),
+  archivedAt: isoDateTimeSchema.optional(),
+  createdBy: nonEmptyIdSchema,
+  updatedBy: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type Product = z.infer<typeof productSchema>;
+
+export const inventoryLocationSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema,
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).optional(),
+  active: z.boolean().default(true),
+  createdBy: nonEmptyIdSchema,
+  updatedBy: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type InventoryLocation = z.infer<typeof inventoryLocationSchema>;
+
+export const stockMovementSchema = z
+  .object({
+    id: nonEmptyIdSchema,
+    tenantId: nonEmptyIdSchema,
+    branchId: nonEmptyIdSchema,
+    locationId: nonEmptyIdSchema.optional(),
+    productId: nonEmptyIdSchema,
+    type: stockMovementTypeSchema,
+    quantity: z
+      .number()
+      .int()
+      .refine((value) => value !== 0, {
+        message: 'Stock movement quantity cannot be zero.',
+      }),
+    balanceAfterQuantity: z.number().int().optional(),
+    sourceType: stockSourceTypeSchema,
+    sourceId: nonEmptyIdSchema.optional(),
+    orderId: nonEmptyIdSchema.optional(),
+    orderItemId: nonEmptyIdSchema.optional(),
+    paymentId: nonEmptyIdSchema.optional(),
+    idempotencyKey: idempotencyKeySchema.optional(),
+    reason: z.string().trim().min(3).max(500).optional(),
+    createdBy: nonEmptyIdSchema,
+    createdAt: isoDateTimeSchema,
+  })
+  .refine(
+    (value) =>
+      (['ENTRY', 'TRANSFER_IN'].includes(value.type) && value.quantity > 0) ||
+      (['SALE', 'LOSS', 'CONSUMPTION', 'TRANSFER_OUT'].includes(value.type) &&
+        value.quantity < 0) ||
+      value.type === 'ADJUSTMENT',
+    {
+      message: 'Stock movement quantity sign must match movement type.',
+      path: ['quantity'],
+    },
+  );
+export type StockMovement = z.infer<typeof stockMovementSchema>;
+
+export const stockBalanceSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema,
+  locationId: nonEmptyIdSchema.optional(),
+  productId: nonEmptyIdSchema,
+  currentQuantity: z.number().int(),
+  minimumStockQuantity: z.number().int().min(0),
+  lowStock: z.boolean(),
+  lastMovementAt: isoDateTimeSchema.optional(),
+  updatedAt: isoDateTimeSchema,
+});
+export type StockBalance = z.infer<typeof stockBalanceSchema>;
+
+export const lowStockAlertSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema,
+  productId: nonEmptyIdSchema,
+  state: stockAlertStateSchema,
+  currentQuantity: z.number().int(),
+  minimumStockQuantity: z.number().int().min(0),
+  triggeredAt: isoDateTimeSchema,
+  resolvedAt: isoDateTimeSchema.optional(),
+});
+export type LowStockAlert = z.infer<typeof lowStockAlertSchema>;
 
 export const professionalScheduleSchema = z
   .object({
@@ -557,6 +1055,7 @@ export const orderItemSchema = z
     nameSnapshot: z.string().trim().min(2).max(160),
     quantity: z.number().int().min(1).max(999),
     unitPriceAmountCents: moneyCentsSchema,
+    costAmountCents: moneyCentsSchema.optional(),
     discountAmountCents: moneyCentsSchema.default(0),
     finalAmountCents: moneyCentsSchema,
     professionalId: nonEmptyIdSchema.optional(),
@@ -643,6 +1142,62 @@ export const paymentSchema = z
     },
   );
 export type Payment = z.infer<typeof paymentSchema>;
+
+export const paymentTerminalProviderSchema = z.enum(['MOCK_TERMINAL', 'MERCADO_PAGO']);
+export type PaymentTerminalProvider = z.infer<typeof paymentTerminalProviderSchema>;
+
+export const terminalPaymentMethodSchema = z.enum(['PIX', 'DEBIT_CARD', 'CREDIT_CARD']);
+export type TerminalPaymentMethod = z.infer<typeof terminalPaymentMethodSchema>;
+
+export const paymentTerminalStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'ERROR']);
+export type PaymentTerminalStatus = z.infer<typeof paymentTerminalStatusSchema>;
+
+export const paymentTerminalIntentStatusSchema = z.enum([
+  'PENDING',
+  'SENT_TO_TERMINAL',
+  'PROCESSING',
+  'PAID',
+  'FAILED',
+  'CANCELLED',
+]);
+export type PaymentTerminalIntentStatus = z.infer<typeof paymentTerminalIntentStatusSchema>;
+
+export const paymentTerminalSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema,
+  provider: paymentTerminalProviderSchema,
+  providerTerminalId: z.string().trim().min(1).max(160),
+  name: z.string().trim().min(2).max(120),
+  status: paymentTerminalStatusSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type PaymentTerminal = z.infer<typeof paymentTerminalSchema>;
+
+export const paymentTerminalIntentSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema,
+  orderId: nonEmptyIdSchema,
+  terminalId: nonEmptyIdSchema,
+  provider: paymentTerminalProviderSchema,
+  method: terminalPaymentMethodSchema,
+  status: paymentTerminalIntentStatusSchema,
+  amountCents: positiveMoneyCentsSchema,
+  installments: z.number().int().min(1).max(24).optional(),
+  providerIntentId: z.string().trim().min(1).max(180).optional(),
+  providerReference: z.string().trim().min(1).max(180).optional(),
+  paymentId: nonEmptyIdSchema.optional(),
+  idempotencyKey: idempotencyKeySchema,
+  createdBy: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+  paidAt: isoDateTimeSchema.optional(),
+  failureCode: z.string().trim().min(1).max(80).optional(),
+  failureMessage: z.string().trim().min(1).max(300).optional(),
+});
+export type PaymentTerminalIntent = z.infer<typeof paymentTerminalIntentSchema>;
 
 export const paymentAllocationSchema = z.object({
   id: nonEmptyIdSchema,
@@ -1019,6 +1574,28 @@ export const professionalWalletSchema = z.object({
 });
 export type ProfessionalWallet = z.infer<typeof professionalWalletSchema>;
 
+export const productListResponseSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  products: z.array(productSchema),
+  categories: z.array(productCategorySchema).default([]),
+  balances: z.array(stockBalanceSchema).default([]),
+  alerts: z.array(lowStockAlertSchema).default([]),
+  nextCursor: z.string().trim().min(1).optional(),
+});
+export type ProductListResponse = z.infer<typeof productListResponseSchema>;
+
+export const productDetailResponseSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  product: productSchema,
+  category: productCategorySchema.optional(),
+  balances: z.array(stockBalanceSchema).default([]),
+  movements: z.array(stockMovementSchema).default([]),
+  alerts: z.array(lowStockAlertSchema).default([]),
+});
+export type ProductDetailResponse = z.infer<typeof productDetailResponseSchema>;
+
 export const listQuerySchema = z.object({
   branchId: nonEmptyIdSchema.optional(),
   search: z.string().trim().min(1).max(120).optional(),
@@ -1079,6 +1656,120 @@ export const updateCustomerCommandSchema = createCustomerCommandSchema.partial()
   status: customerStatusSchema.optional(),
 });
 export type UpdateCustomerCommand = z.input<typeof updateCustomerCommandSchema>;
+
+const productSaleStatusCommandSchema = z.enum(['ACTIVE', 'INACTIVE']);
+
+export const createProductCategoryCommandSchema = z.object({
+  branchIds: z.array(nonEmptyIdSchema).min(1),
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).optional(),
+  status: productSaleStatusCommandSchema.default('ACTIVE'),
+});
+export type CreateProductCategoryCommand = z.input<typeof createProductCategoryCommandSchema>;
+
+export const updateProductCategoryCommandSchema = createProductCategoryCommandSchema
+  .partial()
+  .extend({ id: nonEmptyIdSchema })
+  .refine((value) => Object.keys(value).some((key) => key !== 'id'), {
+    message: 'Product category update requires at least one mutable field.',
+  });
+export type UpdateProductCategoryCommand = z.input<typeof updateProductCategoryCommandSchema>;
+
+export const archiveProductCategoryCommandSchema = z.object({
+  id: nonEmptyIdSchema,
+  reason: z.string().trim().min(3).max(500).optional(),
+});
+export type ArchiveProductCategoryCommand = z.input<typeof archiveProductCategoryCommandSchema>;
+
+export const createProductCommandSchema = z.object({
+  branchIds: z.array(nonEmptyIdSchema).min(1),
+  categoryId: nonEmptyIdSchema.optional(),
+  sku: z.string().trim().min(1).max(80).optional(),
+  barcode: z.string().trim().min(3).max(80).optional(),
+  name: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(1000).optional(),
+  status: productSaleStatusCommandSchema.default('ACTIVE'),
+  salePriceAmountCents: positiveMoneyCentsSchema,
+  costAmountCents: moneyCentsSchema.optional(),
+  stockTrackingPolicy: stockTrackingPolicySchema.default('TRACKED'),
+  allowNegativeStock: z.boolean().default(false),
+  minimumStockQuantity: z.number().int().min(0).default(0),
+  supplierMetadata: supplierMetadataSchema.optional(),
+});
+export type CreateProductCommand = z.input<typeof createProductCommandSchema>;
+
+export const updateProductCommandSchema = createProductCommandSchema
+  .partial()
+  .extend({ id: nonEmptyIdSchema })
+  .refine((value) => Object.keys(value).some((key) => key !== 'id'), {
+    message: 'Product update requires at least one mutable field.',
+  });
+export type UpdateProductCommand = z.input<typeof updateProductCommandSchema>;
+
+export const archiveProductCommandSchema = z.object({
+  id: nonEmptyIdSchema,
+  reason: z.string().trim().min(3).max(500).optional(),
+});
+export type ArchiveProductCommand = z.input<typeof archiveProductCommandSchema>;
+
+const stockCommandBaseSchema = z.object({
+  branchId: nonEmptyIdSchema,
+  locationId: nonEmptyIdSchema.optional(),
+  productId: nonEmptyIdSchema,
+  idempotencyKey: idempotencyKeySchema,
+});
+
+const stockReasonSchema = z.string().trim().min(3).max(500);
+
+export const createStockEntryCommandSchema = stockCommandBaseSchema.extend({
+  quantity: z.number().int().positive(),
+  unitCostAmountCents: moneyCentsSchema.optional(),
+  supplierMetadata: supplierMetadataSchema.optional(),
+  reason: stockReasonSchema.optional(),
+});
+export type CreateStockEntryCommand = z.input<typeof createStockEntryCommandSchema>;
+
+export const createStockSaleEffectCommandSchema = stockCommandBaseSchema.extend({
+  quantity: z.number().int().negative(),
+  orderId: nonEmptyIdSchema,
+  orderItemId: nonEmptyIdSchema,
+  paymentId: nonEmptyIdSchema,
+});
+export type CreateStockSaleEffectCommand = z.input<typeof createStockSaleEffectCommandSchema>;
+
+export const createStockLossCommandSchema = stockCommandBaseSchema.extend({
+  quantity: z.number().int().negative(),
+  reason: stockReasonSchema,
+});
+export type CreateStockLossCommand = z.input<typeof createStockLossCommandSchema>;
+
+export const createStockConsumptionCommandSchema = stockCommandBaseSchema.extend({
+  quantity: z.number().int().negative(),
+  reason: stockReasonSchema,
+});
+export type CreateStockConsumptionCommand = z.input<typeof createStockConsumptionCommandSchema>;
+
+export const createStockAdjustmentCommandSchema = stockCommandBaseSchema.extend({
+  quantity: z
+    .number()
+    .int()
+    .refine((value) => value !== 0, {
+      message: 'Stock adjustment quantity cannot be zero.',
+    }),
+  reason: stockReasonSchema,
+});
+export type CreateStockAdjustmentCommand = z.input<typeof createStockAdjustmentCommandSchema>;
+
+export const createStockTransferCommandSchema = z.object({
+  branchId: nonEmptyIdSchema,
+  productId: nonEmptyIdSchema,
+  fromLocationId: nonEmptyIdSchema,
+  toLocationId: nonEmptyIdSchema,
+  quantity: z.number().int().positive(),
+  idempotencyKey: idempotencyKeySchema,
+  reason: stockReasonSchema,
+});
+export type CreateStockTransferCommand = z.input<typeof createStockTransferCommandSchema>;
 
 export const createProfessionalScheduleCommandSchema = z
   .object({
@@ -1234,6 +1925,7 @@ export const createOrderItemCommandSchema = z
     name: z.string().trim().min(2).max(160),
     quantity: z.number().int().min(1).max(999).default(1),
     unitPriceAmountCents: moneyCentsSchema,
+    costAmountCents: moneyCentsSchema.optional(),
     discountAmountCents: moneyCentsSchema.default(0),
     professionalId: nonEmptyIdSchema.optional(),
     notes: z.string().trim().max(2000).optional(),
@@ -1303,6 +1995,19 @@ export const receivePaymentCommandSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 export type ReceivePaymentCommand = z.input<typeof receivePaymentCommandSchema>;
+
+export const createPaymentTerminalIntentCommandSchema = z.object({
+  orderId: nonEmptyIdSchema,
+  terminalId: nonEmptyIdSchema,
+  method: terminalPaymentMethodSchema,
+  amountCents: positiveMoneyCentsSchema,
+  installments: z.number().int().min(1).max(24).optional(),
+  idempotencyKey: idempotencyKeySchema,
+  notes: z.string().trim().max(500).optional(),
+});
+export type CreatePaymentTerminalIntentCommand = z.infer<
+  typeof createPaymentTerminalIntentCommandSchema
+>;
 
 export const refundPaymentCommandSchema = z.object({
   paymentId: nonEmptyIdSchema,

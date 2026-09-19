@@ -119,7 +119,7 @@ export function CheckInActionButton({
       ) : null}
       {state.type === 'error' ? (
         <p className="check-in-action-feedback danger" id={stateId} role="alert">
-          {state.message} Codigo {state.code}. Request {state.requestId}.
+          {state.message}
         </p>
       ) : null}
     </div>

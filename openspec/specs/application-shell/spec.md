@@ -144,3 +144,48 @@ The system SHALL expose payment and cash register entry points in the operationa
 - **WHEN** an actor lacks the required payment or cash permission
 - **THEN** the shell hides the unavailable entry point when possible
 - **AND** direct route access returns a permission-denied state without exposing protected cash or payment data.
+
+### Requirement: Financial Navigation
+
+The system SHALL expose Financeiro, Despesas, Comissoes/Repasses and Minha carteira entry points only when the authenticated context has the matching permission, role scope and entitlement.
+
+#### Scenario: Finance area available
+
+- **WHEN** an authenticated actor has finance read permission and the finance entitlement
+- **THEN** the shell exposes Financeiro in the appropriate desktop, tablet or mobile navigation surface.
+
+#### Scenario: Expense creation action available
+
+- **WHEN** an actor has finance write permission and the finance entitlement
+- **THEN** the shell or central action can expose Nova despesa without showing it to unauthorized actors.
+
+#### Scenario: Professional wallet available
+
+- **WHEN** a professional has permission to view own commission or wallet data
+- **THEN** the shell exposes Minha carteira scoped to that professional.
+
+#### Scenario: Financial area unavailable
+
+- **WHEN** an actor lacks the required finance, commission or payout permission
+- **THEN** the shell hides the unavailable entry point when possible
+- **AND** direct route access returns a permission-denied state without exposing protected financial data.
+
+### Requirement: Inventory Navigation
+
+The system SHALL expose Produtos, Estoque and product sale entry points only when the authenticated context has matching inventory/order permissions, branch scope and inventory entitlement.
+
+#### Scenario: Inventory area available
+
+- **WHEN** an authenticated actor has inventory read permission and the inventory entitlement
+- **THEN** the shell exposes Produtos e Estoque in the appropriate desktop, tablet or mobile navigation surface.
+
+#### Scenario: Product sale action available
+
+- **WHEN** an actor has order item permission and can access active catalog products for the Comanda branch
+- **THEN** the shell or Comanda surface can expose product sale actions scoped to that Comanda.
+
+#### Scenario: Inventory area unavailable
+
+- **WHEN** an actor lacks inventory permission, branch scope or entitlement
+- **THEN** the shell hides the unavailable entry point when possible
+- **AND** direct route access returns a permission-denied state without exposing protected product or stock data.

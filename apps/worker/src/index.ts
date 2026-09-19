@@ -1,19 +1,32 @@
-import { createServer } from 'node:http';
 import { parseServerEnv } from '@barberos/config';
 
-const env = parseServerEnv(process.env);
-const port = env.WORKER_PORT;
+import { WorkerRuntime } from './runtime';
 
-const server = createServer((request, response) => {
-  if (request.url === '/health') {
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ status: 'ok', service: 'worker' }));
-    return;
-  }
-  response.writeHead(404, { 'content-type': 'application/json' });
-  response.end(JSON.stringify({ error: 'not_found' }));
-});
+export function createWorkerRuntimeFromEnv(input: NodeJS.ProcessEnv = process.env) {
+  const env = parseServerEnv(input);
+  return new WorkerRuntime({
+    port: env.WORKER_PORT,
+    pollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
+  });
+}
 
-server.listen(port, () => {
+async function main() {
+  const runtime = createWorkerRuntimeFromEnv();
+  await runtime.start();
+  const address = runtime.server.address();
+  const port = typeof address === 'object' && address ? address.port : 'unknown';
   console.log(`BarberOS worker listening on http://localhost:${port}`);
-});
+
+  const shutdown = () => {
+    void runtime.stop().finally(() => process.exit(0));
+  };
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  void main().catch((error) => {
+    console.error('Worker failed to start.', error);
+    process.exitCode = 1;
+  });
+}

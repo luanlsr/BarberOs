@@ -24,19 +24,19 @@ describe('Finance data loading layer', () => {
     expect(model.canManageCommissions).toBe(true);
     expect(model.summary).toMatchObject({
       revenueAmountCents: 15_500,
-      expenseAmountCents: 4_200,
-      resultAmountCents: 11_300,
+      expenseAmountCents: 69_200,
+      resultAmountCents: -53_700,
       commissionLiabilityAmountCents: 4_250,
       paidPayoutAmountCents: 3_500,
       cashInAmountCents: 15_500,
-      cashOutAmountCents: 7_700,
-      entriesCount: 4,
+      cashOutAmountCents: 72_700,
+      entriesCount: 5,
     });
     expect(model.cashFlow).toMatchObject({
       cashInAmountCents: 15_500,
-      cashOutAmountCents: 7_700,
-      netCashFlowAmountCents: 7_800,
-      tone: 'success',
+      cashOutAmountCents: 72_700,
+      netCashFlowAmountCents: -57_200,
+      tone: 'danger',
     });
     expect(model.metrics.map((metric) => metric.label)).toEqual([
       'Receitas',
@@ -46,10 +46,12 @@ describe('Finance data loading layer', () => {
     ]);
     expect(model.expenses.map((expense) => expense.description)).toEqual([
       'Energia da Unidade Centro',
+      'Honorarios contabeis de agosto',
       'Aluguel de outubro da Unidade Centro',
     ]);
     expect(model.expenses.map((expense) => expense.dueDateLabel)).toEqual([
       '10/09/2026',
+      '07/09/2026',
       '05/10/2026',
     ]);
     expect(model.commission).toMatchObject({

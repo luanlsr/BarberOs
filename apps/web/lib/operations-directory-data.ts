@@ -7,6 +7,10 @@ export type OperationsDirectoryState =
 export type OperationsDirectoryField = {
   id: string;
   label: string;
+  max?: number;
+  maxLength?: number;
+  min?: number;
+  minLength?: number;
   placeholder: string;
   type: 'text' | 'tel' | 'email' | 'number' | 'select';
   options?: readonly string[];
@@ -27,6 +31,7 @@ export type OperationsDirectoryModel = {
   title: string;
   eyebrow: string;
   description: string;
+  branchId: string;
   branchName: string;
   searchPlaceholder: string;
   primaryActionLabel: string;
@@ -244,9 +249,22 @@ const items: Record<OperationsDirectoryArea, OperationsDirectoryItem[]> = {
 
 const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
   clientes: [
-    { id: 'name', label: 'Nome', placeholder: 'Nome completo', type: 'text' },
-    { id: 'phone', label: 'Telefone', placeholder: '(11) 99999-9999', type: 'tel' },
-    { id: 'email', label: 'Email', placeholder: 'cliente@email.com', type: 'email' },
+    {
+      id: 'name',
+      label: 'Nome',
+      maxLength: 120,
+      minLength: 3,
+      placeholder: 'Nome completo',
+      type: 'text',
+    },
+    { id: 'phone', label: 'Telefone', maxLength: 15, placeholder: '(11) 99999-9999', type: 'tel' },
+    {
+      id: 'email',
+      label: 'Email',
+      maxLength: 160,
+      placeholder: 'cliente@email.com',
+      type: 'email',
+    },
     {
       id: 'source',
       label: 'Origem',
@@ -256,7 +274,14 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
     },
   ],
   equipe: [
-    { id: 'displayName', label: 'Nome', placeholder: 'Nome do profissional', type: 'text' },
+    {
+      id: 'displayName',
+      label: 'Nome',
+      maxLength: 120,
+      minLength: 3,
+      placeholder: 'Nome do profissional',
+      type: 'text',
+    },
     {
       id: 'roleLabel',
       label: 'Papel',
@@ -264,11 +289,18 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
       type: 'select',
       options: ['Barbeiro', 'Barbeiro senior', 'Especialista em barba', 'Recepcao'],
     },
-    { id: 'phone', label: 'Telefone', placeholder: '(11) 99999-9999', type: 'tel' },
+    { id: 'phone', label: 'Telefone', maxLength: 15, placeholder: '(11) 99999-9999', type: 'tel' },
     { id: 'branch', label: 'Filial', placeholder: 'Centro', type: 'select', options: ['Centro'] },
   ],
   servicos: [
-    { id: 'name', label: 'Servico', placeholder: 'Corte classico', type: 'text' },
+    {
+      id: 'name',
+      label: 'Servico',
+      maxLength: 120,
+      minLength: 3,
+      placeholder: 'Corte classico',
+      type: 'text',
+    },
     {
       id: 'category',
       label: 'Categoria',
@@ -276,8 +308,8 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
       type: 'select',
       options: ['Cabelo', 'Barba', 'Pacote', 'Tratamento'],
     },
-    { id: 'duration', label: 'Duracao', placeholder: '45', type: 'number' },
-    { id: 'price', label: 'Preco', placeholder: '60', type: 'number' },
+    { id: 'duration', label: 'Duracao', max: 480, min: 5, placeholder: '45', type: 'number' },
+    { id: 'price', label: 'Preco', max: 100000, min: 1, placeholder: '60', type: 'number' },
   ],
 };
 
@@ -301,6 +333,7 @@ export function getOperationsDirectoryModel(
 
   return {
     ...config,
+    branchId,
     branchName: session.branchName,
     canRead,
     canCreate,

@@ -5,7 +5,9 @@ const openOrderResponse = {
   requestId: 'e2e-order-request',
 };
 
-test('runs agenda check-in through Comanda payment and cash register', async ({ page }) => {
+test('runs agenda check-in through Comanda payment, finance, commission payout and cash register', async ({
+  page,
+}) => {
   let receivedPayment = false;
 
   await page.route('**/api/v1/check-in', async (route) => {
@@ -59,6 +61,24 @@ test('runs agenda check-in through Comanda payment and cash register', async ({ 
   await expect(page.getByText('Pagamento registrado. Atualizando Comanda...')).toBeVisible();
   expect(receivedPayment).toBe(true);
   await page.waitForTimeout(1200);
+
+  await page.goto('/financeiro');
+  await expect(page.getByRole('heading', { name: 'Financeiro', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fluxo de caixa' })).toBeVisible();
+  await expect(page.getByText('Comissoes abertas')).toBeVisible();
+
+  await page.goto('/financeiro/comissoes?scenario=closed-payout');
+  await expect(page.getByRole('heading', { name: 'Comissoes/Repasses' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fechamento e pagamento' })).toBeVisible();
+  await expect(page.getByText('Repasse fechado aguardando pagamento.')).toBeVisible();
+  await expect(
+    page.getByText('Pagamento em dinheiro exige caixa aberto da mesma unidade.'),
+  ).toBeVisible();
+  const payoutPanel = page.getByRole('complementary', {
+    name: 'Fechamento e pagamento de repasses',
+  });
+  await expect(payoutPanel.getByRole('button', { name: 'Pagar repasse' })).toBeEnabled();
+  await payoutPanel.getByRole('button', { name: 'Pagar repasse' }).click();
 
   await page.goto('/caixa');
   await expect(page.getByRole('heading', { name: 'Resumo do caixa' })).toBeVisible();

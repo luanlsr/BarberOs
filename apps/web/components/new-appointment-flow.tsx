@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AlertTriangle, CalendarPlus, CheckCircle2, UserPlus } from 'lucide-react';
 import { Button } from '@barberos/ui';
 import type { AgendaNewAppointmentModel, AgendaOccupiedSlot } from '../lib/agenda-data';
+import { PhoneInput, isValidBrazilMobilePhone } from './form-controls';
 
 type CustomerMode = 'existing' | 'quick';
 type SubmitState =
@@ -19,7 +20,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
   const [serviceId, setServiceId] = React.useState(model.services[0]?.id ?? '');
   const [professionalId, setProfessionalId] = React.useState(model.defaultProfessionalId);
   const [dateIso, setDateIso] = React.useState(model.dateIso);
-  const [timeLabel, setTimeLabel] = React.useState('12:00');
+  const [timeLabel, setTimeLabel] = React.useState(model.defaultTimeLabel);
   const [createdSlots, setCreatedSlots] = React.useState<AgendaOccupiedSlot[]>([]);
   const [submitState, setSubmitState] = React.useState<SubmitState>({ type: 'idle' });
 
@@ -65,6 +66,26 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         code: 'CORE_VALIDATION_ERROR',
         message: 'Informe nome e telefone para criar o cliente rapido.',
         requestId: 'local-validation-error',
+      });
+      return;
+    }
+
+    if (customerMode === 'quick' && quickCustomerName.trim().length < 3) {
+      setSubmitState({
+        type: 'error',
+        code: 'CORE_VALIDATION_ERROR',
+        message: 'Informe o nome completo do cliente com pelo menos 3 caracteres.',
+        requestId: 'local-validation-error',
+      });
+      return;
+    }
+
+    if (customerMode === 'quick' && !isValidBrazilMobilePhone(quickCustomerPhone)) {
+      setSubmitState({
+        type: 'error',
+        code: 'CORE_VALIDATION_ERROR',
+        message: 'Informe um celular valido com DDD, no formato (11) 99999-9999.',
+        requestId: 'local-phone-validation-error',
       });
       return;
     }
@@ -171,6 +192,8 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             <label>
               <span>Nome do cliente</span>
               <input
+                maxLength={120}
+                minLength={3}
                 onChange={(event) => setQuickCustomerName(event.target.value)}
                 placeholder="Nome completo"
                 value={quickCustomerName}
@@ -178,9 +201,10 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             </label>
             <label>
               <span>Telefone</span>
-              <input
-                onChange={(event) => setQuickCustomerPhone(event.target.value)}
+              <PhoneInput
+                onValueChange={setQuickCustomerPhone}
                 placeholder="(11) 99999-9999"
+                required
                 value={quickCustomerPhone}
               />
             </label>
@@ -273,9 +297,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         {submitState.type === 'error' ? (
           <div className="new-appointment-feedback danger" role="alert">
             <AlertTriangle size={16} aria-hidden="true" />
-            <span>
-              {submitState.message} Codigo {submitState.code}. Request {submitState.requestId}.
-            </span>
+            <span>{submitState.message}</span>
           </div>
         ) : null}
 

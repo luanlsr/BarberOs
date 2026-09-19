@@ -6,6 +6,7 @@ import type {
   OrderDetail,
   OrderHistory,
   OrderStatus,
+  Product,
   RemoveOrderItemCommand,
   RequestContext,
   UpdateOrderItemCommand,
@@ -17,7 +18,11 @@ import type {
   OrderListFilters,
   OrderRepository,
 } from '../domain';
-import { CoreOperationsApplicationError, OrderApplicationService } from './order-service';
+import {
+  CoreOperationsApplicationError,
+  OrderApplicationService,
+  type OrderProductCatalog,
+} from './order-service';
 
 const managerContext: RequestContext = {
   requestId: 'request-1',
@@ -79,6 +84,25 @@ const paidOrder: OrderDetail = {
   id: 'order-paid',
   status: 'PAID',
 };
+const product = (overrides: Partial<Product> = {}): Product => ({
+  id: 'product-1',
+  tenantId: 'tenant-1',
+  branchIds: ['branch-1'],
+  categoryId: 'category-1',
+  sku: 'POM-001',
+  name: 'Pomada modeladora',
+  status: 'ACTIVE',
+  salePriceAmountCents: 4500,
+  costAmountCents: 1800,
+  stockTrackingPolicy: 'TRACKED',
+  allowNegativeStock: false,
+  minimumStockQuantity: 2,
+  createdBy: 'user-1',
+  updatedBy: 'user-1',
+  createdAt: '2026-09-08T10:00:00.000Z',
+  updatedAt: '2026-09-08T10:00:00.000Z',
+  ...overrides,
+});
 
 class FakeOrderRepository implements OrderRepository {
   readonly orders = new Map<string, OrderDetail>([
@@ -160,6 +184,7 @@ class FakeOrderRepository implements OrderRepository {
       unitPriceAmountCents: command.unitPriceAmountCents,
       discountAmountCents,
       finalAmountCents: quantity * command.unitPriceAmountCents - discountAmountCents,
+      costAmountCents: command.costAmountCents,
       professionalId: command.professionalId,
       notes: command.notes,
       createdBy: context.userId,
@@ -205,6 +230,15 @@ class FakeOrderRepository implements OrderRepository {
   }
 }
 
+class FakeOrderProductCatalog implements OrderProductCatalog {
+  products = new Map<string, Product>([[product().id, product()]]);
+  readonly lookups: Array<{ productId: string; branchId: string }> = [];
+
+  async findProductForSale(_context: RequestContext, productId: string, branchId: string) {
+    this.lookups.push({ productId, branchId });
+    return this.products.get(productId) ?? null;
+  }
+}
 class FakeOrderAuditSink implements OrderAuditSink {
   readonly events: Array<Parameters<OrderAuditSink['record']>[1]> = [];
 
@@ -354,6 +388,102 @@ describe('OrderApplicationService', () => {
     ]);
   });
 
+  it('adds product items from active catalog snapshots instead of trusting client price data', async () => {
+    const catalog = new FakeOrderProductCatalog();
+    service = new OrderApplicationService(repository, audit, catalog);
+
+    const withProduct = await service.addItem(managerContext, {
+      orderId: order.id,
+      sourceType: 'PRODUCT',
+      sourceId: 'product-1',
+      name: 'Nome adulterado',
+      quantity: 2,
+      unitPriceAmountCents: 999999,
+      discountAmountCents: 500,
+    });
+
+    expect(catalog.lookups).toEqual([{ productId: 'product-1', branchId: 'branch-1' }]);
+    expect(withProduct.items[0]).toMatchObject({
+      sourceType: 'PRODUCT',
+      sourceId: 'product-1',
+      nameSnapshot: 'Pomada modeladora',
+      quantity: 2,
+      unitPriceAmountCents: 4500,
+      costAmountCents: 1800,
+      discountAmountCents: 500,
+      finalAmountCents: 8500,
+    });
+    expect(withProduct.totalAmountCents).toBe(8500);
+  });
+
+  it('rejects unavailable catalog products before adding order items', async () => {
+    const catalog = new FakeOrderProductCatalog();
+    catalog.products.set('product-1', product({ status: 'INACTIVE' }));
+    service = new OrderApplicationService(repository, audit, catalog);
+
+    await expect(
+      service.addItem(managerContext, {
+        orderId: order.id,
+        sourceType: 'PRODUCT',
+        sourceId: 'product-1',
+        name: 'Pomada modeladora',
+        unitPriceAmountCents: 4500,
+      }),
+    ).rejects.toEqual(
+      new CoreOperationsApplicationError(
+        'PRODUCT_UNAVAILABLE',
+        'Product is not available for this order branch.',
+      ),
+    );
+
+    expect(repository.orders.get(order.id)?.items).toEqual([]);
+    expect(repository.history).toEqual([]);
+  });
+
+  it('rejects product items assigned to another branch without leaking product data', async () => {
+    const catalog = new FakeOrderProductCatalog();
+    catalog.products.set('product-1', product({ branchIds: ['branch-2'] }));
+    service = new OrderApplicationService(repository, audit, catalog);
+
+    await expect(
+      service.addItem(managerContext, {
+        orderId: order.id,
+        sourceType: 'PRODUCT',
+        sourceId: 'product-1',
+        name: 'Pomada modeladora',
+        unitPriceAmountCents: 4500,
+      }),
+    ).rejects.toMatchObject({ code: 'PRODUCT_UNAVAILABLE' });
+
+    expect(repository.orders.get(order.id)?.items).toEqual([]);
+  });
+
+  it('removes unpaid product items without catalog or stock side effects', async () => {
+    const catalog = new FakeOrderProductCatalog();
+    service = new OrderApplicationService(repository, audit, catalog);
+
+    await service.addItem(managerContext, {
+      orderId: order.id,
+      sourceType: 'PRODUCT',
+      sourceId: 'product-1',
+      name: 'Pomada modeladora',
+      unitPriceAmountCents: 4500,
+    });
+
+    const removed = await service.removeItem(managerContext, {
+      orderId: order.id,
+      itemId: 'item-created',
+      reason: 'Produto removido antes do pagamento.',
+    });
+
+    expect(removed.items).toEqual([]);
+    expect(removed.totalAmountCents).toBe(0);
+    expect(catalog.lookups).toEqual([{ productId: 'product-1', branchId: 'branch-1' }]);
+    expect(repository.history.map((event) => event.eventType)).toEqual([
+      'ITEM_ADDED',
+      'ITEM_REMOVED',
+    ]);
+  });
   it('updates order status with history and audit events', async () => {
     const updated = await service.updateStatus(managerContext, {
       id: order.id,

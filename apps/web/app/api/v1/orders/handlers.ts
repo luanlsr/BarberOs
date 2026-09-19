@@ -9,6 +9,7 @@ import { createSupabaseServerClient, getRequestContext } from '../../../../lib/a
 import { OrderApplicationService } from '../../../../src/modules/orders/application/order-service';
 import {
   SupabaseOrderAuditSink,
+  SupabaseOrderProductCatalog,
   SupabaseOrderRepository,
 } from '../../../../src/modules/orders/infrastructure';
 import { createOrderItemRouteHandlers } from '../../../../src/modules/orders/presentation/order-item-route-handlers';
@@ -71,5 +72,9 @@ async function getOrderApplicationService() {
     });
   }
   const orders = new SupabaseOrderRepository(client);
-  return new OrderApplicationService(orders, new SupabaseOrderAuditSink(client));
+  return new OrderApplicationService(
+    orders,
+    new SupabaseOrderAuditSink(client),
+    new SupabaseOrderProductCatalog(client),
+  );
 }

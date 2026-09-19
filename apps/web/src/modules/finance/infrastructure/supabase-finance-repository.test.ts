@@ -334,8 +334,9 @@ describe('SupabaseFinanceRepository queries', () => {
       branchId: 'branch-1',
       periodStart: '2026-09-01',
       periodEnd: '2026-09-30',
-      sourceType: 'EXPENSE',
-      sourceId: 'expense-1',
+      type: 'PRODUCT_REVENUE',
+      sourceType: 'PAYMENT',
+      sourceId: 'payment-product-1',
       limit: 50,
     });
 
@@ -346,8 +347,9 @@ describe('SupabaseFinanceRepository queries', () => {
       expect.arrayContaining([
         ['tenant_id', 'tenant-1'],
         ['branch_id', 'branch-1'],
-        ['source_type', 'EXPENSE'],
-        ['source_id', 'expense-1'],
+        ['type', 'PRODUCT_REVENUE'],
+        ['source_type', 'PAYMENT'],
+        ['source_id', 'payment-product-1'],
       ]),
     );
     expect(entryQuery?.rangeFilters).toEqual(
@@ -364,13 +366,23 @@ describe('SupabaseFinanceRepository queries', () => {
       entryRow,
       {
         ...entryRow,
-        id: 'entry-revenue-1',
+        id: 'entry-service-revenue-1',
         direction: 'IN',
         type: 'SERVICE_REVENUE',
         amount_cents: 8_500,
         signed_amount_cents: 8_500,
         source_type: 'PAYMENT',
-        source_id: 'payment-1',
+        source_id: 'payment-service-1',
+      },
+      {
+        ...entryRow,
+        id: 'entry-product-revenue-1',
+        direction: 'IN',
+        type: 'PRODUCT_REVENUE',
+        amount_cents: 3_200,
+        signed_amount_cents: 3_200,
+        source_type: 'PAYMENT',
+        source_id: 'payment-product-1',
       },
     ];
     const repository = new SupabaseFinanceRepository(client as unknown as SupabaseClient);
@@ -382,12 +394,12 @@ describe('SupabaseFinanceRepository queries', () => {
         periodEnd: '2026-09-30',
       }),
     ).resolves.toMatchObject({
-      revenueAmountCents: 8_500,
+      revenueAmountCents: 11_700,
       expenseAmountCents: 4_200,
-      resultAmountCents: 4_300,
+      resultAmountCents: 7_500,
       commissionLiabilityAmountCents: 1_200,
       paidPayoutAmountCents: 800,
-      entriesCount: 2,
+      entriesCount: 3,
     });
   });
 

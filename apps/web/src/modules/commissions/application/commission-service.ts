@@ -27,6 +27,7 @@ import type {
   CommissionAuditSink,
   CommissionRepository,
   CommissionRuleFilters,
+  CommissionOutboxProducer,
   ProfessionalWalletFilters,
   ReverseCommissionAccrualsCommand,
 } from '../domain';
@@ -46,6 +47,7 @@ export type CommissionApplicationServiceDependencies = {
   orders?: Pick<OrderRepository, 'findById'>;
   cashRegister?: PayoutCashRegisterLookup;
   auditSink?: CommissionAuditSink;
+  outbox?: CommissionOutboxProducer;
   now?: () => string;
 };
 
@@ -54,6 +56,7 @@ export class CommissionApplicationService {
   private readonly orders?: Pick<OrderRepository, 'findById'>;
   private readonly cashRegister?: PayoutCashRegisterLookup;
   private readonly audit?: CommissionAuditSink;
+  private readonly outbox?: CommissionOutboxProducer;
   private readonly now: () => string;
 
   constructor(dependencies: CommissionApplicationServiceDependencies) {
@@ -61,6 +64,7 @@ export class CommissionApplicationService {
     this.orders = dependencies.orders;
     this.cashRegister = dependencies.cashRegister;
     this.audit = dependencies.auditSink;
+    this.outbox = dependencies.outbox;
     this.now = dependencies.now ?? (() => new Date().toISOString());
   }
 
@@ -296,7 +300,10 @@ export class CommissionApplicationService {
     authorizeCommissionAccess(context, 'commission.manage', current.payout.branchId);
 
     if (current.payout.status === 'PAID') {
-      if (current.payout.idempotencyKey === parsed.idempotencyKey) return current;
+      if (current.payout.idempotencyKey === parsed.idempotencyKey) {
+        await this.enqueueFinanceRecalculation(context, current.payout);
+        return current;
+      }
       throw new CoreOperationsApplicationError(
         'PAYOUT_IMMUTABLE',
         'Paid payouts cannot be paid again with a different idempotency key.',
@@ -337,6 +344,7 @@ export class CommissionApplicationService {
       beforeState: current,
       afterState: paid,
     });
+    await this.enqueueFinanceRecalculation(context, paid.payout);
 
     return paid;
   }
@@ -372,9 +380,31 @@ export class CommissionApplicationService {
       beforeState: current,
       afterState: corrected,
     });
+    await this.enqueueFinanceRecalculation(context, corrected.payout);
 
     return corrected;
   }
+  private async enqueueFinanceRecalculation(
+    context: RequestContext,
+    payout: Pick<Payout, 'tenantId' | 'branchId' | 'id' | 'status' | 'totalAmountCents'>,
+  ) {
+    if (!this.outbox) return;
+    await this.outbox.createEvent(context, {
+      tenantId: payout.tenantId,
+      branchId: payout.branchId,
+      eventType: 'FINANCE_RECALCULATION_REQUESTED',
+      sourceType: 'COMMISSION',
+      sourceId: payout.id,
+      payload: {
+        payoutId: payout.id,
+        status: payout.status,
+        totalAmountCents: payout.totalAmountCents,
+      },
+      idempotencyKey: 'commission:payout:' + payout.id + ':' + payout.status,
+      correlationId: context.requestId,
+    });
+  }
+
   private async getVisibleRule(context: RequestContext, ruleId: string) {
     const rule = await this.repository.findRuleById(context, ruleId);
     if (!rule || rule.tenantId !== context.tenantId) {

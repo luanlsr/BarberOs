@@ -39,10 +39,15 @@ const payoutSelect =
 const payoutAllocationSelect =
   'id, tenant_id, branch_id, payout_id, accrual_id, amount_cents, created_at';
 
-type QueryLike = {
+type QueryResult = { data: unknown; error: unknown };
+
+type QueryLike = PromiseLike<QueryResult> & {
   eq(column: string, value: unknown): QueryLike;
   in(column: string, values: unknown[]): QueryLike;
   or(filter: string): QueryLike;
+  lt(column: string, value: unknown): QueryLike;
+  gte(column: string, value: unknown): QueryLike;
+  lte(column: string, value: unknown): QueryLike;
 };
 
 export type CommissionRuleRow = {
@@ -128,13 +133,13 @@ export class SupabaseCommissionRepository implements CommissionRepository {
   constructor(private readonly client: SupabaseClient) {}
 
   async listRules(context: RequestContext, filters: CommissionRuleFilters = {}) {
-    let request: any = this.client
+    let request = this.client
       .from('commission_rules')
       .select(commissionRuleSelect)
       .eq('tenant_id', context.tenantId)
       .order('effective_from', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(filters.limit ?? 100);
+      .limit(filters.limit ?? 100) as unknown as QueryLike;
 
     request = applyNullableBranchScope(request, context, filters.branchId);
     if (filters.professionalId) request = request.eq('professional_id', filters.professionalId);
@@ -227,12 +232,12 @@ export class SupabaseCommissionRepository implements CommissionRepository {
   }
 
   async listAccruals(context: RequestContext, filters: CommissionAccrualFilters = {}) {
-    let request: any = this.client
+    let request = this.client
       .from('commission_accruals')
       .select(commissionAccrualSelect)
       .eq('tenant_id', context.tenantId)
       .order('accrued_at', { ascending: false })
-      .limit(filters.limit ?? 100);
+      .limit(filters.limit ?? 100) as unknown as QueryLike;
 
     request = applyBranchScope(request, context, filters.branchId);
     if (filters.professionalId) request = request.eq('professional_id', filters.professionalId);
@@ -342,13 +347,13 @@ export class SupabaseCommissionRepository implements CommissionRepository {
   }
 
   async listPayouts(context: RequestContext, filters: PayoutFilters = {}) {
-    let request: any = this.client
+    let request = this.client
       .from('payouts')
       .select(payoutSelect)
       .eq('tenant_id', context.tenantId)
       .order('period_start', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(filters.limit ?? 100);
+      .limit(filters.limit ?? 100) as unknown as QueryLike;
 
     request = applyBranchScope(request, context, filters.branchId);
     if (filters.professionalId) request = request.eq('professional_id', filters.professionalId);

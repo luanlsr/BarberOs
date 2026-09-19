@@ -17,6 +17,7 @@ import type {
   OrderAppointmentRepository,
   OrderAuditSink,
   OrderListFilters,
+  OrderOutboxProducer,
   OrderRepository,
 } from '../domain';
 import { CheckInApplicationService, CoreOperationsApplicationError } from './check-in-service';
@@ -213,17 +214,33 @@ class FakeOrderAuditSink implements OrderAuditSink {
   }
 }
 
+class FakeOrderOutbox implements OrderOutboxProducer {
+  readonly events = new Map<string, Parameters<OrderOutboxProducer['createEvent']>[1]>();
+  attempts = 0;
+
+  async createEvent(
+    _context: RequestContext,
+    command: Parameters<OrderOutboxProducer['createEvent']>[1],
+  ) {
+    this.attempts += 1;
+    if (!this.events.has(command.idempotencyKey)) this.events.set(command.idempotencyKey, command);
+    return this.events.get(command.idempotencyKey);
+  }
+}
+
 describe('CheckInApplicationService', () => {
   let appointments: FakeAppointmentRepository;
   let orders: FakeOrderRepository;
   let audit: FakeOrderAuditSink;
+  let outbox: FakeOrderOutbox;
   let service: CheckInApplicationService;
 
   beforeEach(() => {
     appointments = new FakeAppointmentRepository();
     orders = new FakeOrderRepository();
     audit = new FakeOrderAuditSink();
-    service = new CheckInApplicationService(appointments, orders, audit);
+    outbox = new FakeOrderOutbox();
+    service = new CheckInApplicationService(appointments, orders, audit, outbox);
   });
 
   it('opens an order with service snapshots for an eligible appointment', async () => {
@@ -256,6 +273,10 @@ describe('CheckInApplicationService', () => {
       'appointment.checked_in',
       'order.created',
     ]);
+    expect(outbox.events.size).toBe(1);
+    expect([...outbox.events.values()]).toEqual([
+      expect.objectContaining({ eventType: 'ORDER_OPENED', sourceId: 'order-created' }),
+    ]);
   });
 
   it('returns the existing linked order on safe retry', async () => {
@@ -265,6 +286,8 @@ describe('CheckInApplicationService', () => {
     expect(orders.createdFromAppointmentCommand).toBeNull();
     expect(orders.history).toEqual([]);
     expect(audit.events).toEqual([]);
+    expect(outbox.events.size).toBe(1);
+    expect(outbox.attempts).toBe(1);
   });
 
   it('rejects appointments that are not eligible for check-in', async () => {

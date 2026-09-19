@@ -20,7 +20,16 @@ export default async function AgendaPage({ searchParams }: { searchParams: Agend
   const professionalId = singleValue(params.professionalId);
   const appointmentId = singleValue(params.appointmentId);
   const mode = singleValue(params.mode);
-  const agenda = getAgendaViewModel(session, { date, professionalId, appointmentId, mode });
+  const view = singleValue(params.view);
+  const time = singleValue(params.time);
+  const agenda = getAgendaViewModel(session, {
+    date,
+    professionalId,
+    appointmentId,
+    mode,
+    view,
+    time,
+  });
 
   return <AgendaView agenda={agenda} />;
 }

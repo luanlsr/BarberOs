@@ -15,10 +15,11 @@ export default async function ComandasPage({
 
   const params = await searchParams;
   const orderId = singleValue(params.orderId);
+  const mode = singleValue(params.mode);
   const state = singleValue(params.state);
   const model = await getComandaViewModel(session, { orderId, state });
 
-  return <OrderView model={model} />;
+  return <OrderView autoOpenWalkIn={mode === 'walk-in'} model={model} />;
 }
 
 function singleValue(value: string | string[] | undefined) {

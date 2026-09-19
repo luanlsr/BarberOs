@@ -87,6 +87,10 @@ type DevelopmentFinanceOptions = {
   branchId?: string;
   state?: 'loading' | 'populated' | 'empty' | 'error' | 'offline';
 };
+type FinanceViewOptions = {
+  branchId?: string;
+  state?: string;
+};
 type FinanceBaseModel = ReturnType<typeof baseModel>;
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -178,6 +182,25 @@ const developmentFinancialEntries: readonly FinancialEntry[] = [
     createdAt: '2026-09-05T13:00:00.000Z',
   },
   {
+    id: 'dev-finance-entry-expense-accounting',
+    tenantId: 'dev-tenant',
+    branchId: 'dev-branch',
+    direction: 'OUT',
+    type: 'EXPENSE',
+    status: 'POSTED',
+    amountCents: 65_000,
+    signedAmountCents: -65_000,
+    competenceDate: '2026-08-31',
+    cashDate: '2026-09-07',
+    sourceType: 'EXPENSE',
+    sourceId: 'dev-expense-accounting',
+    categoryId: 'dev-expense-category-utilities',
+    description: 'Honorarios contabeis pagos em dinheiro',
+    idempotencyKey: 'seed-finance-expense-accounting-cash',
+    createdBy: 'dev-user',
+    createdAt: '2026-09-07T16:20:00.000Z',
+  },
+  {
     id: 'dev-finance-entry-payout-2001',
     tenantId: 'dev-tenant',
     branchId: 'dev-branch',
@@ -220,6 +243,29 @@ const developmentExpenses: readonly Expense[] = [
     paidAt: '2026-09-05T13:00:00.000Z',
     createdAt: '2026-09-05T12:30:00.000Z',
     updatedAt: '2026-09-05T13:00:00.000Z',
+  },
+  {
+    id: 'dev-expense-accounting',
+    tenantId: 'dev-tenant',
+    branchId: 'dev-branch',
+    categoryId: 'dev-expense-category-utilities',
+    description: 'Honorarios contabeis de agosto',
+    vendorName: 'Contabilidade Prime',
+    status: 'PAID',
+    amountCents: 65_000,
+    competenceDate: '2026-08-31',
+    dueDate: '2026-09-07',
+    cashDate: '2026-09-07',
+    paymentMethod: 'CASH',
+    documentMetadata: {},
+    financialEntryId: 'dev-finance-entry-expense-accounting',
+    idempotencyKey: 'seed-expense-accounting-cash',
+    createdBy: 'dev-user',
+    updatedBy: 'dev-user',
+    paidBy: 'dev-user',
+    paidAt: '2026-09-07T16:20:00.000Z',
+    createdAt: '2026-08-31T12:30:00.000Z',
+    updatedAt: '2026-09-07T16:20:00.000Z',
   },
   {
     id: 'dev-expense-rent-open',
@@ -322,6 +368,16 @@ const developmentPayouts: readonly Payout[] = [
     updatedAt: '2026-09-07T17:10:00.000Z',
   },
 ];
+
+export async function getFinanceViewModel(
+  session: SessionContext,
+  options: FinanceViewOptions = {},
+): Promise<FinanceViewModel> {
+  return getDevelopmentFinanceViewModel(session, {
+    branchId: options.branchId,
+    state: developmentStateFrom(options.state),
+  });
+}
 
 export function getDevelopmentFinanceViewModel(
   session: SessionContext,
@@ -527,6 +583,13 @@ function unavailableReasonForState(state: FinanceViewState) {
   if (state === 'permission-denied') return 'Sem permissao para visualizar financeiro.';
   return undefined;
 }
+function developmentStateFrom(state: string | undefined): DevelopmentFinanceOptions['state'] {
+  if (state === 'loading' || state === 'empty' || state === 'error' || state === 'offline') {
+    return state;
+  }
+  return undefined;
+}
+
 function summaryFrom(
   tenantId: string,
   branchId: string,

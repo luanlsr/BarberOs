@@ -1,0 +1,93 @@
+import * as React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, test } from 'vitest';
+import { developmentSession } from '../lib/dev-session';
+import { getDevelopmentFinanceViewModel } from '../lib/finance-data';
+import { FinanceView } from './finance-view';
+
+describe('FinanceView', () => {
+  test('renders mobile-first financial summary sections', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView model={getDevelopmentFinanceViewModel(developmentSession)} />,
+    );
+
+    expect(html).toContain('finance-page');
+    expect(html).toContain('finance-period-controls');
+    expect(html).toContain('aria-label="Controles de periodo financeiro"');
+    expect(html).toContain('aria-label="Periodo anterior"');
+    expect(html).toContain('aria-label="Proximo periodo"');
+    expect(html).toContain('aria-label="Acoes financeiras"');
+    expect(html).toContain('Indicadores financeiros');
+    expect(html).toContain('Receitas');
+    expect(html).toContain('Despesas');
+    expect(html).toContain('Resultado');
+    expect(html).toContain('Comissoes abertas');
+  });
+
+  test('renders tablet structural regions for cash flow and payouts', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView model={getDevelopmentFinanceViewModel(developmentSession)} />,
+    );
+
+    expect(html).toContain('finance-workspace');
+    expect(html).toContain('finance-primary');
+    expect(html).toContain('finance-side');
+    expect(html).toContain('Fluxo de caixa');
+    expect(html).toContain('Saldo de caixa');
+    expect(html).toContain('Pagamentos realizados');
+  });
+
+  test('renders desktop operational detail with commissions and recent expenses', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView model={getDevelopmentFinanceViewModel(developmentSession)} />,
+    );
+
+    expect(html).toContain('Obrigacoes abertas');
+    expect(html).toContain('Valor em aberto');
+    expect(html).toContain('Fechar repasse');
+    expect(html).toContain('Ultimos compromissos');
+    expect(html).toContain('Energia da Unidade Centro');
+    expect(html).toContain('Aluguel de outubro da Unidade Centro');
+  });
+
+  test('renders empty period without expense details', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView
+        model={getDevelopmentFinanceViewModel(developmentSession, { state: 'empty' })}
+      />,
+    );
+
+    expect(html).toContain('Nenhum lancamento financeiro neste periodo.');
+    expect(html).toContain('Sem despesas registradas para este periodo.');
+    expect(html).not.toContain('Energia da Unidade Centro');
+  });
+
+  test('renders offline state with disabled mutation actions', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView
+        model={getDevelopmentFinanceViewModel(developmentSession, { state: 'offline' })}
+      />,
+    );
+
+    expect(html).toContain('Modo offline: dados financeiros pausados.');
+    expect(html).toContain('Nova despesa');
+    expect(html).toContain('disabled=""');
+  });
+
+  test('renders permission denied without financial amounts', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView
+        model={getDevelopmentFinanceViewModel({
+          ...developmentSession,
+          permissions: ['dashboard.read'],
+          entitlements: ['core.operations'],
+        })}
+      />,
+    );
+
+    expect(html).toContain('Acesso restrito');
+    expect(html).toContain('Financeiro indisponivel');
+    expect(html).not.toContain('R$');
+    expect(html).not.toContain('Fluxo de caixa');
+  });
+});

@@ -11,16 +11,21 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@barberos/auth": "0.1.0",
     "@barberos/config": "0.1.0",
     "@barberos/contracts": "0.1.0",
+    "@barberos/permissions": "0.1.0",
     "@barberos/ui": "0.1.0",
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/react": "^6.1.21",
+    "@fullcalendar/timegrid": "^6.1.21",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
     "lucide-react": "^0.468.0",
     "next": "^15.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@barberos/auth": "0.1.0",
-    "@barberos/permissions": "0.1.0"
+    "react-dom": "^19.0.0"
   }
 }

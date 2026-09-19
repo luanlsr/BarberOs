@@ -26,7 +26,10 @@
     "validate:core-operations": "node scripts/validate-core-operations-migration.mjs",
     "validate:orders": "node scripts/validate-orders-migration.mjs",
     "validate:payments": "node scripts/validate-payments-migration.mjs",
-    "validate:finance": "node scripts/validate-finance-migration.mjs"
+    "validate:finance": "node scripts/validate-finance-migration.mjs",
+    "validate:inventory": "node scripts/validate-inventory-migration.mjs",
+    "validate:worker": "node scripts/validate-worker-migration.mjs",
+    "validate:product-domain": "node scripts/validate-product-domain-migration.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

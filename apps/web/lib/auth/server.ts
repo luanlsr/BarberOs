@@ -90,6 +90,8 @@ const rolePermissions: Record<Role, Permission[]> = {
     'commission.manage',
     'inventory.read',
     'inventory.write',
+    'worker.failures.read',
+    'notifications.status.read',
     'settings.read',
     'memberships.read',
     'memberships.manage',
@@ -123,6 +125,8 @@ const rolePermissions: Record<Role, Permission[]> = {
     'payments.receive',
     'inventory.read',
     'inventory.write',
+    'worker.failures.read',
+    'notifications.status.read',
     'settings.read',
   ],
   FINANCE: [
@@ -169,12 +173,19 @@ const rolePermissions: Record<Role, Permission[]> = {
   ],
 };
 const roleEntitlements: Record<Role, Entitlement[]> = {
-  PLATFORM_MASTER: ['core.operations', 'finance', 'inventory', 'ai'],
-  PLATFORM_SUPPORT: ['core.operations'],
-  OWNER: ['core.operations', 'finance', 'inventory', 'ai'],
-  MANAGER: ['core.operations', 'inventory'],
+  PLATFORM_MASTER: [
+    'core.operations',
+    'finance',
+    'inventory',
+    'worker.operations',
+    'notifications',
+    'ai',
+  ],
+  PLATFORM_SUPPORT: ['core.operations', 'worker.operations', 'notifications'],
+  OWNER: ['core.operations', 'finance', 'inventory', 'worker.operations', 'notifications', 'ai'],
+  MANAGER: ['core.operations', 'inventory', 'worker.operations', 'notifications'],
   FINANCE: ['core.operations', 'finance'],
-  RECEPTIONIST: ['core.operations'],
+  RECEPTIONIST: ['core.operations', 'notifications'],
   PROFESSIONAL: ['core.operations'],
 };
 

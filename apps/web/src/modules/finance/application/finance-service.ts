@@ -19,6 +19,7 @@ import type {
   FinancialEntryFilters,
   FinanceRepository,
   FinanceSummaryFilters,
+  FinanceOutboxProducer,
 } from '../domain';
 
 const financeEntitlement = 'finance' satisfies Entitlement;
@@ -36,17 +37,20 @@ export type FinanceApplicationServiceDependencies = {
   repository: FinanceRepository;
   cashRegister?: ExpenseCashRegisterLookup;
   auditSink?: FinanceAuditSink;
+  outbox?: FinanceOutboxProducer;
 };
 
 export class FinanceApplicationService {
   private readonly repository: FinanceRepository;
   private readonly cashRegister?: ExpenseCashRegisterLookup;
   private readonly audit?: FinanceAuditSink;
+  private readonly outbox?: FinanceOutboxProducer;
 
   constructor(dependencies: FinanceApplicationServiceDependencies) {
     this.repository = dependencies.repository;
     this.cashRegister = dependencies.cashRegister;
     this.audit = dependencies.auditSink;
+    this.outbox = dependencies.outbox;
   }
 
   async listEntries(context: RequestContext, filters: FinancialEntryFilters) {
@@ -153,6 +157,7 @@ export class FinanceApplicationService {
     );
     if (idempotentExpense) {
       assertFinancialRecordIsVisible(context, idempotentExpense, 'expense');
+      await this.enqueueRecalculation(context, idempotentExpense);
       return idempotentExpense;
     }
 
@@ -204,6 +209,7 @@ export class FinanceApplicationService {
       source: { type: 'EXPENSE', id: paid.id },
       afterState: { expenseId: paid.id, financialEntryId: paid.financialEntryId },
     });
+    await this.enqueueRecalculation(context, paid);
 
     return paid;
   }
@@ -217,6 +223,7 @@ export class FinanceApplicationService {
       );
       if (idempotentExpense) {
         assertFinancialRecordIsVisible(context, idempotentExpense, 'expense');
+        await this.enqueueRecalculation(context, idempotentExpense);
         return idempotentExpense;
       }
     }
@@ -244,8 +251,35 @@ export class FinanceApplicationService {
       beforeState: current,
       afterState: cancelled,
     });
+    await this.enqueueRecalculation(context, cancelled);
 
     return cancelled;
+  }
+
+  private async enqueueRecalculation(
+    context: RequestContext,
+    expense: Pick<
+      Expense,
+      'tenantId' | 'branchId' | 'id' | 'financialEntryId' | 'status' | 'amountCents'
+    >,
+  ) {
+    if (!this.outbox) return;
+    const sourceId = expense.financialEntryId ?? expense.id;
+    await this.outbox.createEvent(context, {
+      tenantId: expense.tenantId,
+      branchId: expense.branchId,
+      eventType: 'FINANCE_RECALCULATION_REQUESTED',
+      sourceType: 'FINANCIAL_ENTRY',
+      sourceId,
+      payload: {
+        expenseId: expense.id,
+        financialEntryId: expense.financialEntryId,
+        status: expense.status,
+        amountCents: expense.amountCents,
+      },
+      idempotencyKey: 'finance:expense:' + expense.id + ':' + expense.status,
+      correlationId: context.requestId,
+    });
   }
 
   private async resolveCashExpenseSession(

@@ -5,6 +5,7 @@ import type {
   ExpenseCategory,
   ExpenseListResponse,
   FinanceSummary,
+  CreateOutboxEventCommand,
   FinancialEntry,
   FinancialEntryDirection,
   FinancialEntrySourceType,
@@ -21,6 +22,7 @@ export type FinancePeriod = {
 
 export type FinancialEntryFilters = FinancePeriod & {
   branchId?: string;
+  type?: FinancialEntryType;
   sourceType?: FinancialEntrySourceType;
   sourceId?: string;
   limit?: number;
@@ -61,6 +63,20 @@ export interface FinanceRepository {
   ): Promise<Expense>;
   payExpense(context: RequestContext, command: PayExpenseCommand): Promise<Expense>;
   cancelExpense(context: RequestContext, command: CancelExpenseCommand): Promise<Expense>;
+}
+
+export interface FinanceOutboxProducer {
+  createEvent(
+    context: RequestContext,
+    command: Pick<
+      CreateOutboxEventCommand,
+      'tenantId' | 'branchId' | 'payload' | 'idempotencyKey' | 'correlationId'
+    > & {
+      eventType: 'FINANCE_RECALCULATION_REQUESTED';
+      sourceType: 'FINANCIAL_ENTRY';
+      sourceId: string;
+    },
+  ): Promise<unknown>;
 }
 
 export interface FinanceAuditSink {
@@ -107,11 +123,11 @@ export type FinancialEntryReversalInput = {
   id: string;
   sourceType: FinancialEntrySourceType;
   sourceId: string;
+  type?: FinancialEntryType;
   createdBy: string;
   createdAt: string;
   competenceDate?: string;
   cashDate?: string;
-  type?: FinancialEntryType;
   idempotencyKey?: string;
   description?: string;
 };

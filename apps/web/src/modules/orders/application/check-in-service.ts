@@ -2,6 +2,7 @@ import {
   checkInAppointmentCommandSchema,
   type AppointmentStatus,
   type CheckInAppointmentCommand,
+  type OrderDetail,
   type Entitlement,
   type Permission,
   type RequestContext,
@@ -13,6 +14,7 @@ import type {
   CheckInAppointmentSnapshot,
   OrderAppointmentRepository,
   OrderAuditSink,
+  OrderOutboxProducer,
   OrderRepository,
 } from '../domain';
 
@@ -29,6 +31,7 @@ export class CheckInApplicationService {
     private readonly appointments: OrderAppointmentRepository,
     private readonly orders: OrderRepository,
     private readonly audit?: OrderAuditSink,
+    private readonly outbox?: OrderOutboxProducer,
   ) {}
 
   async checkIn(context: RequestContext, command: CheckInAppointmentCommand) {
@@ -40,6 +43,7 @@ export class CheckInApplicationService {
 
     const existingOrder = await this.orders.findByAppointmentId(context, appointment.id);
     if (existingOrder) {
+      await this.enqueueOrderOpened(context, existingOrder, 'appointment-check-in');
       return existingOrder;
     }
 
@@ -77,7 +81,31 @@ export class CheckInApplicationService {
       result: 'SUCCESS',
       afterState: order,
     });
+    await this.enqueueOrderOpened(context, order, 'appointment-check-in');
     return order;
+  }
+
+  private async enqueueOrderOpened(
+    context: RequestContext,
+    order: Pick<OrderDetail, 'tenantId' | 'branchId' | 'id' | 'items' | 'totalAmountCents'>,
+    source: string,
+  ) {
+    if (!this.outbox) return;
+    await this.outbox.createEvent(context, {
+      tenantId: order.tenantId,
+      branchId: order.branchId,
+      eventType: 'ORDER_OPENED',
+      sourceType: 'ORDER',
+      sourceId: order.id,
+      payload: {
+        orderId: order.id,
+        itemCount: order.items.length,
+        totalAmountCents: order.totalAmountCents,
+        source,
+      },
+      idempotencyKey: 'order:' + order.id + ':opened',
+      correlationId: context.requestId,
+    });
   }
 
   private async getVisibleAppointment(context: RequestContext, appointmentId: string) {

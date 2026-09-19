@@ -233,7 +233,7 @@ insert into public.order_items (id, tenant_id, branch_id, order_id, source_type,
 on conflict (id) do update set source_type = excluded.source_type, source_id = excluded.source_id, name_snapshot = excluded.name_snapshot, quantity = excluded.quantity, unit_price_amount_cents = excluded.unit_price_amount_cents, discount_amount_cents = excluded.discount_amount_cents, final_amount_cents = excluded.final_amount_cents, professional_id = excluded.professional_id, notes = excluded.notes;
 
 insert into public.cash_register_sessions (id, tenant_id, branch_id, status, opening_balance_amount_cents, expected_balance_amount_cents, idempotency_key, opened_by, opened_at) values
-  ('00000000-0000-0000-0000-000000001201', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'OPEN', 20000, 28500, 'seed-cash-session-1201', null, '2026-09-07T11:00:00Z')
+  ('00000000-0000-0000-0000-000000001201', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'OPEN', 80000, 23500, 'seed-cash-session-1201', null, '2026-09-07T11:00:00Z')
 on conflict (id) do update set status = excluded.status, opening_balance_amount_cents = excluded.opening_balance_amount_cents, expected_balance_amount_cents = excluded.expected_balance_amount_cents, idempotency_key = excluded.idempotency_key, opened_at = excluded.opened_at;
 
 insert into public.payments (id, tenant_id, branch_id, order_id, method, status, amount_cents, cash_received_amount_cents, change_due_amount_cents, external_reference, idempotency_key, received_by, received_at) values
@@ -245,8 +245,9 @@ insert into public.payment_allocations (id, tenant_id, branch_id, payment_id, or
 on conflict (id) do update set payment_id = excluded.payment_id, order_id = excluded.order_id, amount_cents = excluded.amount_cents;
 
 insert into public.cash_movements (id, tenant_id, branch_id, session_id, type, amount_cents, signed_amount_cents, order_id, payment_id, idempotency_key, reason, created_by, created_at) values
-  ('00000000-0000-0000-0000-000000001301', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001201', 'OPENING_BALANCE', 20000, 20000, null, null, 'seed-cash-opening-1301', 'Saldo inicial da seed', null, '2026-09-07T11:00:00Z'),
-  ('00000000-0000-0000-0000-000000001302', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001201', 'SALE', 8500, 8500, '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000001001', 'seed-cash-sale-1302', 'Pagamento em dinheiro da Comanda paga fixture', null, '2026-09-07T15:20:00Z')
+  ('00000000-0000-0000-0000-000000001301', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001201', 'OPENING_BALANCE', 80000, 80000, null, null, 'seed-cash-opening-1301', 'Saldo inicial da seed', null, '2026-09-07T11:00:00Z'),
+  ('00000000-0000-0000-0000-000000001302', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001201', 'SALE', 8500, 8500, '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000001001', 'seed-cash-sale-1302', 'Pagamento em dinheiro da Comanda paga fixture', null, '2026-09-07T15:20:00Z'),
+  ('00000000-0000-0000-0000-000000001303', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001201', 'EXPENSE', 65000, -65000, null, null, 'seed-cash-expense-1303', 'Despesa paga em dinheiro: Honorarios contabeis de agosto', null, '2026-09-07T16:20:00Z')
 on conflict (id) do update set type = excluded.type, amount_cents = excluded.amount_cents, signed_amount_cents = excluded.signed_amount_cents, order_id = excluded.order_id, payment_id = excluded.payment_id, idempotency_key = excluded.idempotency_key, reason = excluded.reason;
 
 insert into public.order_history (id, tenant_id, branch_id, order_id, event_type, actor_id, reason, metadata) values
@@ -281,11 +282,13 @@ on conflict (id) do nothing;
 insert into public.financial_entries (id, tenant_id, branch_id, direction, type, status, amount_cents, signed_amount_cents, competence_date, cash_date, source_type, source_id, category_id, description, idempotency_key, created_by) values
   ('00000000-0000-0000-0000-000000001501', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'IN', 'SERVICE_REVENUE', 'POSTED', 8500, 8500, '2026-09-07', '2026-09-07', 'PAYMENT', '00000000-0000-0000-0000-000000001001', null, 'Receita da Comanda paga seed-finance-entry-1501', 'seed-finance-payment-1001', null),
   ('00000000-0000-0000-0000-000000001502', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'OUT', 'EXPENSE', 'POSTED', 4200, -4200, '2026-09-05', '2026-09-05', 'EXPENSE', '00000000-0000-0000-0000-000000001601', '00000000-0000-0000-0000-000000001402', 'Conta de energia paga da seed', 'seed-finance-expense-1601', null),
+  ('00000000-0000-0000-0000-000000001505', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'OUT', 'EXPENSE', 'POSTED', 65000, -65000, '2026-08-31', '2026-09-07', 'EXPENSE', '00000000-0000-0000-0000-000000001603', '00000000-0000-0000-0000-000000001402', 'Honorarios contabeis pagos em dinheiro', 'seed-finance-expense-cash-1603', null),
   ('00000000-0000-0000-0000-000000001503', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'IN', 'SERVICE_REVENUE', 'POSTED', 7000, 7000, '2026-09-06', '2026-09-06', 'PAYMENT', '00000000-0000-0000-0000-000000001002', null, 'Receita da Comanda paga para repasse seed', 'seed-finance-payment-1002', null),
   ('00000000-0000-0000-0000-000000001504', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'OUT', 'PAYOUT', 'POSTED', 3500, -3500, '2026-09-06', '2026-09-07', 'PAYOUT', '00000000-0000-0000-0000-000000002001', null, 'Repasse pago ao profissional Carlos', 'seed-finance-payout-2001', null)
 on conflict (id) do nothing;
 insert into public.expenses (id, tenant_id, branch_id, category_id, recurring_template_id, description, vendor_name, status, amount_cents, competence_date, due_date, cash_date, payment_method, recurrence_key, document_metadata, financial_entry_id, idempotency_key, payment_idempotency_key, created_by, updated_by, paid_by, paid_at) values
   ('00000000-0000-0000-0000-000000001601', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001402', null, 'Energia da Unidade Centro', 'Energia SP', 'PAID', 4200, '2026-09-05', '2026-09-10', '2026-09-05', 'PIX', null, '{}'::jsonb, '00000000-0000-0000-0000-000000001502', 'seed-expense-1601', 'seed-expense-pay-1601', null, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '2026-09-05T13:00:00Z'),
+  ('00000000-0000-0000-0000-000000001603', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001402', null, 'Honorarios contabeis de agosto', 'Contabilidade Prime', 'PAID', 65000, '2026-08-31', '2026-09-07', '2026-09-07', 'CASH', null, '{}'::jsonb, '00000000-0000-0000-0000-000000001505', 'seed-expense-1603', 'seed-expense-pay-cash-1603', null, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '2026-09-07T16:20:00Z'),
   ('00000000-0000-0000-0000-000000001602', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001401', '00000000-0000-0000-0000-000000001701', 'Aluguel de outubro da Unidade Centro', 'Imobiliaria Centro', 'OPEN', 120000, '2026-10-01', '2026-10-05', null, null, 'rent-monthly-centro', '{}'::jsonb, null, 'seed-expense-1602', null, null, null, null, null)
 on conflict (id) do nothing;
 
@@ -311,3 +314,123 @@ insert into public.order_history (id, tenant_id, branch_id, order_id, event_type
   ('00000000-0000-0000-0000-000000000905', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000703', 'ORDER_CREATED', null, 'Criado pela seed financeira', '{"source":"finance-seed"}'::jsonb),
   ('00000000-0000-0000-0000-000000000906', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000703', 'ORDER_PAID', null, 'Pagamento fixture para financeiro e repasse', '{"paymentId":"00000000-0000-0000-0000-000000001002"}'::jsonb)
 on conflict (id) do nothing;
+insert into public.product_categories (id, tenant_id, name, description, status, created_by, updated_by) values
+  ('00000000-0000-0000-0000-000000003001', '00000000-0000-0000-0000-000000000001', 'Finalizadores', 'Produtos de acabamento vendidos na Comanda.', 'ACTIVE', null, null),
+  ('00000000-0000-0000-0000-000000003002', '00000000-0000-0000-0000-000000000001', 'Bebidas', 'Produtos de conveniencia para recepcao e espera.', 'ACTIVE', null, null)
+on conflict (id) do update set name = excluded.name, description = excluded.description, status = excluded.status;
+
+insert into public.product_category_branches (tenant_id, category_id, branch_id) values
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003001', '00000000-0000-0000-0000-000000000011'),
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003002', '00000000-0000-0000-0000-000000000011')
+on conflict (tenant_id, category_id, branch_id) do nothing;
+
+insert into public.products (id, tenant_id, category_id, sku, barcode, name, description, status, sale_price_amount_cents, cost_amount_cents, stock_tracking_policy, allow_negative_stock, minimum_stock_quantity, supplier_metadata, created_by, updated_by) values
+  ('00000000-0000-0000-0000-000000003101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003001', 'POM-MATTE-80G', '7890000003101', 'Pomada Matte 80g', 'Produto ativo e rastreado para venda na Comanda.', 'ACTIVE', 4500, 1800, 'TRACKED', false, 5, '{"supplierName":"Barber Supply","leadTimeDays":5}'::jsonb, null, null),
+  ('00000000-0000-0000-0000-000000003102', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003001', 'SHM-BARBA-120ML', '7890000003102', 'Shampoo para Barba 120ml', 'Produto ativo abaixo do estoque minimo.', 'ACTIVE', 3900, 1600, 'TRACKED', false, 5, '{"supplierName":"Barber Supply","leadTimeDays":7}'::jsonb, null, null),
+  ('00000000-0000-0000-0000-000000003103', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003002', 'AGUA-500ML', '7890000003103', 'Agua mineral 500ml', 'Produto inativo mantido para historico e filtros.', 'INACTIVE', 600, 250, 'NOT_TRACKED', false, 0, '{"supplierName":"Distribuidora Centro"}'::jsonb, null, null)
+on conflict (id) do update set category_id = excluded.category_id, sku = excluded.sku, barcode = excluded.barcode, name = excluded.name, description = excluded.description, status = excluded.status, sale_price_amount_cents = excluded.sale_price_amount_cents, cost_amount_cents = excluded.cost_amount_cents, stock_tracking_policy = excluded.stock_tracking_policy, allow_negative_stock = excluded.allow_negative_stock, minimum_stock_quantity = excluded.minimum_stock_quantity, supplier_metadata = excluded.supplier_metadata;
+
+insert into public.product_branches (tenant_id, product_id, branch_id) values
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003101', '00000000-0000-0000-0000-000000000011'),
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003102', '00000000-0000-0000-0000-000000000011'),
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000003103', '00000000-0000-0000-0000-000000000011')
+on conflict (tenant_id, product_id, branch_id) do nothing;
+
+insert into public.inventory_locations (id, tenant_id, branch_id, name, description, active, created_by, updated_by) values
+  ('00000000-0000-0000-0000-000000003201', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'Estoque Centro', 'Armario principal da unidade Centro.', true, null, null),
+  ('00000000-0000-0000-0000-000000003202', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'Vitrine Centro', 'Produtos expostos para venda no atendimento.', true, null, null)
+on conflict (id) do update set name = excluded.name, description = excluded.description, active = excluded.active;
+
+insert into public.orders (id, tenant_id, branch_id, appointment_id, customer_id, professional_id, status, subtotal_amount_cents, discount_amount_cents, total_amount_cents, notes, idempotency_key, opened_at, closed_at, created_by, updated_by) values
+  ('00000000-0000-0000-0000-000000000704', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', null, '00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000102', 'PAID', 4500, 0, 4500, 'seed-inventory-product-sale-order-704', 'seed-inventory-product-sale-order-704', '2026-09-07T17:30:00Z', '2026-09-07T17:36:00Z', null, null)
+on conflict (id) do update set customer_id = excluded.customer_id, professional_id = excluded.professional_id, status = excluded.status, subtotal_amount_cents = excluded.subtotal_amount_cents, discount_amount_cents = excluded.discount_amount_cents, total_amount_cents = excluded.total_amount_cents, notes = excluded.notes, idempotency_key = excluded.idempotency_key, opened_at = excluded.opened_at, closed_at = excluded.closed_at;
+
+insert into public.order_items (id, tenant_id, branch_id, order_id, source_type, source_id, name_snapshot, quantity, unit_price_amount_cents, discount_amount_cents, final_amount_cents, professional_id, notes, created_by) values
+  ('00000000-0000-0000-0000-000000000804', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000704', 'PRODUCT', '00000000-0000-0000-0000-000000003101', 'Pomada Matte 80g', 1, 4500, 0, 4500, '00000000-0000-0000-0000-000000000102', 'Item de produto fixture para baixa de estoque', null)
+on conflict (id) do update set source_type = excluded.source_type, source_id = excluded.source_id, name_snapshot = excluded.name_snapshot, quantity = excluded.quantity, unit_price_amount_cents = excluded.unit_price_amount_cents, discount_amount_cents = excluded.discount_amount_cents, final_amount_cents = excluded.final_amount_cents, professional_id = excluded.professional_id, notes = excluded.notes;
+
+insert into public.payments (id, tenant_id, branch_id, order_id, method, status, amount_cents, external_reference, idempotency_key, received_by, received_at) values
+  ('00000000-0000-0000-0000-000000001004', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000704', 'PIX', 'PAID', 4500, 'seed-inventory-product-payment', 'seed-payment-1004', null, '2026-09-07T17:36:00Z')
+on conflict (id) do update set method = excluded.method, status = excluded.status, amount_cents = excluded.amount_cents, external_reference = excluded.external_reference, idempotency_key = excluded.idempotency_key, received_at = excluded.received_at;
+
+insert into public.payment_allocations (id, tenant_id, branch_id, payment_id, order_id, amount_cents) values
+  ('00000000-0000-0000-0000-000000001104', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000001004', '00000000-0000-0000-0000-000000000704', 4500)
+on conflict (id) do update set payment_id = excluded.payment_id, order_id = excluded.order_id, amount_cents = excluded.amount_cents;
+
+insert into public.financial_entries (id, tenant_id, branch_id, direction, type, status, amount_cents, signed_amount_cents, competence_date, cash_date, source_type, source_id, category_id, description, idempotency_key, created_by) values
+  ('00000000-0000-0000-0000-000000001506', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'IN', 'PRODUCT_REVENUE', 'POSTED', 4500, 4500, '2026-09-07', '2026-09-07', 'PAYMENT', '00000000-0000-0000-0000-000000001004', null, 'Receita de produto da Comanda seed-inventory-product-sale-order-704', 'seed-finance-product-payment-1004', null)
+on conflict (id) do update set direction = excluded.direction, type = excluded.type, status = excluded.status, amount_cents = excluded.amount_cents, signed_amount_cents = excluded.signed_amount_cents, competence_date = excluded.competence_date, cash_date = excluded.cash_date, source_type = excluded.source_type, source_id = excluded.source_id, description = excluded.description, idempotency_key = excluded.idempotency_key;
+
+insert into public.stock_movements (id, tenant_id, branch_id, location_id, product_id, type, quantity, balance_after_quantity, source_type, source_id, order_id, order_item_id, payment_id, idempotency_key, reason, created_by, created_at) values
+  ('00000000-0000-0000-0000-000000003301', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000003201', '00000000-0000-0000-0000-000000003101', 'ENTRY', 24, 24, 'MANUAL', 'seed-inventory-entry-3301', null, null, null, 'seed-inventory-entry-3301', 'Entrada inicial da Pomada Matte 80g', null, '2026-09-07T09:00:00Z'),
+  ('00000000-0000-0000-0000-000000003302', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000003201', '00000000-0000-0000-0000-000000003102', 'ENTRY', 2, 2, 'MANUAL', 'seed-inventory-entry-3302', null, null, null, 'seed-inventory-entry-3302', 'Entrada inicial abaixo do minimo para alerta', null, '2026-09-07T09:05:00Z'),
+  ('00000000-0000-0000-0000-000000003303', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000003202', '00000000-0000-0000-0000-000000003101', 'SALE', -1, 23, 'PAYMENT', '00000000-0000-0000-0000-000000001004', '00000000-0000-0000-0000-000000000704', '00000000-0000-0000-0000-000000000804', '00000000-0000-0000-0000-000000001004', 'seed-inventory-sale-3303', 'Venda de produto na Comanda.', null, '2026-09-07T17:36:00Z')
+on conflict (id) do update set location_id = excluded.location_id, product_id = excluded.product_id, type = excluded.type, quantity = excluded.quantity, balance_after_quantity = excluded.balance_after_quantity, source_type = excluded.source_type, source_id = excluded.source_id, order_id = excluded.order_id, order_item_id = excluded.order_item_id, payment_id = excluded.payment_id, idempotency_key = excluded.idempotency_key, reason = excluded.reason, created_at = excluded.created_at;
+
+insert into public.low_stock_alerts (id, tenant_id, branch_id, product_id, state, current_quantity, minimum_stock_quantity, triggered_at, resolved_at) values
+  ('00000000-0000-0000-0000-000000003401', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000003102', 'ACTIVE', 2, 5, '2026-09-07T09:06:00Z', null)
+on conflict (id) do update set state = excluded.state, current_quantity = excluded.current_quantity, minimum_stock_quantity = excluded.minimum_stock_quantity, triggered_at = excluded.triggered_at, resolved_at = excluded.resolved_at;
+
+insert into public.order_history (id, tenant_id, branch_id, order_id, event_type, actor_id, reason, metadata) values
+  ('00000000-0000-0000-0000-000000000907', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000704', 'ORDER_CREATED', null, 'Criado pela seed de inventario', '{"source":"inventory-seed"}'::jsonb),
+  ('00000000-0000-0000-0000-000000000908', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000704', 'ORDER_PAID', null, 'Pagamento com produto fixture da seed de inventario', '{"paymentId":"00000000-0000-0000-0000-000000001004","stockMovementId":"00000000-0000-0000-0000-000000003303"}'::jsonb)
+on conflict (id) do update set event_type = excluded.event_type, reason = excluded.reason, metadata = excluded.metadata;
+
+insert into public.permissions (code, description) values
+  ('worker.failures.read', 'Visualizar falhas operacionais de jobs e outbox'),
+  ('notifications.status.read', 'Visualizar status de notificacoes operacionais')
+on conflict (code) do update set description = excluded.description;
+
+insert into public.role_permissions (role_code, permission_code) values
+  ('OWNER', 'worker.failures.read'),
+  ('OWNER', 'notifications.status.read'),
+  ('MANAGER', 'worker.failures.read'),
+  ('MANAGER', 'notifications.status.read'),
+  ('RECEPTIONIST', 'notifications.status.read'),
+  ('PLATFORM_MASTER', 'worker.failures.read'),
+  ('PLATFORM_MASTER', 'notifications.status.read'),
+  ('PLATFORM_SUPPORT', 'worker.failures.read'),
+  ('PLATFORM_SUPPORT', 'notifications.status.read')
+on conflict (role_code, permission_code) do nothing;
+
+insert into public.entitlements (code, description) values
+  ('worker.operations', 'Operacao de worker, outbox e falhas assincronas'),
+  ('notifications', 'Status de notificacoes operacionais')
+on conflict (code) do update set description = excluded.description;
+
+insert into public.tenant_entitlements (tenant_id, entitlement_code) values
+  ('00000000-0000-0000-0000-000000000001', 'worker.operations'),
+  ('00000000-0000-0000-0000-000000000001', 'notifications')
+on conflict (tenant_id, entitlement_code) do update set enabled = true;
+
+insert into public.notification_intents (id, tenant_id, branch_id, recipient_type, recipient_id, channel, template_key, source_type, source_id, payload, status, idempotency_key, correlation_id, created_at, updated_at) values
+  ('00000000-0000-0000-0000-000000004001', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'CUSTOMER', '00000000-0000-0000-0000-000000000301', 'LOCAL', 'appointment.reminder.v1', 'APPOINTMENT', '00000000-0000-0000-0000-000000000401', '{"appointmentId":"00000000-0000-0000-0000-000000000401"}'::jsonb, 'PENDING', 'seed-notification-pending-4001', 'seed-worker-correlation-4001', '2026-09-07T12:00:00Z', '2026-09-07T12:00:00Z'),
+  ('00000000-0000-0000-0000-000000004002', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'CUSTOMER', '00000000-0000-0000-0000-000000000302', 'LOCAL', 'post_service.follow_up.v1', 'ORDER', '00000000-0000-0000-0000-000000000702', '{"orderId":"00000000-0000-0000-0000-000000000702"}'::jsonb, 'SENT', 'seed-notification-sent-4002', 'seed-worker-correlation-4002', '2026-09-07T16:00:00Z', '2026-09-07T16:02:00Z'),
+  ('00000000-0000-0000-0000-000000004003', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'CUSTOMER', '00000000-0000-0000-0000-000000000303', 'LOCAL', 'appointment.reminder.v1', 'APPOINTMENT', '00000000-0000-0000-0000-000000000403', '{"appointmentId":"00000000-0000-0000-0000-000000000403"}'::jsonb, 'FAILED', 'seed-notification-failed-4003', 'seed-worker-correlation-4003', '2026-09-07T16:30:00Z', '2026-09-07T16:35:00Z')
+on conflict (id) do update set status = excluded.status, payload = excluded.payload, updated_at = excluded.updated_at;
+
+insert into public.outbox_events (id, tenant_id, branch_id, event_type, source_type, source_id, payload, idempotency_key, status, correlation_id, schema_version, attempt_count, available_at, last_error_code, last_error_message, last_error_retryable, dispatched_at, created_at, updated_at) values
+  ('00000000-0000-0000-0000-000000004101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'ORDER_PAID', 'ORDER', '00000000-0000-0000-0000-000000000702', '{"orderId":"00000000-0000-0000-0000-000000000702"}'::jsonb, 'seed-outbox-pending-4101', 'PENDING', 'seed-worker-correlation-4101', 1, 0, '2026-09-07T15:20:00Z', null, null, null, null, '2026-09-07T15:20:00Z', '2026-09-07T15:20:00Z'),
+  ('00000000-0000-0000-0000-000000004102', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'PAYMENT_COMPLETED', 'PAYMENT', '00000000-0000-0000-0000-000000001001', '{"paymentId":"00000000-0000-0000-0000-000000001001"}'::jsonb, 'seed-outbox-dispatched-4102', 'DISPATCHED', 'seed-worker-correlation-4102', 1, 1, '2026-09-07T15:22:00Z', null, null, null, '2026-09-07T15:23:00Z', '2026-09-07T15:22:00Z', '2026-09-07T15:23:00Z'),
+  ('00000000-0000-0000-0000-000000004103', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'NOTIFICATION_DELIVERY_REQUESTED', 'NOTIFICATION_INTENT', '00000000-0000-0000-0000-000000004003', '{"notificationIntentId":"00000000-0000-0000-0000-000000004003"}'::jsonb, 'seed-outbox-dead-4103', 'DEAD_LETTERED', 'seed-worker-correlation-4103', 1, 5, '2026-09-07T16:35:00Z', 'WORKER_RETRY_EXHAUSTED', 'Retry limit reached for local notification delivery.', false, null, '2026-09-07T16:35:00Z', '2026-09-07T17:10:00Z')
+on conflict (id) do update set status = excluded.status, attempt_count = excluded.attempt_count, last_error_code = excluded.last_error_code, last_error_message = excluded.last_error_message, updated_at = excluded.updated_at;
+
+insert into public.worker_jobs (id, tenant_id, branch_id, type, status, schema_version, source_type, source_id, outbox_event_id, notification_intent_id, payload, idempotency_key, correlation_id, priority, attempt_count, max_attempts, run_at, last_error_code, last_error_message, last_error_retryable, completed_at, created_at, updated_at) values
+  ('00000000-0000-0000-0000-000000004201', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'APPOINTMENT_REMINDER', 'PENDING', 1, 'APPOINTMENT', '00000000-0000-0000-0000-000000000401', null, '00000000-0000-0000-0000-000000004001', '{"appointmentId":"00000000-0000-0000-0000-000000000401"}'::jsonb, 'seed-worker-job-pending-4101', 'seed-worker-correlation-4001', 50, 0, 5, '2026-09-07T12:15:00Z', null, null, null, null, '2026-09-07T12:00:00Z', '2026-09-07T12:00:00Z'),
+  ('00000000-0000-0000-0000-000000004202', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'POST_SERVICE_FOLLOW_UP', 'SUCCEEDED', 1, 'ORDER', '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000004102', '00000000-0000-0000-0000-000000004002', '{"orderId":"00000000-0000-0000-0000-000000000702"}'::jsonb, 'seed-worker-job-succeeded-4102', 'seed-worker-correlation-4002', 40, 1, 5, '2026-09-07T16:01:00Z', null, null, null, '2026-09-07T16:02:00Z', '2026-09-07T16:00:00Z', '2026-09-07T16:02:00Z'),
+  ('00000000-0000-0000-0000-000000004203', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'NOTIFICATION_DELIVERY', 'RETRY_SCHEDULED', 1, 'NOTIFICATION_INTENT', '00000000-0000-0000-0000-000000004003', '00000000-0000-0000-0000-000000004103', '00000000-0000-0000-0000-000000004003', '{"notificationIntentId":"00000000-0000-0000-0000-000000004003"}'::jsonb, 'seed-worker-job-retrying-4103', 'seed-worker-correlation-4003', 90, 2, 5, '2026-09-07T17:30:00Z', 'WORKER_PROVIDER_UNAVAILABLE', 'Local notification provider unavailable.', true, null, '2026-09-07T16:30:00Z', '2026-09-07T16:35:00Z'),
+  ('00000000-0000-0000-0000-000000004204', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'FINANCE_RECALCULATION', 'FAILED', 1, 'PAYMENT', '00000000-0000-0000-0000-000000001004', null, null, '{"paymentId":"00000000-0000-0000-0000-000000001004"}'::jsonb, 'seed-worker-job-failed-4104', 'seed-worker-correlation-4104', 60, 3, 5, '2026-09-07T18:00:00Z', 'WORKER_HANDLER_FAILED', 'Finance recalculation failed with sanitized details.', true, null, '2026-09-07T17:45:00Z', '2026-09-07T17:50:00Z'),
+  ('00000000-0000-0000-0000-000000004205', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'STOCK_ALERT', 'DEAD_LETTERED', 1, 'PRODUCT', '00000000-0000-0000-0000-000000003102', null, null, '{"productId":"00000000-0000-0000-0000-000000003102"}'::jsonb, 'seed-worker-job-dead-4105', 'seed-worker-correlation-4105', 80, 5, 5, '2026-09-07T18:30:00Z', 'WORKER_RETRY_EXHAUSTED', 'Retry limit reached for stock alert job.', false, null, '2026-09-07T18:00:00Z', '2026-09-07T18:30:00Z')
+on conflict (id) do update set status = excluded.status, attempt_count = excluded.attempt_count, last_error_code = excluded.last_error_code, last_error_message = excluded.last_error_message, updated_at = excluded.updated_at;
+
+insert into public.worker_job_attempts (id, tenant_id, branch_id, job_id, outbox_event_id, status, attempt_number, worker_id, started_at, finished_at, created_at, error_code, error_message, error_retryable) values
+  ('00000000-0000-0000-0000-000000004301', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000004202', '00000000-0000-0000-0000-000000004102', 'SUCCEEDED', 1, 'worker-seed-a', '2026-09-07T16:01:00Z', '2026-09-07T16:02:00Z', '2026-09-07T16:01:00Z', null, null, null),
+  ('00000000-0000-0000-0000-000000004302', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000004203', '00000000-0000-0000-0000-000000004103', 'RETRY_SCHEDULED', 2, 'worker-seed-a', '2026-09-07T16:34:00Z', '2026-09-07T16:35:00Z', '2026-09-07T16:34:00Z', 'WORKER_PROVIDER_UNAVAILABLE', 'Local notification provider unavailable.', true),
+  ('00000000-0000-0000-0000-000000004303', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000004205', null, 'DEAD_LETTERED', 5, 'worker-seed-b', '2026-09-07T18:28:00Z', '2026-09-07T18:30:00Z', '2026-09-07T18:28:00Z', 'WORKER_RETRY_EXHAUSTED', 'Retry limit reached for stock alert job.', false)
+on conflict (id) do update set status = excluded.status, error_code = excluded.error_code, error_message = excluded.error_message, error_retryable = excluded.error_retryable;
+
+insert into public.notification_delivery_attempts (id, tenant_id, branch_id, notification_intent_id, channel, status, attempt_number, provider, provider_message_id, error_code, error_message, error_retryable, sent_at, created_at) values
+  ('00000000-0000-0000-0000-000000004401', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000004002', 'LOCAL', 'SENT', 1, 'local', 'seed-local-message-4401', null, null, null, '2026-09-07T16:02:00Z', '2026-09-07T16:02:00Z'),
+  ('00000000-0000-0000-0000-000000004402', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000004003', 'LOCAL', 'RETRY_SCHEDULED', 2, 'local', null, 'WORKER_PROVIDER_UNAVAILABLE', 'Local notification provider unavailable.', true, null, '2026-09-07T16:35:00Z'),
+  ('00000000-0000-0000-0000-000000004403', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000004003', 'LOCAL', 'DEAD_LETTERED', 5, 'local', null, 'WORKER_RETRY_EXHAUSTED', 'Retry limit reached for local notification delivery.', false, null, '2026-09-07T17:10:00Z')
+on conflict (id) do update set status = excluded.status, error_code = excluded.error_code, error_message = excluded.error_message, error_retryable = excluded.error_retryable;

@@ -33,7 +33,7 @@ describe('CashRegisterView', () => {
     );
 
     expect(html).toContain('Abertura do caixa');
-    expect(html).toContain('Troco inicial');
+    expect(html).toContain('Informe troco inicial e observacao em um modal seguro.');
     expect(html).toContain('Abrir caixa');
     expect(html).toContain('Sem recebimentos registrados nesta sessao.');
     expect(html).toContain('Nenhum movimento registrado.');

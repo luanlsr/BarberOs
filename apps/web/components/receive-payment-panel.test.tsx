@@ -28,6 +28,12 @@ function setOnline(value: boolean) {
   });
 }
 
+function openPaymentModal(container: HTMLElement) {
+  flushSync(() => {
+    container.querySelector<HTMLButtonElement>('button.order-payment-open-button')?.click();
+  });
+}
+
 describe('ReceivePaymentPanel', () => {
   beforeEach(() => {
     setOnline(true);
@@ -57,6 +63,12 @@ describe('ReceivePaymentPanel', () => {
         onPaymentSuccess={onPaymentSuccess}
       />,
     );
+    openPaymentModal(container);
+    expect(container.querySelector('input[aria-label="Valor da forma 1"]')).toBeTruthy();
+    expect(
+      container.querySelector('input[aria-label="Dinheiro recebido na forma 1"]'),
+    ).toBeTruthy();
+
     container
       .querySelector('form.order-payment-form')
       ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -101,6 +113,8 @@ describe('ReceivePaymentPanel', () => {
         paymentSummary={model.order!.paymentSummary}
       />,
     );
+    openPaymentModal(container);
+
     container
       .querySelector('form.order-payment-form')
       ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -123,10 +137,9 @@ describe('ReceivePaymentPanel', () => {
     expect(offlineResult.container.textContent).toContain(
       'Voce esta offline. Pagamento precisa de conexao.',
     );
-    expect(offlineResult.container.querySelector('button.order-payment-button')).toHaveProperty(
-      'disabled',
-      true,
-    );
+    expect(
+      offlineResult.container.querySelector('button.order-payment-open-button'),
+    ).toHaveProperty('disabled', true);
 
     const permissionDenied = getDevelopmentComandaViewModel({
       ...developmentSession,
@@ -141,7 +154,7 @@ describe('ReceivePaymentPanel', () => {
     );
 
     expect(deniedResult.container.textContent).toContain('Seu perfil nao pode receber pagamentos.');
-    expect(deniedResult.container.querySelector('button.order-payment-button')).toHaveProperty(
+    expect(deniedResult.container.querySelector('button.order-payment-open-button')).toHaveProperty(
       'disabled',
       true,
     );

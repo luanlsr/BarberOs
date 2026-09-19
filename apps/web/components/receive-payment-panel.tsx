@@ -1,9 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { LoaderCircle, Plus, RefreshCcw, Trash2, WalletCards, WifiOff } from 'lucide-react';
+import { LoaderCircle, Plus, RefreshCcw, Trash2, WalletCards, WifiOff, X } from 'lucide-react';
 import type { PaymentMethod } from '@barberos/contracts';
 import type { ComandaPaymentSummaryModel } from '../lib/order-data';
+
+type PaymentTerminalOption = {
+  id: string;
+  name: string;
+  provider: string;
+};
 
 type PaymentLine = {
   id: string;
@@ -43,6 +49,11 @@ export function ReceivePaymentPanel({
   const [feedback, setFeedback] = React.useState<Feedback>({ type: 'idle' });
   const online = useOnlineStatus();
   const feedbackId = React.useId();
+  const dialogTitleId = React.useId();
+  const [paymentDialogOpen, setPaymentDialogOpen] = React.useState(false);
+  const [terminals, setTerminals] = React.useState<PaymentTerminalOption[]>([]);
+  const [terminalId, setTerminalId] = React.useState('');
+  const [terminalsLoading, setTerminalsLoading] = React.useState(false);
   const appliedAmountCents = lines.reduce((total, line) => total + moneyToCents(line.amount), 0);
   const remainingAmountCents = Math.max(paymentSummary.amountDueCents - appliedAmountCents, 0);
   const overpaidAmountCents = Math.max(appliedAmountCents - paymentSummary.amountDueCents, 0);
@@ -52,6 +63,8 @@ export function ReceivePaymentPanel({
   }, 0);
   const disabled = !paymentSummary.canReceivePayment || !online || feedback.type === 'loading';
   const canSubmit = !disabled && remainingAmountCents === 0 && overpaidAmountCents === 0;
+  const terminalPayments = lines.filter((line) => isTerminalPaymentMethod(line.method));
+  const hasTerminalPayments = terminalPayments.length > 0;
 
   function updateLine(id: string, updates: Partial<PaymentLine>) {
     setLines((current) => current.map((line) => (line.id === id ? { ...line, ...updates } : line)));
@@ -70,9 +83,23 @@ export function ReceivePaymentPanel({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSubmit) return;
+    if (hasTerminalPayments && !terminalId) {
+      setFeedback({
+        type: 'error',
+        code: 'PAYMENT_TERMINAL_REQUIRED',
+        message: 'Selecione uma maquininha para receber Pix ou cartao.',
+        requestId: randomToken(),
+      });
+      return;
+    }
 
     const requestId = randomToken();
-    setFeedback({ type: 'loading', message: 'Registrando pagamento...' });
+    setFeedback({
+      type: 'loading',
+      message: hasTerminalPayments
+        ? 'Enviando cobranca para a maquininha...'
+        : 'Registrando pagamento...',
+    });
 
     try {
       const payments = lines
@@ -81,18 +108,53 @@ export function ReceivePaymentPanel({
           amountCents: moneyToCents(line.amount),
           cashReceivedAmountCents:
             line.method === 'CASH' ? moneyToCents(line.cashReceived) : undefined,
+          installments: line.method === 'CREDIT_CARD' ? 1 : undefined,
         }))
         .filter((line) => line.amountCents > 0);
 
-      const response = await fetch('/api/v1/payments', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-request-id': requestId },
-        body: JSON.stringify({
-          orderId,
-          idempotencyKey: 'receive-payment:' + requestId,
-          payments,
-        }),
-      });
+      const manualPayments = payments.filter((line) => !isTerminalPaymentMethod(line.method));
+      const terminalPayment = payments.find((line) => isTerminalPaymentMethod(line.method));
+
+      if (manualPayments.length) {
+        const manualResponse = await fetch('/api/v1/payments', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-request-id': requestId },
+          body: JSON.stringify({
+            orderId,
+            idempotencyKey: 'receive-payment:' + requestId + ':manual',
+            payments: manualPayments,
+          }),
+        });
+        const manualPayload = (await manualResponse
+          .json()
+          .catch(() => null)) as PaymentApiResponse | null;
+        if (!manualResponse.ok) {
+          setFeedback(
+            errorFeedback(
+              manualPayload,
+              manualResponse.status,
+              requestId,
+              'Nao foi possivel registrar a baixa manual.',
+            ),
+          );
+          return;
+        }
+      }
+
+      const response = terminalPayment
+        ? await fetch('/api/v1/payment-terminals', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-request-id': requestId },
+            body: JSON.stringify({
+              orderId,
+              terminalId,
+              method: terminalPayment.method,
+              amountCents: terminalPayment.amountCents,
+              installments: terminalPayment.installments,
+              idempotencyKey: 'terminal-payment:' + requestId,
+            }),
+          })
+        : new Response(JSON.stringify({ data: { status: 'PAID' }, requestId }), { status: 201 });
       const payload = (await response.json().catch(() => null)) as PaymentApiResponse | null;
 
       if (!response.ok) {
@@ -102,7 +164,12 @@ export function ReceivePaymentPanel({
         return;
       }
 
-      setFeedback({ type: 'success', message: 'Pagamento registrado. Atualizando Comanda...' });
+      setFeedback({
+        type: 'success',
+        message: hasTerminalPayments
+          ? 'Pagamento aprovado na maquininha. Atualizando Comanda...'
+          : 'Pagamento registrado. Atualizando Comanda...',
+      });
       window.setTimeout(() => onPaymentSuccess(orderId), 250);
     } catch {
       setFeedback({
@@ -159,113 +226,190 @@ export function ReceivePaymentPanel({
           <WifiOff size={15} aria-hidden="true" /> Voce esta offline. Pagamento precisa de conexao.
         </p>
       ) : null}
-
-      <form
-        className="order-payment-form"
-        onSubmit={handleSubmit}
-        aria-describedby={feedbackId}
-        aria-label={'Receber pagamento da ' + orderId}
+      <button
+        className="button button-primary order-payment-open-button"
+        type="button"
+        disabled={disabled}
+        onClick={() => setPaymentDialogOpen(true)}
       >
-        <fieldset disabled={disabled}>
-          <div className="order-payment-lines">
-            {lines.map((line, index) => (
-              <div className="order-payment-line" key={line.id}>
-                <label>
-                  Metodo
-                  <select
-                    value={line.method}
-                    onChange={(event) =>
-                      updateLine(line.id, {
-                        method: event.target.value as PaymentMethod,
-                        cashReceived:
-                          event.target.value === 'CASH' ? line.cashReceived || line.amount : '',
-                      })
-                    }
-                  >
-                    {paymentMethods.map((method) => (
-                      <option key={method.method} value={method.method}>
-                        {method.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Valor
-                  <input
-                    aria-label={'Valor da forma ' + (index + 1)}
-                    inputMode="decimal"
-                    value={line.amount}
-                    onChange={(event) =>
-                      updateLine(line.id, {
-                        amount: event.target.value,
-                        cashReceived:
-                          line.method === 'CASH' && line.cashReceived === line.amount
-                            ? event.target.value
-                            : line.cashReceived,
-                      })
-                    }
-                  />
-                </label>
-                {line.method === 'CASH' ? (
-                  <label>
-                    Recebido
-                    <input
-                      aria-label={'Dinheiro recebido na forma ' + (index + 1)}
-                      inputMode="decimal"
-                      value={line.cashReceived}
-                      onChange={(event) =>
-                        updateLine(line.id, { cashReceived: event.target.value })
-                      }
-                    />
-                  </label>
-                ) : null}
-                <button
-                  className="icon-button order-payment-remove"
-                  type="button"
-                  aria-label={'Remover forma ' + (index + 1)}
-                  disabled={disabled || lines.length === 1}
-                  onClick={() => removeLine(line.id)}
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </fieldset>
+        <WalletCards size={16} aria-hidden="true" />
+        Receber pagamento
+      </button>
 
-        <div className="order-payment-footer">
-          <button
-            className="button button-secondary"
-            type="button"
-            disabled={disabled || remainingAmountCents === 0}
-            onClick={addLine}
-          >
-            <Plus size={16} aria-hidden="true" />
-            Adicionar forma
-          </button>
-          <div className="order-payment-balance" aria-live="polite">
-            <span>Restante {formatCurrency(remainingAmountCents)}</span>
-            <span>Troco {formatCurrency(cashChangeAmountCents)}</span>
-            {overpaidAmountCents > 0 ? (
-              <span>Excesso {formatCurrency(overpaidAmountCents)}</span>
-            ) : null}
-          </div>
-        </div>
-
-        <button
-          className="button button-primary order-payment-button"
-          disabled={!canSubmit}
-          type="submit"
+      {paymentDialogOpen ? (
+        <div
+          className="app-dialog-backdrop"
+          role="presentation"
+          onClick={() => setPaymentDialogOpen(false)}
         >
-          {feedback.type === 'loading' ? (
-            <LoaderCircle className="check-in-action-spinner" size={16} aria-hidden="true" />
-          ) : (
-            <WalletCards size={16} aria-hidden="true" />
-          )}
-          {feedback.type === 'loading' ? 'Registrando...' : 'Confirmar recebimento'}
-        </button>
-      </form>
-      <FeedbackMessage feedback={feedback} id={feedbackId} />
+          <section
+            aria-labelledby={dialogTitleId}
+            aria-modal="true"
+            className="app-dialog order-payment-dialog"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="app-dialog-header">
+              <div>
+                <p className="eyebrow">Pagamento</p>
+                <h2 id={dialogTitleId}>Receber pagamento</h2>
+                <p>Registre uma ou mais formas de pagamento para quitar a Comanda.</p>
+              </div>
+              <button
+                aria-label="Fechar recebimento"
+                className="icon-button"
+                type="button"
+                onClick={() => setPaymentDialogOpen(false)}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="order-payment-dialog-body">
+              <form
+                className="order-payment-form"
+                onSubmit={handleSubmit}
+                aria-describedby={feedbackId}
+                aria-label={'Receber pagamento da ' + orderId}
+              >
+                <fieldset disabled={disabled}>
+                  {hasTerminalPayments ? (
+                    <label>
+                      Maquininha
+                      <select
+                        disabled={disabled || terminalsLoading || !terminals.length}
+                        value={terminalId}
+                        onChange={(event) => setTerminalId(event.target.value)}
+                      >
+                        <option value="">
+                          {terminalsLoading
+                            ? 'Carregando maquininhas...'
+                            : terminals.length
+                              ? 'Selecione a maquininha'
+                              : 'Nenhuma maquininha ativa'}
+                        </option>
+                        {terminals.map((terminal) => (
+                          <option key={terminal.id} value={terminal.id}>
+                            {terminal.name} - {terminal.provider}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <div className="order-payment-lines">
+                    {lines.map((line, index) => (
+                      <div className="order-payment-line" key={line.id}>
+                        <label>
+                          Metodo
+                          <select
+                            value={line.method}
+                            onChange={(event) =>
+                              updateLine(line.id, {
+                                method: event.target.value as PaymentMethod,
+                                cashReceived:
+                                  event.target.value === 'CASH'
+                                    ? line.cashReceived || line.amount
+                                    : '',
+                              })
+                            }
+                          >
+                            {paymentMethods.map((method) => (
+                              <option key={method.method} value={method.method}>
+                                {method.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Valor
+                          <input
+                            aria-label={'Valor da forma ' + (index + 1)}
+                            inputMode="decimal"
+                            value={line.amount}
+                            onChange={(event) =>
+                              updateLine(line.id, {
+                                amount: event.target.value,
+                                cashReceived:
+                                  line.method === 'CASH' && line.cashReceived === line.amount
+                                    ? event.target.value
+                                    : line.cashReceived,
+                              })
+                            }
+                          />
+                        </label>
+                        {line.method === 'CASH' ? (
+                          <label>
+                            Recebido
+                            <input
+                              aria-label={'Dinheiro recebido na forma ' + (index + 1)}
+                              inputMode="decimal"
+                              value={line.cashReceived}
+                              onChange={(event) =>
+                                updateLine(line.id, { cashReceived: event.target.value })
+                              }
+                            />
+                          </label>
+                        ) : null}
+                        <button
+                          className="icon-button order-payment-remove"
+                          type="button"
+                          aria-label={'Remover forma ' + (index + 1)}
+                          disabled={disabled || lines.length === 1}
+                          onClick={() => removeLine(line.id)}
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div className="order-payment-footer">
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    disabled={disabled || remainingAmountCents === 0}
+                    onClick={addLine}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                    Adicionar forma
+                  </button>
+                  <div className="order-payment-balance" aria-live="polite">
+                    <span>Restante {formatCurrency(remainingAmountCents)}</span>
+                    <span>Troco {formatCurrency(cashChangeAmountCents)}</span>
+                    {overpaidAmountCents > 0 ? (
+                      <span>Excesso {formatCurrency(overpaidAmountCents)}</span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <button
+                  className="button button-primary order-payment-button"
+                  disabled={!canSubmit}
+                  type="submit"
+                >
+                  {feedback.type === 'loading' ? (
+                    <LoaderCircle
+                      className="check-in-action-spinner"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <WalletCards size={16} aria-hidden="true" />
+                  )}
+                  {feedback.type === 'loading'
+                    ? hasTerminalPayments
+                      ? 'Aguardando maquininha...'
+                      : 'Registrando...'
+                    : hasTerminalPayments
+                      ? 'Enviar para maquininha'
+                      : 'Confirmar recebimento'}
+                </button>
+              </form>
+              <FeedbackMessage feedback={feedback} id={feedbackId} />
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -283,9 +427,12 @@ function FeedbackMessage({ feedback, id }: Readonly<{ feedback: Feedback; id: st
         <RefreshCcw size={15} aria-hidden="true" />
       ) : null}
       {feedback.message}
-      {feedback.type === 'error' ? ` Codigo ${feedback.code}. Request ${feedback.requestId}.` : ''}
     </p>
   );
+}
+
+function isTerminalPaymentMethod(method: PaymentMethod) {
+  return method === 'PIX' || method === 'DEBIT_CARD' || method === 'CREDIT_CARD';
 }
 
 function newPaymentLine(amountCents: number): PaymentLine {

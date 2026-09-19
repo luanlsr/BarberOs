@@ -18,6 +18,7 @@ import {
   calculateRefundableAmount,
   calculateSplitPaymentTotal,
   type PaymentAuditSink,
+  type PaymentOutboxProducer,
   type PaymentReceiveResult,
   type PaymentRepository,
 } from '../domain';
@@ -32,6 +33,7 @@ export class PaymentApplicationService {
     private readonly orders: Pick<OrderRepository, 'findById'>,
     private readonly payments: PaymentRepository,
     private readonly audit?: PaymentAuditSink,
+    private readonly outbox?: PaymentOutboxProducer,
   ) {}
 
   async receivePayment(context: RequestContext, command: ReceivePaymentCommand) {
@@ -42,6 +44,7 @@ export class PaymentApplicationService {
     );
     if (idempotentResult) {
       assertPaymentResultIsVisible(context, idempotentResult);
+      await this.enqueuePaymentEvents(context, idempotentResult, parsed.idempotencyKey);
       return { ...idempotentResult, idempotent: true } satisfies PaymentReceiveResult;
     }
 
@@ -99,6 +102,8 @@ export class PaymentApplicationService {
       });
     }
 
+    await this.enqueuePaymentEvents(context, result, parsed.idempotencyKey);
+
     return result;
   }
 
@@ -110,6 +115,7 @@ export class PaymentApplicationService {
     );
     if (idempotentRefund) {
       assertPaymentIsVisible(context, idempotentRefund);
+      await this.enqueueRefundEvent(context, idempotentRefund, parsed.idempotencyKey);
       return idempotentRefund;
     }
 
@@ -152,7 +158,68 @@ export class PaymentApplicationService {
       afterState: updated,
     });
 
+    await this.enqueueRefundEvent(context, updated, parsed.idempotencyKey);
+
     return updated;
+  }
+
+  private async enqueuePaymentEvents(
+    context: RequestContext,
+    result: PaymentReceiveResult,
+    idempotencyKey: string,
+  ) {
+    if (!this.outbox || result.paymentIds.length === 0) return;
+    const paymentId = result.paymentIds[0];
+    await this.outbox.createEvent(context, {
+      tenantId: result.tenantId,
+      branchId: result.branchId,
+      eventType: 'PAYMENT_COMPLETED',
+      sourceType: 'PAYMENT',
+      sourceId: paymentId,
+      payload: {
+        orderId: result.orderId,
+        paymentIds: result.paymentIds,
+        paidAmountCents: result.paidAmountCents,
+        status: result.status,
+      },
+      idempotencyKey: idempotencyKey + ':' + 'payment-completed',
+      correlationId: context.requestId,
+    });
+    if (result.status === 'PAID') {
+      await this.outbox.createEvent(context, {
+        tenantId: result.tenantId,
+        branchId: result.branchId,
+        eventType: 'ORDER_PAID',
+        sourceType: 'ORDER',
+        sourceId: result.orderId,
+        payload: { paymentIds: result.paymentIds, paidAmountCents: result.paidAmountCents },
+        idempotencyKey: idempotencyKey + ':' + 'order-paid',
+        correlationId: context.requestId,
+      });
+    }
+  }
+
+  private async enqueueRefundEvent(
+    context: RequestContext,
+    payment: Payment,
+    idempotencyKey: string,
+  ) {
+    if (!this.outbox) return;
+    await this.outbox.createEvent(context, {
+      tenantId: payment.tenantId,
+      branchId: payment.branchId,
+      eventType: 'PAYMENT_REFUNDED',
+      sourceType: 'PAYMENT',
+      sourceId: payment.id,
+      payload: {
+        orderId: payment.orderId,
+        paymentId: payment.id,
+        refundedAmountCents: payment.refundedAmountCents,
+        status: payment.status,
+      },
+      idempotencyKey: idempotencyKey + ':' + 'payment-refunded',
+      correlationId: context.requestId,
+    });
   }
 
   private async getVisibleOrder(context: RequestContext, orderId: string) {

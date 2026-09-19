@@ -6,6 +6,7 @@ import type {
   CommissionRuleScope,
   CommissionRuleStatus,
   CommissionSummary,
+  CreateOutboxEventCommand,
   CorrectPayoutCommand,
   CreateCommissionRuleCommand,
   GenerateCommissionAccrualsCommand,
@@ -105,6 +106,20 @@ export interface CommissionRepository {
     context: RequestContext,
     filters: ProfessionalWalletFilters,
   ): Promise<ProfessionalWallet>;
+}
+
+export interface CommissionOutboxProducer {
+  createEvent(
+    context: RequestContext,
+    command: Pick<
+      CreateOutboxEventCommand,
+      'tenantId' | 'branchId' | 'payload' | 'idempotencyKey' | 'correlationId'
+    > & {
+      eventType: 'FINANCE_RECALCULATION_REQUESTED';
+      sourceType: 'COMMISSION';
+      sourceId: string;
+    },
+  ): Promise<unknown>;
 }
 
 export interface CommissionAuditSink {

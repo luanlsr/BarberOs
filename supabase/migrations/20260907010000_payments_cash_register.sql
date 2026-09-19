@@ -14,6 +14,7 @@ create table if not exists public.cash_register_sessions (
   actual_balance_amount_cents integer check (actual_balance_amount_cents >= 0),
   difference_amount_cents integer not null default 0,
   idempotency_key text,
+  closing_idempotency_key text,
   opened_by uuid,
   opened_at timestamptz not null default now(),
   closed_by uuid,
@@ -732,7 +733,7 @@ begin
          closed_by = p_actor_id,
          closed_at = now(),
          closing_notes = p_difference_reason,
-         idempotency_key = coalesce(idempotency_key, nullif(p_idempotency_key, '')),
+         closing_idempotency_key = coalesce(closing_idempotency_key, nullif(p_idempotency_key, '')),
          updated_at = now()
    where id = v_session.id;
 

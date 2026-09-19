@@ -162,3 +162,44 @@ The system SHALL expose payment readiness and payment completion from the Comand
 - **WHEN** Comanda payment completes successfully
 - **THEN** the UI confirms the paid amount and methods used
 - **AND** offers the next operational actions without presenting unpaid totals as still due.
+
+### Requirement: Commission Source Attribution
+
+The system SHALL keep enough item-level attribution on Comandas to determine the professional, item type and source amount used for commission accrual after payment completion.
+
+#### Scenario: Service item has responsible professional
+
+- **WHEN** a scheduled or manual service item is added to a Comanda
+- **THEN** the item exposes the responsible professional used for production and commission calculations
+- **AND** later changes to professional assignment do not silently mutate historical paid commission sources.
+
+#### Scenario: Product item has optional commission attribution
+
+- **WHEN** a product or manual sale item is added to a Comanda with commission eligibility
+- **THEN** the item exposes the professional attribution or explicitly records that no professional commission applies.
+
+#### Scenario: Paid item attribution is immutable
+
+- **WHEN** a Comanda item has contributed to a paid commission accrual
+- **THEN** correcting the attribution requires an auditable adjustment instead of silently editing the historical commission source.
+
+### Requirement: Product Catalog Order Items
+
+The system SHALL allow authorized actors to add active catalog products to Comandas while preserving product sale snapshots and without creating stock movements before payment completion.
+
+#### Scenario: Product item is added from catalog
+
+- **WHEN** an authorized actor adds an active product from the catalog to an open Comanda
+- **THEN** the order item stores product source type, product source id, name snapshot, quantity, unit sale price, optional cost snapshot, discount and final amount
+- **AND** the item remains tenant-scoped and branch-scoped to the Comanda.
+
+#### Scenario: Product unavailable for branch
+
+- **WHEN** an actor attempts to add a product outside the Comanda branch scope or tenant
+- **THEN** the system rejects the item without exposing out-of-scope product data.
+
+#### Scenario: Unpaid product item is changed
+
+- **WHEN** a product item is updated or removed before payment completion
+- **THEN** the system recalculates Comanda totals server-side
+- **AND** does not create stock movement history for the unpaid transient state.

@@ -160,7 +160,7 @@ class FakeSupabaseClient {
 }
 
 describe('SupabasePaymentRepository queries', () => {
-  it('receives payment through the transactional money-effects RPC and tenant-scoped reread', async () => {
+  it('receives payment through the transactional money and inventory-effects RPC and tenant-scoped reread', async () => {
     const client = new FakeSupabaseClient();
     const repository = new SupabasePaymentRepository(client as unknown as SupabaseClient);
 
@@ -172,7 +172,7 @@ describe('SupabasePaymentRepository queries', () => {
 
     expect(result).toMatchObject({ status: 'PAID', amountDueCents: 0, paymentIds: ['payment-1'] });
     expect(client.rpcCalls[0]).toEqual({
-      name: 'receive_order_payment_with_money_effects',
+      name: 'receive_order_payment_with_inventory_effects',
       args: expect.objectContaining({
         p_tenant_id: 'tenant-1',
         p_branch_id: 'branch-1',
@@ -214,9 +214,9 @@ describe('SupabasePaymentRepository queries', () => {
     });
   });
 
-  it('surfaces transactional side-effect rollback before rereading created payments', async () => {
+  it('surfaces transactional inventory side-effect rollback before rereading created payments', async () => {
     const client = new FakeSupabaseClient();
-    client.rpcError = { message: 'finance side effect failed' };
+    client.rpcError = { message: 'Insufficient stock for product sale.' };
     const repository = new SupabasePaymentRepository(client as unknown as SupabaseClient);
 
     await expect(
@@ -225,9 +225,9 @@ describe('SupabasePaymentRepository queries', () => {
         idempotencyKey: 'receive-key-1',
         payments: [{ method: 'PIX', amountCents: 8_500, externalReference: 'pix-1' }],
       }),
-    ).rejects.toMatchObject({ message: 'finance side effect failed' });
+    ).rejects.toMatchObject({ message: 'Insufficient stock for product sale.' });
 
-    expect(client.rpcCalls[0]?.name).toBe('receive_order_payment_with_money_effects');
+    expect(client.rpcCalls[0]?.name).toBe('receive_order_payment_with_inventory_effects');
     expect(client.queries.filter((query) => query.table === 'payments')).toHaveLength(0);
   });
 

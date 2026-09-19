@@ -43,6 +43,7 @@ export type AgendaOccupiedSlot = {
 export type AgendaNewAppointmentModel = {
   isOpen: boolean;
   dateIso: string;
+  defaultTimeLabel: string;
   branchId: string;
   canCreateAppointment: boolean;
   canCreateCustomer: boolean;
@@ -126,8 +127,11 @@ export type AgendaProfessionalColumn = {
   appointments: readonly AgendaAppointment[];
 };
 
+export type AgendaCalendarView = 'month' | 'week' | 'day';
+
 export type AgendaViewModel = {
   dateIso: string;
+  calendarView: AgendaCalendarView;
   dateLabel: string;
   branchId: string;
   branchName: string;
@@ -291,7 +295,14 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
 
 export function getAgendaViewModel(
   session: SessionContext,
-  options: { date?: string; professionalId?: string; appointmentId?: string; mode?: string } = {},
+  options: {
+    date?: string;
+    professionalId?: string;
+    appointmentId?: string;
+    mode?: string;
+    view?: string;
+    time?: string;
+  } = {},
 ): AgendaViewModel {
   return buildAgendaViewModel({ session, ...options });
 }
@@ -302,12 +313,16 @@ export function buildAgendaViewModel({
   professionalId,
   appointmentId,
   mode,
+  view,
+  time,
 }: {
   session: SessionContext;
   date?: string;
   professionalId?: string;
   appointmentId?: string;
   mode?: string;
+  view?: string;
+  time?: string;
 }): AgendaViewModel {
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
   const hasReadPermission =
@@ -324,6 +339,8 @@ export function buildAgendaViewModel({
       ? professionalId
       : 'all';
   const dateIso = normalizeDate(date);
+  const calendarView = normalizeCalendarView(view);
+  const defaultTimeLabel = normalizeTimeLabel(time);
   const appointments = hasReadPermission
     ? appointmentSeeds
         .filter((appointment) =>
@@ -346,8 +363,9 @@ export function buildAgendaViewModel({
       (appointment) => appointment.professionalId === professional.id,
     ),
   }));
-  const selectedAppointment =
-    appointments.find((appointment) => appointment.id === appointmentId) ?? appointments[0];
+  const selectedAppointment = appointmentId
+    ? appointments.find((appointment) => appointment.id === appointmentId)
+    : undefined;
   const canCreateAppointment =
     session.permissions.includes('appointments.create') &&
     (session.entitlements ?? []).includes('core.operations') &&
@@ -355,6 +373,7 @@ export function buildAgendaViewModel({
   const newAppointment = buildNewAppointmentModel({
     isOpen: mode === 'new',
     dateIso,
+    defaultTimeLabel,
     branchId,
     canCreateAppointment,
     canCreateCustomer: hasPermission(session, 'customers.create'),
@@ -366,6 +385,7 @@ export function buildAgendaViewModel({
 
   return {
     dateIso,
+    calendarView,
     dateLabel: formatDateLabel(dateIso),
     branchId,
     branchName: session.branchName,
@@ -640,6 +660,15 @@ function normalizeDate(date?: string) {
   return '2026-09-05';
 }
 
+function normalizeCalendarView(view?: string): AgendaCalendarView {
+  if (view === 'month' || view === 'week' || view === 'day') return view;
+  return 'day';
+}
+
+function normalizeTimeLabel(time?: string) {
+  return time && /^\d{2}:\d{2}$/.test(time) ? time : '12:00';
+}
+
 function formatDateLabel(dateIso: string) {
   const [year, month, day] = dateIso.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day, 12));
@@ -687,6 +716,7 @@ function subtractMinutes(timeLabel: string, minutes: number) {
 function buildNewAppointmentModel({
   isOpen,
   dateIso,
+  defaultTimeLabel,
   branchId,
   canCreateAppointment,
   canCreateCustomer,
@@ -697,6 +727,7 @@ function buildNewAppointmentModel({
 }: {
   isOpen: boolean;
   dateIso: string;
+  defaultTimeLabel: string;
   branchId: string;
   canCreateAppointment: boolean;
   canCreateCustomer: boolean;
@@ -708,6 +739,7 @@ function buildNewAppointmentModel({
   return {
     isOpen,
     dateIso,
+    defaultTimeLabel,
     branchId,
     canCreateAppointment,
     canCreateCustomer,

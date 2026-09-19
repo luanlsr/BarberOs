@@ -212,6 +212,51 @@ describe('shared API error responses', () => {
     }
   });
 
+  it('sanitizes all catalog and inventory public error messages', async () => {
+    const cases = [
+      ['CATALOG_PERMISSION_DENIED', 403, 'Permission denied.'],
+      ['CATALOG_BRANCH_SCOPE_DENIED', 403, 'Catalog data is outside the authorized scope.'],
+      ['CATALOG_ENTITLEMENT_DENIED', 403, 'Entitlement denied.'],
+      ['CATALOG_NOT_FOUND', 404, 'Catalog record was not found.'],
+      [
+        'CATALOG_IDEMPOTENCY_CONFLICT',
+        409,
+        'Catalog request conflicts with an existing idempotency key.',
+      ],
+      ['CATALOG_VALIDATION_ERROR', 400, 'Catalog request payload is invalid.'],
+      ['PRODUCT_UNAVAILABLE', 400, 'Product is unavailable for sale.'],
+      ['INVENTORY_PERMISSION_DENIED', 403, 'Permission denied.'],
+      ['INVENTORY_BRANCH_SCOPE_DENIED', 403, 'Inventory data is outside the authorized scope.'],
+      ['INVENTORY_ENTITLEMENT_DENIED', 403, 'Entitlement denied.'],
+      ['INVENTORY_NOT_FOUND', 404, 'Inventory record was not found.'],
+      ['INVENTORY_PRODUCT_UNAVAILABLE', 400, 'Inventory product is unavailable.'],
+      ['INVENTORY_INSUFFICIENT_STOCK', 400, 'Insufficient stock for this product and branch.'],
+      [
+        'INVENTORY_IDEMPOTENCY_CONFLICT',
+        409,
+        'Inventory request conflicts with an existing idempotency key.',
+      ],
+      ['INVENTORY_IMMUTABLE_MOVEMENT', 409, 'Inventory history cannot be changed destructively.'],
+      ['INVENTORY_VALIDATION_ERROR', 400, 'Inventory request payload is invalid.'],
+    ] as const;
+
+    for (const [code, status, message] of cases) {
+      const response = jsonFromError(
+        new CoreOperationsApplicationError(
+          code,
+          `${code} leaked tenant-secret branch-secret product-secret`,
+        ),
+        `request-${code}`,
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(status);
+      expect(body).toEqual({ error: { code, message, requestId: `request-${code}` } });
+      expect(JSON.stringify(body)).not.toContain('tenant-secret');
+      expect(JSON.stringify(body)).not.toContain('branch-secret');
+      expect(JSON.stringify(body)).not.toContain('product-secret');
+    }
+  });
   it('keeps domain validation messages that do not identify forbidden tenant data', async () => {
     const response = jsonFromError(
       new CoreOperationsApplicationError(

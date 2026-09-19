@@ -19,6 +19,10 @@ import {
 } from '../src/modules/orders/infrastructure';
 import { calculateAmountDue, calculatePaidAmount } from '../src/modules/payments/application';
 import { SupabasePaymentRepository } from '../src/modules/payments/infrastructure';
+import {
+  getDevelopmentProductPickerViewModel,
+  type ProductPickerViewModel,
+} from './product-picker-data';
 
 export type OrderTone = 'neutral' | 'success' | 'warning' | 'danger';
 
@@ -26,9 +30,14 @@ export type ComandaItemModel = {
   id: string;
   name: string;
   sourceType: OrderItemSourceType;
+  sourceId?: string;
   typeLabel: string;
+  sourceLabel: string;
+  sourceDescription: string;
+  isCatalogProduct: boolean;
   quantity: number;
   unitPriceAmountCents: number;
+  costAmountCents?: number;
   discountAmountCents: number;
   finalAmountCents: number;
   quantityLabel: string;
@@ -43,7 +52,11 @@ export type ComandaItemSuggestionModel = {
   id: string;
   name: string;
   sourceType: OrderItemSourceType;
+  sourceId?: string;
   typeLabel: string;
+  sourceLabel: string;
+  helperLabel: string;
+  disabledReason?: string;
   unitPriceAmountCents: number;
   unitPriceLabel: string;
 };
@@ -66,6 +79,15 @@ export type ComandaSummaryModel = {
   href: string;
 };
 
+export type ComandaItemBreakdownModel = {
+  serviceCount: number;
+  productCount: number;
+  manualCount: number;
+  serviceTotalLabel: string;
+  productTotalLabel: string;
+  manualTotalLabel: string;
+};
+
 export type ComandaPaymentMethodSummaryModel = {
   method: PaymentMethod;
   methodLabel: string;
@@ -74,6 +96,12 @@ export type ComandaPaymentMethodSummaryModel = {
 };
 
 export type ComandaPaymentState = 'unpaid' | 'partially-paid' | 'paid';
+
+export type ComandaSettlementUpdateModel = {
+  id: 'finance' | 'commission' | 'cash';
+  label: string;
+  tone: OrderTone;
+};
 
 export type ComandaPaymentSummaryModel = {
   state: ComandaPaymentState;
@@ -85,6 +113,7 @@ export type ComandaPaymentSummaryModel = {
   amountDueCents: number;
   amountDueLabel: string;
   methodTotals: readonly ComandaPaymentMethodSummaryModel[];
+  settlementUpdates: readonly ComandaSettlementUpdateModel[];
   canReceivePayment: boolean;
   receivePaymentLabel: string;
   unavailableReason?: string;
@@ -105,6 +134,7 @@ export type ComandaDetailModel = {
   subtotalLabel: string;
   discountLabel: string;
   totalLabel: string;
+  itemBreakdown: ComandaItemBreakdownModel;
   paymentSummary: ComandaPaymentSummaryModel;
   notes?: string;
   items: readonly ComandaItemModel[];
@@ -127,6 +157,7 @@ export type ComandaViewModel = {
   order?: ComandaDetailModel;
   openOrders: readonly ComandaSummaryModel[];
   itemSuggestions: readonly ComandaItemSuggestionModel[];
+  productPicker: ProductPickerViewModel;
   error?: { code: string; message: string; requestId: string };
 };
 
@@ -171,6 +202,18 @@ const itemTypeLabels: Record<OrderItemSourceType, string> = {
   MANUAL: 'Manual',
 };
 
+const itemSourceLabels: Record<OrderItemSourceType, string> = {
+  SERVICE: 'Servico do catalogo',
+  PRODUCT: 'Produto de catalogo',
+  MANUAL: 'Item manual',
+};
+
+const itemSourceDescriptions: Record<OrderItemSourceType, string> = {
+  SERVICE: 'Preco congelado do servico no atendimento.',
+  PRODUCT: 'Preco e custo congelados do catalogo; estoque so baixa no pagamento.',
+  MANUAL: 'Lancamento avulso sem vinculo com produto de estoque.',
+};
+
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH: 'Dinheiro',
   PIX: 'PIX',
@@ -198,6 +241,8 @@ const developmentItemSuggestions: readonly ComandaItemSuggestionModel[] = [
     name: 'Agua mineral',
     sourceType: 'MANUAL',
     typeLabel: itemTypeLabels.MANUAL,
+    sourceLabel: itemSourceLabels.MANUAL,
+    helperLabel: itemSourceDescriptions.MANUAL,
     unitPriceAmountCents: 500,
     unitPriceLabel: formatCurrency(500),
   },
@@ -206,6 +251,8 @@ const developmentItemSuggestions: readonly ComandaItemSuggestionModel[] = [
     name: 'Cafe especial',
     sourceType: 'MANUAL',
     typeLabel: itemTypeLabels.MANUAL,
+    sourceLabel: itemSourceLabels.MANUAL,
+    helperLabel: itemSourceDescriptions.MANUAL,
     unitPriceAmountCents: 700,
     unitPriceLabel: formatCurrency(700),
   },
@@ -213,15 +260,33 @@ const developmentItemSuggestions: readonly ComandaItemSuggestionModel[] = [
     id: 'product-pomade',
     name: 'Pomada matte',
     sourceType: 'PRODUCT',
+    sourceId: 'dev-product-pomade',
     typeLabel: itemTypeLabels.PRODUCT,
+    sourceLabel: itemSourceLabels.PRODUCT,
+    helperLabel: 'Catalogo ativo nesta unidade.',
     unitPriceAmountCents: 3200,
     unitPriceLabel: formatCurrency(3200),
+  },
+  {
+    id: 'product-inactive',
+    name: 'Shampoo indisponivel',
+    sourceType: 'PRODUCT',
+    sourceId: 'dev-product-inactive',
+    typeLabel: itemTypeLabels.PRODUCT,
+    sourceLabel: itemSourceLabels.PRODUCT,
+    helperLabel: 'Produto fora do catalogo ativo desta unidade.',
+    disabledReason: 'Indisponivel para esta filial',
+    unitPriceAmountCents: 2800,
+    unitPriceLabel: formatCurrency(2800),
   },
   {
     id: 'service-finish',
     name: 'Acabamento',
     sourceType: 'SERVICE',
+    sourceId: 'dev-service-finish',
     typeLabel: itemTypeLabels.SERVICE,
+    sourceLabel: itemSourceLabels.SERVICE,
+    helperLabel: itemSourceDescriptions.SERVICE,
     unitPriceAmountCents: 2500,
     unitPriceLabel: formatCurrency(2500),
   },
@@ -328,6 +393,7 @@ const developmentOrder: OrderDetail = {
       nameSnapshot: 'Pomada matte',
       quantity: 1,
       unitPriceAmountCents: 3200,
+      costAmountCents: 1800,
       discountAmountCents: 0,
       finalAmountCents: 3200,
       createdBy: 'dev-user',
@@ -454,6 +520,21 @@ export function getDevelopmentComandaViewModel(
     };
   }
 
+  if (!options.orderId) {
+    const preview = toComandaDetailModel(session, developmentOrder, {
+      customerName: devPeople.customers.get(developmentOrder.customerId ?? '')?.name,
+      customerPhone: devPeople.customers.get(developmentOrder.customerId ?? '')?.phone,
+      professionalName: devPeople.professionals.get(developmentOrder.professionalId ?? ''),
+    }, [], true);
+    return {
+      ...base,
+      state: 'ready',
+      selectedOrderId: undefined,
+      openOrders: [toComandaSummaryModel(preview)],
+      description: 'Selecione uma Comanda para expandir os detalhes do atendimento.',
+    };
+  }
+
   const payments = developmentPaymentsFor(options.state);
   const orderStatus = options.state === 'paid' ? 'PAID' : developmentOrder.status;
   const order = toComandaDetailModel(
@@ -513,6 +594,7 @@ function baseModel(
       session.branchScope.includes(branchId),
     isOnline: true,
     itemSuggestions: developmentItemSuggestions,
+    productPicker: getDevelopmentProductPickerViewModel(session, { branchId }),
   };
 }
 
@@ -528,21 +610,31 @@ async function getPersistentComandaViewModel(
   );
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
   const base = baseModel(session, branchId);
-  const selected = options.orderId
-    ? await service.get(context, options.orderId)
-    : await getFirstOpenOrderDetail(service, context, branchId);
+  const openOrders = await service.list(context, { branchId, limit: 12 });
+  const selected = options.orderId ? await service.get(context, options.orderId) : null;
 
   if (!selected) {
+    if (!openOrders.length) {
+      return {
+        ...base,
+        state: 'empty',
+        selectedOrderId: options.orderId,
+        openOrders: [],
+        description: 'Nenhuma Comanda aberta foi encontrada para os filtros atuais.',
+      };
+    }
     return {
       ...base,
-      state: 'empty',
-      selectedOrderId: options.orderId,
-      openOrders: [],
-      description: 'Nenhuma Comanda aberta foi encontrada para os filtros atuais.',
+      state: 'ready',
+      selectedOrderId: undefined,
+      openOrders: openOrders.map((item) =>
+        toComandaSummaryModel(
+          toComandaDetailModel(session, { ...item, items: [], history: [] }, {}, [], true),
+        ),
+      ),
+      description: 'Selecione uma Comanda para expandir os detalhes do atendimento.',
     };
   }
-
-  const openOrders = await service.list(context, { branchId, limit: 12 });
   const labels = await resolvePersonLabels(client, context, selected);
   const payments = await new SupabasePaymentRepository(client).list(context, {
     branchId,
@@ -652,6 +744,7 @@ function toComandaDetailModel(
     subtotalLabel: formatCurrency(order.subtotalAmountCents),
     discountLabel: formatCurrency(order.discountAmountCents),
     totalLabel: formatCurrency(order.totalAmountCents),
+    itemBreakdown: toItemBreakdownModel(items),
     paymentSummary: toPaymentSummaryModel(session, order, payments, isOnline),
     notes: order.notes ?? undefined,
     items,
@@ -675,9 +768,14 @@ function toComandaItemModel(item: OrderItem): ComandaItemModel {
     id: item.id,
     name: item.nameSnapshot,
     sourceType: item.sourceType,
+    sourceId: item.sourceId ?? undefined,
     typeLabel: itemTypeLabels[item.sourceType],
+    sourceLabel: itemSourceLabels[item.sourceType],
+    sourceDescription: itemSourceDescriptions[item.sourceType],
+    isCatalogProduct: item.sourceType === 'PRODUCT' && Boolean(item.sourceId),
     quantity: item.quantity,
     unitPriceAmountCents: item.unitPriceAmountCents,
+    costAmountCents: item.costAmountCents,
     discountAmountCents: item.discountAmountCents,
     finalAmountCents: item.finalAmountCents,
     quantityLabel: String(item.quantity) + ' x ' + formatCurrency(item.unitPriceAmountCents),
@@ -688,7 +786,33 @@ function toComandaItemModel(item: OrderItem): ComandaItemModel {
     notes: item.notes ?? undefined,
   };
 }
+function toItemBreakdownModel(items: readonly ComandaItemModel[]): ComandaItemBreakdownModel {
+  const service = summarizeItemsByType(items, 'SERVICE');
+  const product = summarizeItemsByType(items, 'PRODUCT');
+  const manual = summarizeItemsByType(items, 'MANUAL');
 
+  return {
+    serviceCount: service.count,
+    productCount: product.count,
+    manualCount: manual.count,
+    serviceTotalLabel: formatCurrency(service.totalAmountCents),
+    productTotalLabel: formatCurrency(product.totalAmountCents),
+    manualTotalLabel: formatCurrency(manual.totalAmountCents),
+  };
+}
+
+function summarizeItemsByType(items: readonly ComandaItemModel[], sourceType: OrderItemSourceType) {
+  return items.reduce(
+    (summary, item) => {
+      if (item.sourceType !== sourceType) return summary;
+      return {
+        count: summary.count + item.quantity,
+        totalAmountCents: summary.totalAmountCents + item.finalAmountCents,
+      };
+    },
+    { count: 0, totalAmountCents: 0 },
+  );
+}
 function toComandaSummaryModel(order: ComandaDetailModel): ComandaSummaryModel {
   return {
     id: order.id,
@@ -807,6 +931,7 @@ function toPaymentSummaryModel(
     amountDueCents,
     amountDueLabel: formatCurrency(amountDueCents),
     methodTotals: paymentMethodTotals(payments),
+    settlementUpdates: settlementUpdatesFor(order, payments, state, paidAmountCents),
     canReceivePayment,
     receivePaymentLabel: canReceivePayment
       ? 'Receber ' + formatCurrency(amountDueCents)
@@ -848,6 +973,26 @@ function paymentUnavailableReason(
   if (order.totalAmountCents <= 0) return 'Comanda sem valor para receber.';
   if (amountDueCents <= 0 || order.status === 'PAID') return 'Comanda ja esta paga.';
   return 'Status da Comanda nao permite recebimento.';
+}
+
+function settlementUpdatesFor(
+  order: OrderDetail,
+  payments: readonly Payment[],
+  state: ComandaPaymentState,
+  paidAmountCents: number,
+): readonly ComandaSettlementUpdateModel[] {
+  if (state !== 'paid' || paidAmountCents <= 0) return [];
+
+  const updates: ComandaSettlementUpdateModel[] = [
+    { id: 'finance', label: 'Financeiro atualizado', tone: 'success' },
+  ];
+  if (order.items.some((item) => Boolean(item.professionalId))) {
+    updates.push({ id: 'commission', label: 'Comissoes calculadas', tone: 'success' });
+  }
+  if (payments.some((payment) => payment.method === 'CASH')) {
+    updates.push({ id: 'cash', label: 'Caixa sincronizado', tone: 'success' });
+  }
+  return updates;
 }
 
 function paymentStateLabel(state: ComandaPaymentState) {

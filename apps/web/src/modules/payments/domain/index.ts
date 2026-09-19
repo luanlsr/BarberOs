@@ -95,3 +95,19 @@ export function calculateRefundableAmount(payment: PaymentAmountSnapshot) {
   if (!capturedStatuses.has(payment.status)) return 0;
   return Math.max(payment.amountCents - payment.refundedAmountCents, 0);
 }
+
+export interface PaymentOutboxProducer {
+  createEvent(
+    context: RequestContext,
+    command: {
+      tenantId: string;
+      branchId?: string;
+      eventType: 'PAYMENT_COMPLETED' | 'ORDER_PAID' | 'PAYMENT_REFUNDED';
+      sourceType: 'PAYMENT' | 'ORDER';
+      sourceId: string;
+      payload: Record<string, unknown>;
+      idempotencyKey: string;
+      correlationId: string;
+    },
+  ): Promise<unknown>;
+}

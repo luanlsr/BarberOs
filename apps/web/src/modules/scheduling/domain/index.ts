@@ -4,6 +4,7 @@ import type {
   AppointmentStatus,
   AppointmentStatusHistory,
   AvailabilityQuery,
+  CreateOutboxEventCommand,
   CancelAppointmentCommand,
   CreateAppointmentCommand,
   CreateProfessionalScheduleCommand,
@@ -66,6 +67,19 @@ export interface SchedulingServiceLookup {
 
 export interface SchedulingCustomerLookup {
   findCustomerById(context: RequestContext, customerId: string): Promise<Customer | null>;
+}
+export interface SchedulingOutboxProducer {
+  createEvent(
+    context: RequestContext,
+    command: Pick<
+      CreateOutboxEventCommand,
+      'tenantId' | 'branchId' | 'payload' | 'idempotencyKey' | 'correlationId'
+    > & {
+      eventType: 'APPOINTMENT_CONFIRMED' | 'APPOINTMENT_CANCELLED';
+      sourceType: 'APPOINTMENT';
+      sourceId: string;
+    },
+  ): Promise<unknown>;
 }
 
 export interface SchedulingProfessionalLookup {

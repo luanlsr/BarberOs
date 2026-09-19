@@ -15,11 +15,16 @@ const financeData = await readFile(
   new URL('../apps/web/lib/finance-data.ts', import.meta.url),
   'utf8',
 );
+const cashRegisterData = await readFile(
+  new URL('../apps/web/lib/cash-register-data.ts', import.meta.url),
+  'utf8',
+);
 const packageJson = await readFile(new URL('../package.json', import.meta.url), 'utf8');
 const migrationLower = migration.toLowerCase();
 const contractsLower = contracts.toLowerCase();
 const seedLower = seed.toLowerCase();
 const financeDataLower = financeData.toLowerCase();
+const cashRegisterDataLower = cashRegisterData.toLowerCase();
 
 const files = (await readdir(migrationsDir)).filter((file) => file.endsWith('.sql')).sort();
 const paymentsIndex = files.indexOf('20260907010000_payments_cash_register.sql');
@@ -155,11 +160,16 @@ const requiredSeedSnippets = [
   'seed-finance-entry-1501',
   'seed-finance-payment-1001',
   'seed-finance-expense-1601',
+  'seed-finance-expense-cash-1603',
+  'seed-expense-pay-cash-1603',
+  'seed-cash-expense-1303',
   '00000000-0000-0000-0000-000000001901',
   'seed-payout-close-2001',
   'seed-payout-pay-2001',
   'aluguel mensal da unidade centro',
   'energia da unidade centro',
+  'honorarios contabeis de agosto',
+  'honorarios contabeis pagos em dinheiro',
   'comanda paga para validacao local de financeiro e repasse',
   'insert into public.expense_categories',
   'insert into public.recurring_expense_templates',
@@ -173,8 +183,8 @@ const requiredSeedSnippets = [
 
 const requiredFinanceDataSnippets = [
   'export function getDevelopmentFinanceViewModel',
-  "state: 'empty'",
-  "state: 'permission-denied'",
+  'emptySummary',
+  'permission-denied',
   'developmentFinancialEntries',
   'developmentExpenses',
   'developmentCommissionAccruals',
@@ -183,6 +193,12 @@ const requiredFinanceDataSnippets = [
   'paidPayoutAmountCents',
   'canCreateExpense',
   'canManageCommissions',
+];
+const requiredCashRegisterDataSnippets = [
+  'dev-cash-movement-expense',
+  'cashOutAmountCents: 65_000',
+  "type: 'EXPENSE'",
+  'Despesa paga em dinheiro: Honorarios contabeis de agosto.',
 ];
 const requiredPolicySnippets = [
   'expense_categories_money_select',
@@ -247,6 +263,11 @@ for (const snippet of requiredSeedSnippets) {
 
 for (const snippet of requiredFinanceDataSnippets) {
   if (!financeDataLower.includes(snippet.toLowerCase())) missing.push('finance-data: ' + snippet);
+}
+for (const snippet of requiredCashRegisterDataSnippets) {
+  if (!cashRegisterDataLower.includes(snippet.toLowerCase())) {
+    missing.push('cash-register-data: ' + snippet);
+  }
 }
 for (const snippet of requiredPolicySnippets) {
   if (!migrationLower.includes(snippet.toLowerCase())) missing.push('policy: ' + snippet);

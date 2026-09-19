@@ -62,6 +62,7 @@ class FakePaymentRepository implements PaymentRepository {
   refundCommand: Parameters<PaymentRepository['refundPayment']>[1] | null = null;
   receiveCount = 0;
   refundCount = 0;
+  receiveError: unknown | null = null;
   listedFilters: PaymentListFilters | null = null;
 
   async list(_context: RequestContext, filters: PaymentListFilters = {}) {
@@ -83,6 +84,7 @@ class FakePaymentRepository implements PaymentRepository {
 
   async receivePayment(_context: RequestContext, command: ReceivePaymentCommand) {
     this.receiveCount += 1;
+    if (this.receiveError) throw this.receiveError;
     this.receivedCommand = command;
     const paidAmountCents = command.payments.reduce(
       (total, payment) => total + payment.amountCents,
@@ -186,6 +188,22 @@ describe('PaymentApplicationService', () => {
       result: 'SUCCESS',
       afterState: expect.objectContaining({ tenantId: 'tenant-1', branchId: 'branch-1' }),
     });
+  });
+
+  it('does not audit success or expose completion when inventory stock persistence rolls back', async () => {
+    payments.receiveError = new Error('Insufficient stock for product sale.');
+
+    await expect(
+      service.receivePayment(context, {
+        orderId: order.id,
+        idempotencyKey: 'pay-stock-fail-1',
+        payments: [{ method: 'PIX', amountCents: 10_000, externalReference: 'pix-stock-fail-1' }],
+      }),
+    ).rejects.toThrow('Insufficient stock for product sale.');
+
+    expect(payments.receiveCount).toBe(1);
+    expect(payments.receiveResultsByIdempotencyKey.has('pay-stock-fail-1')).toBe(false);
+    expect(audit.events).toEqual([]);
   });
 
   it('allows a partial payment up to the remaining amount due', async () => {

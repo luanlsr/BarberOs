@@ -405,7 +405,7 @@ begin
         where oi.tenant_id = p_tenant_id
           and oi.branch_id = p_branch_id
           and oi.order_id = p_order_id
-          and oi.source_type in ('PRODUCT', 'MANUAL')
+          and oi.source_type = 'PRODUCT'
       ) then 'PRODUCT_REVENUE'
       else 'SERVICE_REVENUE'
     end into v_entry_type;
