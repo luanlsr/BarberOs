@@ -77,6 +77,7 @@ function NavLink({
     <Link
       className={`nav-link ${nested ? 'nav-link-child' : ''}`}
       href={item.href}
+      prefetch={false}
       aria-current={active ? 'page' : undefined}
       onClick={onNavigate}
     >
@@ -183,6 +184,7 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
       <Link
         className="mobile-add-button"
         href={actions[0].href}
+        prefetch={false}
         aria-label={`Criar ${actions[0].label.toLowerCase()}`}
       >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
@@ -205,7 +207,12 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
         {actions.map((action) => {
           const Icon = actionIcons[action.icon];
           return (
-            <Link href={action.href} key={action.href} onClick={() => setOpen(false)}>
+            <Link
+              href={action.href}
+              key={action.href}
+              prefetch={false}
+              onClick={() => setOpen(false)}
+            >
               <Icon size={16} aria-hidden="true" />
               {action.label}
             </Link>

@@ -19,6 +19,9 @@ import type {
   ServiceRepository,
 } from '../../services/domain';
 
+const devTenantId = 'dev-tenant';
+const devBranchId = 'dev-branch';
+
 const nowIso = () => new Date().toISOString();
 
 const customers = new Map<string, Customer>([
@@ -26,8 +29,8 @@ const customers = new Map<string, Customer>([
     'customer-marcos',
     {
       id: 'customer-marcos',
-      tenantId: 'tenant-barbearia-centro',
-      branchId: 'branch-centro',
+      tenantId: devTenantId,
+      branchId: devBranchId,
       name: 'Marcos Vinicius',
       phone: '(11) 98800-1100',
       source: 'WhatsApp',
@@ -40,8 +43,8 @@ const customers = new Map<string, Customer>([
     'customer-rafael',
     {
       id: 'customer-rafael',
-      tenantId: 'tenant-barbearia-centro',
-      branchId: 'branch-centro',
+      tenantId: devTenantId,
+      branchId: devBranchId,
       name: 'Rafael Alves',
       phone: '(11) 97700-2211',
       source: 'Recepcao',
@@ -53,8 +56,8 @@ const customers = new Map<string, Customer>([
     'customer-bruno',
     {
       id: 'customer-bruno',
-      tenantId: 'tenant-barbearia-centro',
-      branchId: 'branch-centro',
+      tenantId: devTenantId,
+      branchId: devBranchId,
       name: 'Bruno Martins',
       phone: '(11) 96600-3322',
       source: 'Recepcao',
@@ -69,8 +72,8 @@ const professionals = new Map<string, Professional>([
     'professional-carlos',
     {
       id: 'professional-carlos',
-      tenantId: 'tenant-barbearia-centro',
-      branchIds: ['branch-centro'],
+      tenantId: devTenantId,
+      branchIds: [devBranchId],
       displayName: 'Carlos Mendes',
       phone: '(11) 95555-0101',
       roleLabel: 'Barbeiro senior',
@@ -81,8 +84,8 @@ const professionals = new Map<string, Professional>([
     'professional-joao',
     {
       id: 'professional-joao',
-      tenantId: 'tenant-barbearia-centro',
-      branchIds: ['branch-centro'],
+      tenantId: devTenantId,
+      branchIds: [devBranchId],
       displayName: 'Joao Pereira',
       phone: '(11) 95555-0202',
       roleLabel: 'Barbeiro',
@@ -93,8 +96,8 @@ const professionals = new Map<string, Professional>([
     'professional-rafael',
     {
       id: 'professional-rafael',
-      tenantId: 'tenant-barbearia-centro',
-      branchIds: ['branch-centro'],
+      tenantId: devTenantId,
+      branchIds: [devBranchId],
       displayName: 'Rafael Lima',
       phone: '(11) 95555-0303',
       roleLabel: 'Especialista em barba',
@@ -108,7 +111,7 @@ const services = new Map<string, Service>([
     'service-cut',
     {
       id: 'service-cut',
-      tenantId: 'tenant-barbearia-centro',
+      tenantId: devTenantId,
       category: 'Cabelo',
       name: 'Corte classico',
       durationMinutes: 45,
@@ -121,7 +124,7 @@ const services = new Map<string, Service>([
     'service-beard',
     {
       id: 'service-beard',
-      tenantId: 'tenant-barbearia-centro',
+      tenantId: devTenantId,
       category: 'Barba',
       name: 'Barba',
       durationMinutes: 30,
@@ -134,7 +137,7 @@ const services = new Map<string, Service>([
     'service-premium',
     {
       id: 'service-premium',
-      tenantId: 'tenant-barbearia-centro',
+      tenantId: devTenantId,
       category: 'Pacote',
       name: 'Combo completo',
       durationMinutes: 90,
