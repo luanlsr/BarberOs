@@ -3,11 +3,16 @@ import type {
   RequestContext,
   UpdateCustomerCommand,
 } from '@barberos/contracts';
-import { createSupabaseServerClient, getRequestContext } from '../../../../lib/auth/server';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from '../../../../lib/auth/server';
 import { CustomerApplicationService } from '../../../../src/modules/customers/application/customer-service';
 import type { CustomerListFilters } from '../../../../src/modules/customers/domain';
 import { SupabaseCustomerRepository } from '../../../../src/modules/customers/infrastructure/supabase-customer-repository';
 import { createCustomerRouteHandlers } from '../../../../src/modules/customers/presentation/customer-route-handlers';
+import { DevCustomerRepository } from '../../../../src/modules/platform-data/application/dev-directory-repositories';
 
 const handlers = createCustomerRouteHandlers({
   resolveContext(request) {
@@ -42,6 +47,9 @@ export const DELETE = handlers.DELETE;
 async function getCustomerApplicationService() {
   const client = await createSupabaseServerClient();
   if (!client) {
+    if (isDevelopmentAuthEnabled()) {
+      return new CustomerApplicationService(new DevCustomerRepository());
+    }
     throw Object.assign(new Error('Persistence is not configured.'), {
       code: 'PERSISTENCE_NOT_CONFIGURED',
     });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { WorkerHandlerRegistry } from './handler-registry';
+import { WorkerLogger, type WorkerLogEntry } from './worker-logger';
 import { WorkerRuntime } from './worker-runtime';
 
 describe('WorkerRuntime', () => {
@@ -27,11 +28,11 @@ describe('WorkerRuntime', () => {
     const address = runtime.server.address();
     const port = typeof address === 'object' && address ? address.port : 0;
 
-    const health = await fetch(`http://127.0.0.1:${port}/health`);
+    const health = await fetch('http://127.0.0.1:' + port + '/health');
     expect(health.status).toBe(200);
     expect(await health.json()).toMatchObject({ status: 'ok', state: 'READY' });
 
-    const ready = await fetch(`http://127.0.0.1:${port}/ready`);
+    const ready = await fetch('http://127.0.0.1:' + port + '/ready');
     expect(ready.status).toBe(200);
     expect(await ready.json()).toMatchObject({
       status: 'ready',
@@ -68,6 +69,42 @@ describe('WorkerRuntime', () => {
     await shutdown;
     expect(runtime.currentState).toBe('STOPPED');
     expect(runtime.server.listening).toBe(false);
+  });
+
+  it('logs poll failures with sanitized structured telemetry', async () => {
+    const entries: WorkerLogEntry[] = [];
+    const runtime = new WorkerRuntime({
+      port: 0,
+      pollIntervalMs: 10_000,
+      logger: new WorkerLogger(
+        {
+          write(entry) {
+            entries.push(entry);
+          },
+        },
+        () => new Date('2026-09-19T12:00:00.000Z'),
+      ),
+      poll: async () => {
+        throw new Error('Provider returned bearer secret-token for card 4111111111111111');
+      },
+    });
+    runtimes.push(runtime);
+
+    await runtime.start();
+
+    expect(entries).toEqual([
+      expect.objectContaining({
+        timestamp: '2026-09-19T12:00:00.000Z',
+        service: 'worker',
+        level: 'error',
+        event: 'worker.poll.failed',
+        error: {
+          code: 'WORKER_HANDLER_FAILED',
+          message: 'Provider returned bearer [REDACTED] for card [REDACTED]',
+          retryable: true,
+        },
+      }),
+    ]);
   });
 
   it('rejects duplicate handler registration', () => {

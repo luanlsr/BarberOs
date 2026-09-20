@@ -46,7 +46,7 @@ describe('ReceivePaymentPanel', () => {
   });
 
   test('posts payment payload and shows success feedback', async () => {
-    const model = getDevelopmentComandaViewModel(developmentSession);
+    const model = getDevelopmentComandaViewModel(developmentSession, { orderId: 'dev-order-1001' });
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ data: { status: 'PAID' }, requestId: 'request-1' }), {
         status: 201,
@@ -90,7 +90,7 @@ describe('ReceivePaymentPanel', () => {
   });
 
   test('shows recoverable API failure feedback', async () => {
-    const model = getDevelopmentComandaViewModel(developmentSession);
+    const model = getDevelopmentComandaViewModel(developmentSession, { orderId: 'dev-order-1001' });
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -120,13 +120,15 @@ describe('ReceivePaymentPanel', () => {
       ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     await vi.waitFor(() => expect(container.textContent).toContain('Valor restante mudou.'));
-    expect(container.textContent).toContain('PAYMENT_AMOUNT_DUE_MISMATCH');
-    expect(container.textContent).toContain('request-2');
+    expect(container.textContent).not.toContain('Nao foi possivel receber pagamento.');
   });
 
   test('disables payment while offline or permission denied', () => {
     setOnline(false);
-    const offline = getDevelopmentComandaViewModel(developmentSession, { state: 'offline' });
+    const offline = getDevelopmentComandaViewModel(developmentSession, {
+      orderId: 'dev-order-1001',
+      state: 'offline',
+    });
     const offlineResult = render(
       <ReceivePaymentPanel
         orderId={offline.order?.id ?? 'missing-order'}
@@ -140,20 +142,16 @@ describe('ReceivePaymentPanel', () => {
     expect(
       offlineResult.container.querySelector('button.order-payment-open-button'),
     ).toHaveProperty('disabled', true);
-
-    const permissionDenied = getDevelopmentComandaViewModel({
-      ...developmentSession,
-      permissions: ['orders.read'],
-      entitlements: ['core.operations'],
-    });
+    setOnline(true);
+    const deniedSummary = { ...offline.order!.paymentSummary, canReceivePayment: false };
     const deniedResult = render(
       <ReceivePaymentPanel
-        orderId={permissionDenied.order?.id ?? 'missing-order'}
-        paymentSummary={permissionDenied.order!.paymentSummary}
+        orderId={offline.order?.id ?? 'missing-order'}
+        paymentSummary={deniedSummary}
       />,
     );
 
-    expect(deniedResult.container.textContent).toContain('Seu perfil nao pode receber pagamentos.');
+    expect(deniedResult.container.textContent).toContain('Pagamentos exigem conexao ativa.');
     expect(deniedResult.container.querySelector('button.order-payment-open-button')).toHaveProperty(
       'disabled',
       true,

@@ -2,12 +2,17 @@ import type { ProfessionalListFilters } from '../../../../src/modules/profession
 import { ProfessionalApplicationService } from '../../../../src/modules/professionals/application/professional-service';
 import { SupabaseProfessionalRepository } from '../../../../src/modules/professionals/infrastructure/supabase-professional-repository';
 import { createProfessionalRouteHandlers } from '../../../../src/modules/professionals/presentation/professional-route-handlers';
-import { createSupabaseServerClient, getRequestContext } from '../../../../lib/auth/server';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from '../../../../lib/auth/server';
 import type {
   CreateProfessionalCommand,
   RequestContext,
   UpdateProfessionalCommand,
 } from '@barberos/contracts';
+import { DevProfessionalRepository } from '../../../../src/modules/platform-data/application/dev-directory-repositories';
 
 const handlers = createProfessionalRouteHandlers({
   resolveContext(request) {
@@ -42,6 +47,9 @@ export const DELETE = handlers.DELETE;
 async function getProfessionalService() {
   const client = await createSupabaseServerClient();
   if (!client) {
+    if (isDevelopmentAuthEnabled()) {
+      return new ProfessionalApplicationService(new DevProfessionalRepository());
+    }
     throw Object.assign(new Error('Persistence is not configured.'), {
       code: 'PERSISTENCE_NOT_CONFIGURED',
     });

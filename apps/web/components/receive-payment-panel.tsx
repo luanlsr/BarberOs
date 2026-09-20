@@ -54,6 +54,7 @@ export function ReceivePaymentPanel({
   const [terminals, setTerminals] = React.useState<PaymentTerminalOption[]>([]);
   const [terminalId, setTerminalId] = React.useState('');
   const [terminalsLoading, setTerminalsLoading] = React.useState(false);
+  const terminalsRequestedRef = React.useRef(false);
   const appliedAmountCents = lines.reduce((total, line) => total + moneyToCents(line.amount), 0);
   const remainingAmountCents = Math.max(paymentSummary.amountDueCents - appliedAmountCents, 0);
   const overpaidAmountCents = Math.max(appliedAmountCents - paymentSummary.amountDueCents, 0);
@@ -65,6 +66,39 @@ export function ReceivePaymentPanel({
   const canSubmit = !disabled && remainingAmountCents === 0 && overpaidAmountCents === 0;
   const terminalPayments = lines.filter((line) => isTerminalPaymentMethod(line.method));
   const hasTerminalPayments = terminalPayments.length > 0;
+
+  React.useEffect(() => {
+    if (!hasTerminalPayments) {
+      terminalsRequestedRef.current = false;
+      if (terminalId) setTerminalId('');
+      return undefined;
+    }
+    if (terminals.length || terminalsLoading || terminalsRequestedRef.current) return undefined;
+
+    terminalsRequestedRef.current = true;
+    let cancelled = false;
+    setTerminalsLoading(true);
+    const requestId = randomToken();
+
+    fetch('/api/v1/payment-terminals', { headers: { 'x-request-id': requestId } })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as {
+          data?: PaymentTerminalOption[];
+        } | null;
+        if (!response.ok) throw new Error('Payment terminals unavailable.');
+        if (!cancelled) setTerminals(payload?.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setTerminals([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTerminalsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasTerminalPayments, terminalId, terminals.length, terminalsLoading]);
 
   function updateLine(id: string, updates: Partial<PaymentLine>) {
     setLines((current) => current.map((line) => (line.id === id ? { ...line, ...updates } : line)));

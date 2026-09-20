@@ -30,8 +30,9 @@ export function OrderView({
 
   if (model.state === 'permission-denied') return <OrderPermissionDenied model={model} />;
   if (model.state === 'error') return <OrderErrorState model={model} />;
-  if (model.state === 'empty') return <OrderEmptyWorkspace model={model} />;
-  if (!model.order) return <OrderIndexWorkspace model={model} />;
+  if (model.state === 'empty')
+    return <OrderEmptyWorkspace autoOpenWalkIn={autoOpenWalkIn} model={model} />;
+  if (!model.order) return <OrderIndexWorkspace autoOpenWalkIn={autoOpenWalkIn} model={model} />;
 
   const order = model.order;
 

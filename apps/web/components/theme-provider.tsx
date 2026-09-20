@@ -1,51 +1,73 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type Theme = 'light' | 'dark' | 'system';
 
+type ResolvedTheme = 'light' | 'dark';
+
 export function getNextTheme(theme: Theme): Theme {
-  return theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+  return theme === 'dark' ? 'light' : 'dark';
 }
 
-function resolveTheme(theme: Theme) {
-  if (theme !== 'system') return theme;
+function getSystemTheme(): ResolvedTheme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+function resolveTheme(theme: Theme): ResolvedTheme {
+  if (theme !== 'system') return theme;
+  return getSystemTheme();
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = resolveTheme(theme);
+}
+
+function readStoredTheme(): Theme {
+  const storedTheme = window.localStorage.getItem('barberos-theme') as Theme | null;
+  return storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
+    ? storedTheme
+    : 'system';
+}
+
 export function ThemeProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [theme, setTheme] = useState<Theme>('system');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'system';
+    return readStoredTheme();
+  });
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem('barberos-theme') as Theme | null;
-    const nextTheme =
-      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
-        ? storedTheme
-        : 'system';
-    setTheme(nextTheme);
+    const storedTheme = readStoredTheme();
+    setTheme(storedTheme);
+    applyTheme(storedTheme);
   }, []);
 
   useEffect(() => {
-    const applyTheme = () => {
-      document.documentElement.dataset.theme = resolveTheme(theme);
-    };
+    applyTheme(theme);
+    if (theme !== 'system') return undefined;
 
-    applyTheme();
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-    media.addEventListener('change', applyTheme);
-    return () => media.removeEventListener('change', applyTheme);
+    const handleSystemThemeChange = () => applyTheme('system');
+    media.addEventListener('change', handleSystemThemeChange);
+    return () => media.removeEventListener('change', handleSystemThemeChange);
   }, [theme]);
 
-  function cycleTheme() {
-    const nextTheme = getNextTheme(theme);
-    setTheme(nextTheme);
-    window.localStorage.setItem('barberos-theme', nextTheme);
-  }
+  const value = useMemo(
+    () => ({
+      theme,
+      cycleTheme() {
+        const currentResolvedTheme = resolveTheme(theme);
+        const nextTheme = getNextTheme(currentResolvedTheme);
+        setTheme(nextTheme);
+        applyTheme(nextTheme);
+        window.localStorage.setItem('barberos-theme', nextTheme);
+      },
+    }),
+    [theme],
+  );
 
-  return <ThemeContext.Provider value={{ theme, cycleTheme }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
-
-import { createContext, useContext } from 'react';
 
 type ThemeContextValue = { theme: Theme; cycleTheme: () => void };
 

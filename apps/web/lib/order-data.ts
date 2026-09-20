@@ -521,11 +521,17 @@ export function getDevelopmentComandaViewModel(
   }
 
   if (!options.orderId) {
-    const preview = toComandaDetailModel(session, developmentOrder, {
-      customerName: devPeople.customers.get(developmentOrder.customerId ?? '')?.name,
-      customerPhone: devPeople.customers.get(developmentOrder.customerId ?? '')?.phone,
-      professionalName: devPeople.professionals.get(developmentOrder.professionalId ?? ''),
-    }, [], true);
+    const preview = toComandaDetailModel(
+      session,
+      developmentOrder,
+      {
+        customerName: devPeople.customers.get(developmentOrder.customerId ?? '')?.name,
+        customerPhone: devPeople.customers.get(developmentOrder.customerId ?? '')?.phone,
+        professionalName: devPeople.professionals.get(developmentOrder.professionalId ?? ''),
+      },
+      [],
+      true,
+    );
     return {
       ...base,
       state: 'ready',
@@ -658,16 +664,6 @@ async function getPersistentComandaViewModel(
         ? 'Comanda paga, com historico e resumo de recebimento.'
         : 'Atendimento em andamento com itens, descontos, totais e observacoes.',
   };
-}
-
-async function getFirstOpenOrderDetail(
-  service: OrderApplicationService,
-  context: RequestContext,
-  branchId: string,
-) {
-  const orders = await service.list(context, { branchId, status: 'OPEN', limit: 1 });
-  const first = orders[0];
-  return first ? service.get(context, first.id) : null;
 }
 
 async function resolvePersonLabels(

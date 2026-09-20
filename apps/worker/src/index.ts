@@ -1,12 +1,13 @@
 import { parseServerEnv } from '@barberos/config';
 
-import { WorkerRuntime } from './runtime';
+import { sanitizeUnknownError, WorkerLogger, WorkerRuntime } from './runtime';
 
 export function createWorkerRuntimeFromEnv(input: NodeJS.ProcessEnv = process.env) {
   const env = parseServerEnv(input);
   return new WorkerRuntime({
     port: env.WORKER_PORT,
     pollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
+    logger: new WorkerLogger(),
   });
 }
 
@@ -15,7 +16,10 @@ async function main() {
   await runtime.start();
   const address = runtime.server.address();
   const port = typeof address === 'object' && address ? address.port : 'unknown';
-  console.log(`BarberOS worker listening on http://localhost:${port}`);
+  new WorkerLogger().info({
+    event: 'worker.started',
+    metadata: { host: '127.0.0.1', port },
+  });
 
   const shutdown = () => {
     void runtime.stop().finally(() => process.exit(0));
@@ -26,7 +30,10 @@ async function main() {
 
 if (process.env.NODE_ENV !== 'test') {
   void main().catch((error) => {
-    console.error('Worker failed to start.', error);
+    new WorkerLogger().error({
+      event: 'worker.start.failed',
+      error: sanitizeUnknownError(error),
+    });
     process.exitCode = 1;
   });
 }

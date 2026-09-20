@@ -32,10 +32,10 @@
 
 - [x] 5.1 Expand `apps/worker` into a structured runtime with health/readiness endpoints, polling loop, graceful shutdown and handler registry, and verify worker unit tests cover startup, health and shutdown behavior.
 - [x] 5.2 Implement durable job claiming, leases, Redis-backed locks and safe reclaim behavior, and verify worker tests cover concurrent claim attempts and expired leases.
-- [ ] 5.3 Implement outbox dispatch into executable jobs with idempotency and source uniqueness, and verify worker tests cover one event producing one or multiple jobs without duplicates.
-- [ ] 5.4 Implement retry, exponential backoff, rate-limit delay and dead-letter transitions, and verify deterministic clock tests cover retry scheduling, retry exhaustion and non-retryable failures.
-- [ ] 5.5 Implement initial handlers for appointment reminders, post-service follow-up, finance recalculation, stock alerts and expired cleanup using current-state reads before side effects, and verify handler tests cover stale/no-op source state.
-- [ ] 5.6 Add structured logging with job id, event id, tenant id, branch id, correlation id, attempt count and sanitized error details, and verify tests or log snapshots cover sensitive-data redaction.
+- [x] 5.3 Implement outbox dispatch into executable jobs with idempotency and source uniqueness, and verify worker tests cover one event producing one or multiple jobs without duplicates.
+- [x] 5.4 Implement retry, exponential backoff, rate-limit delay and dead-letter transitions, and verify deterministic clock tests cover retry scheduling, retry exhaustion and non-retryable failures.
+- [x] 5.5 Implement initial handlers for appointment reminders, post-service follow-up, finance recalculation, stock alerts and expired cleanup using current-state reads before side effects, and verify handler tests cover stale/no-op source state.
+- [x] 5.6 Add structured logging with job id, event id, tenant id, branch id, correlation id, attempt count and sanitized error details, and verify tests or log snapshots cover sensitive-data redaction.
 
 ## 6. Notification Delivery Foundation
 

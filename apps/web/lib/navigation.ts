@@ -21,6 +21,7 @@ export type NavigationItem = {
   entitlements?: readonly Entitlement[];
   roles?: readonly NavigationRole[];
   mobile?: boolean;
+  parentHref?: string;
   group?: 'Operacao' | 'Gestao' | 'Sistema';
 };
 
@@ -124,6 +125,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/financeiro/despesas',
     label: 'Despesas',
     icon: 'receipt',
+    parentHref: '/financeiro',
     permission: 'finance.read',
     entitlement: 'finance',
     roles: ['OWNER', 'FINANCE', 'MANAGER'],
@@ -133,6 +135,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/financeiro/comissoes',
     label: 'Comissoes/Repasses',
     icon: 'wallet',
+    parentHref: '/financeiro',
     permission: 'commission.manage',
     entitlement: 'finance',
     roles: ['OWNER', 'FINANCE'],

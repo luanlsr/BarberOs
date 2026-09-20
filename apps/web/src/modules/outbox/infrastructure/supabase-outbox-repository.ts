@@ -17,6 +17,10 @@ import type {
   WorkerJobFilters,
   WorkerJobRepository,
 } from '../domain';
+type BranchScopedQuery<T> = {
+  eq(column: string, value: unknown): T;
+  in(column: string, values: readonly unknown[]): T;
+};
 
 const eventSelect =
   'id, tenant_id, branch_id, event_type, source_type, source_id, payload, idempotency_key, status, correlation_id, schema_version, attempt_count, available_at, locked_by, locked_until, last_error, dispatched_at, created_by, created_at, updated_at';
@@ -155,7 +159,7 @@ export class SupabaseOutboxRepository implements OutboxRepository, WorkerJobRepo
   }
 }
 
-function applyBranchScope<T extends { eq: Function; in: Function }>(
+function applyBranchScope<T extends BranchScopedQuery<T>>(
   query: T,
   context: RequestContext,
   branchId?: string,

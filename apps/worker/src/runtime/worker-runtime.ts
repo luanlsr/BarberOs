@@ -1,6 +1,7 @@
 import { createServer, type Server } from 'node:http';
 
 import { WorkerHandlerRegistry } from './handler-registry';
+import { sanitizeUnknownError, WorkerLogger } from './worker-logger';
 
 export type WorkerRuntimeState = 'STARTING' | 'READY' | 'STOPPING' | 'STOPPED';
 
@@ -9,11 +10,13 @@ export type WorkerRuntimeOptions<TJob = unknown> = {
   pollIntervalMs: number;
   poll?: () => Promise<void>;
   registry?: WorkerHandlerRegistry<TJob>;
+  logger?: WorkerLogger;
 };
 
 export class WorkerRuntime<TJob = unknown> {
   readonly registry: WorkerHandlerRegistry<TJob>;
   readonly server: Server;
+  private readonly logger: WorkerLogger;
   private state: WorkerRuntimeState = 'STARTING';
   private timer: NodeJS.Timeout | null = null;
   private pollInFlight: Promise<void> | null = null;
@@ -21,6 +24,7 @@ export class WorkerRuntime<TJob = unknown> {
 
   constructor(private readonly options: WorkerRuntimeOptions<TJob>) {
     this.registry = options.registry ?? new WorkerHandlerRegistry<TJob>();
+    this.logger = options.logger ?? new WorkerLogger();
     this.server = createServer((request, response) => this.handleRequest(request.url, response));
   }
 
@@ -68,7 +72,10 @@ export class WorkerRuntime<TJob = unknown> {
     this.pollInFlight = this.options
       .poll()
       .catch((error) => {
-        console.error('Worker poll failed.', error);
+        this.logger.error({
+          event: 'worker.poll.failed',
+          error: sanitizeUnknownError(error),
+        });
       })
       .finally(() => {
         this.pollInFlight = null;

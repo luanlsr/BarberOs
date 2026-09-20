@@ -250,7 +250,7 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient | nul
   });
 }
 
-function isDevelopmentAuthEnabled() {
+export function isDevelopmentAuthEnabled() {
   return process.env.NODE_ENV !== 'production' && process.env.BARBEROS_DEV_AUTH !== 'false';
 }
 

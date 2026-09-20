@@ -36,6 +36,8 @@ import { BrandLogo } from './brand-logo';
 import { LogoutButton } from './logout-button';
 import { WorkspaceSwitcher } from './workspace-switcher';
 
+type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
+
 const icons = {
   layout: LayoutDashboard,
   calendar: CalendarDays,
@@ -61,13 +63,19 @@ const actionIcons = {
 function NavLink({
   activeHref,
   item,
+  nested = false,
   onNavigate,
-}: Readonly<{ activeHref?: string; item: NavigationItem; onNavigate?: () => void }>) {
+}: Readonly<{
+  activeHref?: string;
+  item: NavigationItem;
+  nested?: boolean;
+  onNavigate?: () => void;
+}>) {
   const Icon = icons[item.icon];
   const active = activeHref === item.href;
   return (
     <Link
-      className="nav-link"
+      className={`nav-link ${nested ? 'nav-link-child' : ''}`}
       href={item.href}
       aria-current={active ? 'page' : undefined}
       onClick={onNavigate}
@@ -79,8 +87,9 @@ function NavLink({
 }
 
 function groupNavigationItems(items: NavigationItem[]) {
-  const groups: Array<{ label: string; items: NavigationItem[] }> = [];
-  for (const item of items) {
+  const treeItems = buildNavigationTree(items);
+  const groups: Array<{ label: string; items: NavigationTreeItem[] }> = [];
+  for (const item of treeItems) {
     const label = item.group ?? 'Operacao';
     const group = groups.find((entry) => entry.label === label);
     if (group) {
@@ -92,6 +101,14 @@ function groupNavigationItems(items: NavigationItem[]) {
   return groups;
 }
 
+function buildNavigationTree(items: NavigationItem[]): NavigationTreeItem[] {
+  const parents = items.filter((item) => !item.parentHref);
+  return parents.map((item) => ({
+    ...item,
+    children: items.filter((candidate) => candidate.parentHref === item.href),
+  }));
+}
+
 function getActiveHref(pathname: string, items: NavigationItem[]) {
   return items
     .filter((item) =>
@@ -100,28 +117,6 @@ function getActiveHref(pathname: string, items: NavigationItem[]) {
         : pathname === item.href || pathname.startsWith(item.href + '/'),
     )
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
-}
-
-function DesktopQuickActions({ actions }: Readonly<{ actions: PrimaryActionItem[] }>) {
-  if (!actions.length) return null;
-
-  return (
-    <div className="desktop-quick-actions" aria-label="Acoes rapidas">
-      {actions.map((action) => {
-        const Icon = actionIcons[action.icon];
-        return (
-          <Link
-            className="button button-secondary quick-action-button"
-            href={action.href}
-            key={action.href}
-          >
-            <Icon size={16} aria-hidden="true" />
-            {action.label}
-          </Link>
-        );
-      })}
-    </div>
-  );
 }
 
 function MobileOverflowMenu({
@@ -144,18 +139,25 @@ function MobileOverflowMenu({
         <MoreHorizontal size={20} aria-hidden="true" />
         <span>Mais</span>
       </button>
-      {open ? (
-        <div className="mobile-action-menu mobile-overflow-menu">
-          {items.map((item) => (
-            <NavLink
-              activeHref={activeHref}
-              item={item}
-              key={item.href}
-              onNavigate={() => setOpen(false)}
-            />
-          ))}
-        </div>
-      ) : null}
+      <div
+        className={`mobile-action-menu mobile-overflow-menu ${open ? 'is-open' : ''}`}
+        aria-hidden={!open}
+      >
+        {buildNavigationTree(items).map((item) => (
+          <div className="mobile-overflow-cluster" key={item.href}>
+            <NavLink activeHref={activeHref} item={item} onNavigate={() => setOpen(false)} />
+            {item.children.map((child) => (
+              <NavLink
+                activeHref={activeHref}
+                item={child}
+                key={child.href}
+                nested
+                onNavigate={() => setOpen(false)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -199,19 +201,17 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
       >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
       </button>
-      {open ? (
-        <div className="mobile-action-menu">
-          {actions.map((action) => {
-            const Icon = actionIcons[action.icon];
-            return (
-              <Link href={action.href} key={action.href} onClick={() => setOpen(false)}>
-                <Icon size={16} aria-hidden="true" />
-                {action.label}
-              </Link>
-            );
-          })}
-        </div>
-      ) : null}
+      <div className={`mobile-action-menu ${open ? 'is-open' : ''}`} aria-hidden={!open}>
+        {actions.map((action) => {
+          const Icon = actionIcons[action.icon];
+          return (
+            <Link href={action.href} key={action.href} onClick={() => setOpen(false)}>
+              <Icon size={16} aria-hidden="true" />
+              {action.label}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -259,7 +259,16 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
             <section className="sidebar-nav-section" key={group.label} aria-label={group.label}>
               <p className="sidebar-nav-label">{group.label}</p>
               {group.items.map((item) => (
-                <NavLink activeHref={activeHref} key={item.href} item={item} />
+                <div className="sidebar-nav-cluster" key={item.href}>
+                  <NavLink activeHref={activeHref} item={item} />
+                  {item.children.length ? (
+                    <div className="sidebar-subnav" aria-label={`${item.label} submenu`}>
+                      {item.children.map((child) => (
+                        <NavLink activeHref={activeHref} item={child} key={child.href} nested />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </section>
           ))}

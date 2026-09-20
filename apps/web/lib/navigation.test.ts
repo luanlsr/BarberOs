@@ -145,6 +145,11 @@ describe('filterNavigation', () => {
     expect(owner).toEqual([]);
   });
 });
+it('models expenses and commissions as Financeiro submenus', () => {
+  expect(
+    navigationItems.filter((item) => item.parentHref === '/financeiro').map((item) => item.href),
+  ).toEqual(['/financeiro/despesas', '/financeiro/comissoes']);
+});
 
 describe('filterPrimaryActions', () => {
   it('shows new appointment, Comanda, customer, product sale, expense and cash actions only when allowed', () => {
