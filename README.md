@@ -29,9 +29,22 @@ A web fica em `http://localhost:3000`, o worker em `http://localhost:4001/health
 
 ## Autenticacao local e Supabase
 
-O shell usa uma sessao de desenvolvimento somente fora de producao quando `BARBEROS_DEV_AUTH=true`. Para autenticacao real, preencha `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` em `.env.local`.
+O shell usa uma sessao de desenvolvimento somente fora de producao quando `BARBEROS_DEV_AUTH=true`. Para autenticacao real, preencha `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` em `.env.local`.
 
 A migration em `supabase/migrations/` e o seed em `supabase/seed.sql` modelam auth, tenant, branch, membership, RBAC, entitlements, RLS e auditoria. A service role permanece server-side e nunca deve ser configurada no navegador.
+
+Para criar ou atualizar o usuario local no Supabase Auth e vincular ele ao tenant/filiais da seed, rode:
+
+```bash
+npm run auth:create-dev-user
+```
+
+Credenciais padrao criadas pelo comando:
+
+- Email: `dev@barberos.local`
+- Senha: `BarberOS@123456`
+
+Para forcar o login real em desenvolvimento, configure `BARBEROS_DEV_AUTH=false`.
 
 ## Validacao
 
