@@ -29,7 +29,9 @@
     "validate:finance": "node scripts/validate-finance-migration.mjs",
     "validate:inventory": "node scripts/validate-inventory-migration.mjs",
     "validate:worker": "node scripts/validate-worker-migration.mjs",
-    "validate:product-domain": "node scripts/validate-product-domain-migration.mjs"
+    "validate:product-domain": "node scripts/validate-product-domain-migration.mjs",
+    "dev:web:turbo": "npm run dev:turbo --workspace @barberos/web",
+    "start:web": "npm run serve --workspace @barberos/web"
   },
   "engines": {
     "node": ">=20.19.0"

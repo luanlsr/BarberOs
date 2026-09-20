@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { AppShell } from '../components/app-shell';
+import { NavigationPerformanceLogger } from '../components/navigation-performance-logger';
 import { ThemeProvider } from '../components/theme-provider';
 import { getSessionContext } from '../lib/auth/server';
 import './globals.css';
@@ -33,6 +35,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider>
+          <Suspense fallback={null}>
+            <NavigationPerformanceLogger />
+          </Suspense>
           <AppShell session={session}>{children}</AppShell>
         </ThemeProvider>
       </body>

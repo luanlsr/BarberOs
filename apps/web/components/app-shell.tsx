@@ -34,6 +34,7 @@ import { useTheme } from './theme-provider';
 import { AuthGate } from './auth-gate';
 import { BrandLogo } from './brand-logo';
 import { LogoutButton } from './logout-button';
+import { markNavigationClick } from './navigation-performance-logger';
 import { WorkspaceSwitcher } from './workspace-switcher';
 
 type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
@@ -80,15 +81,25 @@ function NavLink({
     prefetched.current = true;
     router.prefetch(item.href);
   }, [item.href, router]);
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (active) {
+        event.preventDefault();
+      } else {
+        markNavigationClick(item.href, item.label, nested ? 'sidebar-child' : 'sidebar');
+      }
+      onNavigate?.();
+    },
+    [active, onNavigate],
+  );
   return (
     <Link
       className={nested ? 'nav-link nav-link-child' : 'nav-link'}
       href={item.href}
-      prefetch={false}
       aria-current={active ? 'page' : undefined}
       onPointerEnter={prefetchOnIntent}
       onFocus={prefetchOnIntent}
-      onClick={onNavigate}
+      onClick={handleClick}
     >
       <Icon size={18} strokeWidth={active ? 2.3 : 1.8} aria-hidden="true" />
       <span>{item.label}</span>
@@ -193,7 +204,6 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
       <Link
         className="mobile-add-button"
         href={actions[0].href}
-        prefetch={false}
         aria-label={`Criar ${actions[0].label.toLowerCase()}`}
       >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
@@ -216,12 +226,7 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
         {actions.map((action) => {
           const Icon = actionIcons[action.icon];
           return (
-            <Link
-              href={action.href}
-              key={action.href}
-              prefetch={false}
-              onClick={() => setOpen(false)}
-            >
+            <Link href={action.href} key={action.href} onClick={() => setOpen(false)}>
               <Icon size={16} aria-hidden="true" />
               {action.label}
             </Link>

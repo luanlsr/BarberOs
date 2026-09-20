@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev:turbo": "next dev --turbopack",
+    "serve": "next start",
+    "dev:webpack": "next dev"
   },
   "dependencies": {
     "@barberos/auth": "0.1.0",
