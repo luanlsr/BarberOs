@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Boxes,
   CalendarDays,
@@ -72,13 +72,22 @@ function NavLink({
   onNavigate?: () => void;
 }>) {
   const Icon = icons[item.icon];
+  const router = useRouter();
+  const prefetched = React.useRef(false);
   const active = activeHref === item.href;
+  const prefetchOnIntent = React.useCallback(() => {
+    if (prefetched.current) return;
+    prefetched.current = true;
+    router.prefetch(item.href);
+  }, [item.href, router]);
   return (
     <Link
-      className={`nav-link ${nested ? 'nav-link-child' : ''}`}
+      className={nested ? 'nav-link nav-link-child' : 'nav-link'}
       href={item.href}
       prefetch={false}
       aria-current={active ? 'page' : undefined}
+      onPointerEnter={prefetchOnIntent}
+      onFocus={prefetchOnIntent}
       onClick={onNavigate}
     >
       <Icon size={18} strokeWidth={active ? 2.3 : 1.8} aria-hidden="true" />

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { parseServerEnv } from '@barberos/config';
 import {
@@ -254,7 +255,7 @@ export function isDevelopmentAuthEnabled() {
   return process.env.NODE_ENV !== 'production' && process.env.BARBEROS_DEV_AUTH !== 'false';
 }
 
-export async function getSessionContext(
+async function getSessionContextUncached(
   requestedTenantId?: string,
   requestedBranchId?: string,
 ): Promise<SessionContext | null> {
@@ -322,3 +323,7 @@ export async function getRequestContext(
     workspace,
   );
 }
+
+// Layouts and route pages both need the same session. React cache deduplicates
+// that work within one server render without sharing auth data between requests.
+export const getSessionContext = cache(getSessionContextUncached);
