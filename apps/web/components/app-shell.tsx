@@ -34,7 +34,6 @@ import { useTheme } from './theme-provider';
 import { AuthGate } from './auth-gate';
 import { BrandLogo } from './brand-logo';
 import { LogoutButton } from './logout-button';
-import { markNavigationClick } from './navigation-performance-logger';
 import { WorkspaceSwitcher } from './workspace-switcher';
 
 type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
@@ -85,8 +84,6 @@ function NavLink({
     (event: React.MouseEvent<HTMLAnchorElement>) => {
       if (active) {
         event.preventDefault();
-      } else {
-        markNavigationClick(item.href, item.label, nested ? 'sidebar-child' : 'sidebar');
       }
       onNavigate?.();
     },

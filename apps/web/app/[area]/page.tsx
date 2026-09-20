@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Permission } from '@barberos/contracts';
 import { OperationsDirectoryView } from '../../components/operations-directory-view';
-import { createPagePerformanceLogger } from '../../lib/page-performance';
 import { getSessionContext } from '../../lib/auth/server';
 import {
   getOperationsDirectoryModel,
@@ -24,30 +23,21 @@ export default async function AreaPage({
   params: AreaPageParams;
   searchParams: AreaSearchParams;
 }) {
-  const logPagePhase = createPagePerformanceLogger('/[area]');
-  logPagePhase('start');
-
   const { area } = await params;
-  logPagePhase('params', { area });
   const session = await getSessionContext();
-  logPagePhase('session', { area, hasSession: Boolean(session) });
   if (!session) redirect('/login');
 
   if (isOperationsDirectoryArea(area)) {
     const query = await searchParams;
-    logPagePhase('searchParams', { area });
     const model = getOperationsDirectoryModel(session, area, {
       mode: singleValue(query.mode),
       state: singleValue(query.state),
     });
-    logPagePhase('model', { area, modelState: model.state, items: model.items.length });
-    logPagePhase('return', { area });
     return <OperationsDirectoryView model={model} />;
   }
 
   const target = areas[area] ?? { label: 'Area', permission: 'dashboard.read' as Permission };
   if (!session.permissions.includes(target.permission)) redirect('/forbidden');
-  logPagePhase('placeholder', { area });
   return (
     <div className="placeholder-page">
       <div>
