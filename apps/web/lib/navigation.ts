@@ -15,7 +15,8 @@ export type NavigationItem = {
     | 'wallet'
     | 'package'
     | 'boxes'
-    | 'more';
+    | 'more'
+    | 'settings';
   permission: Permission;
   entitlement?: Entitlement;
   entitlements?: readonly Entitlement[];
@@ -136,26 +137,6 @@ export const navigationItems: NavigationItem[] = [
     group: 'Gestao',
   },
   {
-    href: '/financeiro/despesas',
-    label: 'Despesas',
-    icon: 'receipt',
-    parentHref: '/financeiro',
-    permission: 'finance.read',
-    entitlement: 'finance',
-    roles: ['OWNER', 'FINANCE', 'MANAGER'],
-    group: 'Gestao',
-  },
-  {
-    href: '/financeiro/comissoes',
-    label: 'Comissoes/Repasses',
-    icon: 'wallet',
-    parentHref: '/financeiro',
-    permission: 'commission.manage',
-    entitlement: 'finance',
-    roles: ['OWNER', 'FINANCE'],
-    group: 'Gestao',
-  },
-  {
     href: '/minha-carteira',
     label: 'Minha carteira',
     icon: 'wallet',
@@ -176,15 +157,6 @@ export const navigationItems: NavigationItem[] = [
     group: 'Operacao',
   },
   {
-    href: '/operacoes/falhas',
-    label: 'Falhas operacionais',
-    icon: 'boxes',
-    permission: 'worker.failures.read',
-    entitlement: 'worker.operations',
-    roles: ['OWNER', 'MANAGER'],
-    group: 'Sistema',
-  },
-  {
     href: '/master',
     label: 'Master Admin',
     icon: 'layout',
@@ -194,8 +166,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     href: '/configuracoes',
-    label: 'Mais',
-    icon: 'more',
+    label: 'Configurações',
+    icon: 'settings',
     permission: 'settings.read',
     group: 'Sistema',
   },

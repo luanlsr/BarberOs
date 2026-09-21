@@ -79,7 +79,7 @@ describe('filterNavigation', () => {
     expect(navFor('OWNER', [], ['inventory'])).toEqual([]);
   });
 
-  it('exposes finance areas for owner, finance and manager roles by permission', () => {
+  it('exposes finance as one sidebar area for owner, finance and manager roles', () => {
     const owner = navFor(
       'OWNER',
       ['dashboard.read', 'finance.read', 'commission.manage'],
@@ -92,20 +92,9 @@ describe('filterNavigation', () => {
     );
     const manager = navFor('MANAGER', ['finance.read', 'finance.write'], ['finance']);
 
-    expect(owner).toEqual([
-      '/',
-      '/financeiro',
-      '/financeiro/despesas',
-      '/financeiro/comissoes',
-      '/caixa',
-    ]);
-    expect(finance).toEqual([
-      '/financeiro',
-      '/financeiro/despesas',
-      '/financeiro/comissoes',
-      '/caixa',
-    ]);
-    expect(manager).toEqual(['/financeiro', '/financeiro/despesas']);
+    expect(owner).toEqual(['/', '/financeiro', '/caixa']);
+    expect(finance).toEqual(['/financeiro', '/caixa']);
+    expect(manager).toEqual(['/financeiro']);
   });
 
   it('keeps receptionists and professionals out of tenant-wide finance', () => {
@@ -126,17 +115,6 @@ describe('filterNavigation', () => {
     expect(professional).not.toContain('/financeiro/comissoes');
   });
 
-  it('exposes operational failures only to authorized owner and manager roles', () => {
-    const permissions = ['worker.failures.read'] as const;
-    const entitlements = ['worker.operations'] as const;
-
-    expect(navFor('OWNER', permissions, entitlements)).toEqual(['/operacoes/falhas']);
-    expect(navFor('MANAGER', permissions, entitlements)).toEqual(['/operacoes/falhas']);
-    expect(navFor('RECEPTIONIST', permissions, entitlements)).toEqual([]);
-    expect(navFor('PROFESSIONAL', permissions, entitlements)).toEqual([]);
-    expect(navFor('OWNER', [], entitlements)).toEqual([]);
-    expect(navFor('OWNER', permissions, [])).toEqual([]);
-  });
   it('exposes professional wallet only to professional role with commission read entitlement', () => {
     const professional = navFor('PROFESSIONAL', ['commission.read'], ['finance']);
     const owner = navFor('OWNER', ['commission.read'], ['finance']);
@@ -144,6 +122,7 @@ describe('filterNavigation', () => {
     expect(professional).toEqual(['/minha-carteira']);
     expect(owner).toEqual([]);
   });
+
   it('models the four demo access profiles in role-aware navigation', () => {
     expect(navFor('PLATFORM_MASTER', ['audit.read', 'settings.read'], [])).toEqual([
       '/master',
@@ -177,8 +156,6 @@ describe('filterNavigation', () => {
       '/produtos',
       '/estoque',
       '/financeiro',
-      '/financeiro/despesas',
-      '/financeiro/comissoes',
       '/caixa',
       '/configuracoes',
     ]);
@@ -237,10 +214,9 @@ describe('filterNavigation', () => {
     ]);
   });
 });
-it('models expenses and commissions as Financeiro submenus', () => {
-  expect(
-    navigationItems.filter((item) => item.parentHref === '/financeiro').map((item) => item.href),
-  ).toEqual(['/financeiro/despesas', '/financeiro/comissoes']);
+
+it('keeps finance details out of the sidebar tree', () => {
+  expect(navigationItems.filter((item) => item.parentHref === '/financeiro')).toEqual([]);
 });
 
 describe('filterPrimaryActions', () => {

@@ -23,6 +23,7 @@ import type {
   CommissionsViewModel,
   PayoutModel,
 } from '../lib/commission-data';
+import { FinanceSectionTabs } from './finance-section-tabs';
 
 type CommissionModalState =
   | { type: 'rule'; rule?: CommissionRuleModel }
@@ -75,9 +76,12 @@ export function CommissionView({ model }: Readonly<{ model: CommissionsViewModel
         <CommissionActions actions={model.allowedActions} onAction={handleAction} />
       </header>
 
+      <FinanceSectionTabs active="commissions" />
+
       {model.state === 'offline' ? (
         <CommissionInlineState text="Modo offline: fechamento e pagamento de repasses pausados." />
       ) : null}
+
       {model.state === 'empty' ? (
         <CommissionInlineState text="Nenhuma comissao ou regra encontrada neste periodo." />
       ) : null}

@@ -4,16 +4,21 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Bell,
   Boxes,
   CalendarDays,
   CalendarPlus,
   LayoutDashboard,
   MoreHorizontal,
   Package,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   ReceiptText,
   Scissors,
+  Settings,
   SunMoon,
+  UserCircle,
   UserPlus,
   UserRoundCog,
   Users,
@@ -49,6 +54,7 @@ const icons = {
   package: Package,
   boxes: Boxes,
   more: MoreHorizontal,
+  settings: Settings,
 };
 
 const actionIcons = {
@@ -60,13 +66,16 @@ const actionIcons = {
   payment: WalletCards,
   product: Package,
 };
+
 function NavLink({
   activeHref,
+  collapsed = false,
   item,
   nested = false,
   onNavigate,
 }: Readonly<{
   activeHref?: string;
+  collapsed?: boolean;
   item: NavigationItem;
   nested?: boolean;
   onNavigate?: () => void;
@@ -82,21 +91,22 @@ function NavLink({
   }, [item.href, router]);
   const handleClick = React.useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
-      if (active) {
-        event.preventDefault();
-      }
+      if (active) event.preventDefault();
       onNavigate?.();
     },
     [active, onNavigate],
   );
+
   return (
     <Link
+      aria-current={active ? 'page' : undefined}
+      aria-label={collapsed ? item.label : undefined}
       className={nested ? 'nav-link nav-link-child' : 'nav-link'}
       href={item.href}
-      aria-current={active ? 'page' : undefined}
-      onPointerEnter={prefetchOnIntent}
-      onFocus={prefetchOnIntent}
+      title={collapsed ? item.label : undefined}
       onClick={handleClick}
+      onFocus={prefetchOnIntent}
+      onPointerEnter={prefetchOnIntent}
     >
       <Icon size={18} strokeWidth={active ? 2.3 : 1.8} aria-hidden="true" />
       <span>{item.label}</span>
@@ -110,11 +120,8 @@ function groupNavigationItems(items: NavigationItem[]) {
   for (const item of treeItems) {
     const label = item.group ?? 'Operacao';
     const group = groups.find((entry) => entry.label === label);
-    if (group) {
-      group.items.push(item);
-    } else {
-      groups.push({ label, items: [item] });
-    }
+    if (group) group.items.push(item);
+    else groups.push({ label, items: [item] });
   }
   return groups;
 }
@@ -148,18 +155,18 @@ function MobileOverflowMenu({
   return (
     <div className="mobile-action-wrap">
       <button
+        aria-expanded={open}
+        aria-label="Abrir mais menus"
         className="mobile-more-button"
         type="button"
-        aria-label="Abrir mais menus"
-        aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
         <MoreHorizontal size={20} aria-hidden="true" />
-        <span>Mais</span>
+        <span>Configurações</span>
       </button>
       <div
-        className={`mobile-action-menu mobile-overflow-menu ${open ? 'is-open' : ''}`}
         aria-hidden={!open}
+        className={`mobile-action-menu mobile-overflow-menu ${open ? 'is-open' : ''}`}
       >
         {buildNavigationTree(items).map((item) => (
           <div className="mobile-overflow-cluster" key={item.href}>
@@ -186,10 +193,10 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
   if (!actions.length) {
     return (
       <button
-        className="mobile-add-button"
-        type="button"
-        disabled
         aria-label="Nenhuma acao disponivel"
+        className="mobile-add-button"
+        disabled
+        type="button"
       >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
       </button>
@@ -199,9 +206,9 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
   if (actions.length === 1) {
     return (
       <Link
+        aria-label={`Criar ${actions[0].label.toLowerCase()}`}
         className="mobile-add-button"
         href={actions[0].href}
-        aria-label={`Criar ${actions[0].label.toLowerCase()}`}
       >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
       </Link>
@@ -211,10 +218,10 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
   return (
     <div className="mobile-action-wrap">
       <button
+        aria-expanded={open}
+        aria-label="Criar"
         className="mobile-add-button"
         type="button"
-        aria-label="Criar"
-        aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
         <Plus size={25} strokeWidth={2.2} aria-hidden="true" />
@@ -234,10 +241,58 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
   );
 }
 
+function UserControl({ isOnline }: Readonly<{ isOnline: boolean }>) {
+  const [open, setOpen] = React.useState(false);
+  const session = useSessionContext();
+  const { cycleTheme } = useTheme();
+  if (!session) return null;
+
+  return (
+    <div className="topbar-user-menu">
+      <button
+        aria-expanded={open}
+        aria-label="Abrir menu do usuário"
+        className="topbar-user-button"
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <UserCircle size={21} aria-hidden="true" />
+        <span>{session.userName}</span>
+      </button>
+      <div className={`topbar-user-popover ${open ? 'is-open' : ''}`} aria-hidden={!open}>
+        <div className="workspace-switcher compact">
+          <span className="workspace-avatar" aria-hidden="true">
+            BM
+          </span>
+          <WorkspaceSwitcher session={session} />
+        </div>
+        <div className="topbar-user-card">
+          <span className="user-avatar" aria-hidden="true">
+            LR
+          </span>
+          <div className="user-meta">
+            <strong>{session.userName}</strong>
+            <span>{session.role}</span>
+          </div>
+        </div>
+        <div className="topbar-user-actions">
+          <span className={`online-indicator ${isOnline ? '' : 'offline'}`} role="status">
+            {isOnline ? 'Online' : 'Offline'}
+          </span>
+          <IconButton label="Alternar tema" onClick={cycleTheme}>
+            <SunMoon size={18} aria-hidden="true" />
+          </IconButton>
+          <LogoutButton />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const session = useSessionContext();
   const pathname = usePathname();
-  const { cycleTheme } = useTheme();
   const isOnline = useOnlineStatus();
   if (!session || pathname === '/login') return <AuthGate />;
 
@@ -269,17 +324,29 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   const trailingMobileItems = mobileNavItems.slice(2, 3);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarCollapsed ? 'app-shell-collapsed' : ''}`}>
       <aside className="desktop-sidebar">
-        <BrandLogo />
+        <div className="sidebar-head">
+          <BrandLogo />
+          <IconButton
+            label={sidebarCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+            onClick={() => setSidebarCollapsed((current) => !current)}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen size={18} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={18} aria-hidden="true" />
+            )}
+          </IconButton>
+        </div>
         <nav className="sidebar-nav" aria-label="Navegacao principal">
           {navigationGroups.map((group) => (
             <section className="sidebar-nav-section" key={group.label} aria-label={group.label}>
               <p className="sidebar-nav-label">{group.label}</p>
               {group.items.map((item) => (
                 <div className="sidebar-nav-cluster" key={item.href}>
-                  <NavLink activeHref={activeHref} item={item} />
-                  {item.children.length ? (
+                  <NavLink activeHref={activeHref} collapsed={sidebarCollapsed} item={item} />
+                  {!sidebarCollapsed && item.children.length ? (
                     <div className="sidebar-subnav" aria-label={`${item.label} submenu`}>
                       {item.children.map((child) => (
                         <NavLink activeHref={activeHref} item={child} key={child.href} nested />
@@ -291,34 +358,20 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
             </section>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <div className="sidebar-utility-row">
-            <span className={`online-indicator ${isOnline ? '' : 'offline'}`} role="status">
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
-            <IconButton label="Alternar tema" onClick={cycleTheme}>
-              <SunMoon size={18} aria-hidden="true" />
-            </IconButton>
-          </div>
-          <div className="workspace-switcher">
-            <span className="workspace-avatar" aria-hidden="true">
-              BM
-            </span>
-            <WorkspaceSwitcher session={session} />
-          </div>
-          <div className="workspace-switcher">
-            <span className="user-avatar" aria-hidden="true">
-              LR
-            </span>
-            <div className="user-meta">
-              <strong>{session.userName}</strong>
-              <span>{session.role}</span>
-            </div>
-            <LogoutButton />
-          </div>
-        </div>
       </aside>
       <div className="app-main">
+        <header className="topbar app-topbar">
+          <div className="topbar-context">
+            <strong>{session.branchName}</strong>
+            <p>{session.tenantName}</p>
+          </div>
+          <div className="topbar-actions">
+            <IconButton label="Notificações">
+              <Bell size={18} aria-hidden="true" />
+            </IconButton>
+            <UserControl isOnline={isOnline} />
+          </div>
+        </header>
         <main className="main-content">{children}</main>
       </div>
       <nav className="mobile-nav" aria-label="Navegacao mobile">

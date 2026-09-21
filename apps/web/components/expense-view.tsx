@@ -24,6 +24,7 @@ import type {
   ExpenseStatusFilterModel,
   ExpensesViewModel,
 } from '../lib/expense-data';
+import { FinanceSectionTabs } from './finance-section-tabs';
 
 type ExpenseModalState =
   | { type: 'create' }
@@ -80,15 +81,19 @@ export function ExpenseView({ model }: Readonly<{ model: ExpensesViewModel }>) {
         <ExpenseActions actions={model.allowedActions} onAction={handleAction} />
       </header>
 
+      <FinanceSectionTabs active="expenses" />
+
       {model.state === 'loading' ? (
         <ExpenseInlineState tone="neutral" text="Carregando despesas..." />
       ) : null}
+
       {model.state === 'offline' ? (
         <ExpenseInlineState
           tone="warning"
           text="Modo offline: pagamentos e cancelamentos pausados."
         />
       ) : null}
+
       {model.state === 'empty' ? (
         <ExpenseInlineState tone="neutral" text="Nenhuma despesa encontrada para este periodo." />
       ) : null}

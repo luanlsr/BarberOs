@@ -10,7 +10,7 @@ import {
 
 const areas: Record<string, { label: string; permission: Permission }> = {
   financeiro: { label: 'Financeiro', permission: 'finance.read' },
-  configuracoes: { label: 'Mais', permission: 'settings.read' },
+  configuracoes: { label: 'Configurações', permission: 'settings.read' },
 };
 
 type AreaPageParams = Promise<{ area: string }>;

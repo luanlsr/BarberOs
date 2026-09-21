@@ -18,6 +18,7 @@ import type {
   FinanceMetricModel,
   FinanceViewModel,
 } from '../lib/finance-data';
+import { FinanceSectionTabs } from './finance-section-tabs';
 
 export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
   if (model.state === 'permission-denied') return <FinanceBoundaryState model={model} />;
@@ -35,6 +36,8 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
         </div>
         <FinanceActions actions={model.allowedActions} />
       </header>
+
+      <FinanceSectionTabs active="summary" />
 
       <section
         className="finance-period-panel"
