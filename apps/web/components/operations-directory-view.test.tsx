@@ -6,16 +6,16 @@ import { developmentSession } from '../lib/dev-session';
 import { getOperationsDirectoryModel } from '../lib/operations-directory-data';
 
 describe('OperationsDirectoryView', () => {
-  test('renders list and form for an allowed operations area', () => {
+  test('renders loading while an allowed operations area syncs server records', () => {
     const model = getOperationsDirectoryModel(developmentSession, 'servicos');
     const html = renderToStaticMarkup(<OperationsDirectoryView model={model} />);
 
-    expect(html).toContain('Servicos');
-    expect(html).toContain('Corte classico');
-    expect(html).toContain('Novo servico');
-    expect(html).not.toContain('CRUD habilitado');
-    expect(html).toContain('Editar');
-    expect(html).toContain('Arquivar');
+    expect(html).toContain('Serviços');
+    expect(html).toContain('Novo serviço');
+    expect(html).toContain('Carregando diretorio operacional');
+    expect(html).not.toContain('Corte classico');
+    expect(html).not.toContain('Editar');
+    expect(html).not.toContain('Arquivar');
   });
 
   test('renders permission denied without protected records', () => {

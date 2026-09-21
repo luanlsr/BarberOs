@@ -35,7 +35,12 @@ type DirectoryDialogState = {
 type ApiRecord = Customer | Professional | Service;
 
 export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsDirectoryModel }>) {
-  const [items, setItems] = React.useState(() => [...model.items]);
+  const shouldFetchServerRecords = model.state === 'default' && model.canRead;
+  const [items, setItems] = React.useState(() =>
+    shouldFetchServerRecords ? [] : [...model.items],
+  );
+  const [loadingServerRecords, setLoadingServerRecords] =
+    React.useState(shouldFetchServerRecords);
   const [query, setQuery] = React.useState('');
   const [dialog, setDialog] = React.useState<DirectoryDialogState>(null);
   const [confirming, setConfirming] = React.useState<OperationsDirectoryItem | null>(null);
@@ -45,13 +50,19 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
 
   React.useEffect(() => {
     let cancelled = false;
-    setItems([...model.items]);
     setQuery('');
     setDialog(null);
     setConfirming(null);
     setServerSynced(false);
 
-    if (model.state !== 'default' || !model.canRead) return undefined;
+    if (model.state !== 'default' || !model.canRead) {
+      setItems([...model.items]);
+      setLoadingServerRecords(false);
+      return undefined;
+    }
+
+    setItems([]);
+    setLoadingServerRecords(true);
 
     fetchDirectoryRecords(model)
       .then((records) => {
@@ -60,7 +71,12 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
         setServerSynced(true);
       })
       .catch(() => {
-        if (!cancelled) setServerSynced(false);
+        if (cancelled) return;
+        setItems([...model.items]);
+        setServerSynced(false);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingServerRecords(false);
       });
 
     return () => {
@@ -161,7 +177,7 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
         <DirectoryPermissionDenied model={model} />
       ) : model.state === 'error' ? (
         <DirectoryErrorState />
-      ) : model.state === 'loading' ? (
+      ) : model.state === 'loading' || loadingServerRecords ? (
         <DirectoryLoadingState />
       ) : (
         <section className="directory-list-pane" aria-labelledby="directory-list-title">

@@ -24,7 +24,7 @@ describe('operations directory data', () => {
 
     expect(model.state).toBe('empty');
     expect(model.items).toEqual([]);
-    expect(model.emptyTitle).toContain('Nenhum servico');
+    expect(model.emptyTitle).toContain('Nenhum serviço');
   });
 
   test('denies read when permission or entitlement is missing', () => {

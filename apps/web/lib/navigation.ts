@@ -99,7 +99,7 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     href: '/servicos',
-    label: 'Servicos',
+    label: 'Serviços',
     icon: 'scissors',
     permission: 'services.read',
     entitlement: 'core.operations',
