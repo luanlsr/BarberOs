@@ -82,8 +82,25 @@ async function getSessionContextUncached(
   requestedTenantId?: string,
   requestedBranchId?: string,
 ): Promise<SessionContext | null> {
+  return getSessionContextInternal({
+    requestedTenantId,
+    requestedBranchId,
+    allowDevelopmentFallback: true,
+  });
+}
+
+async function getSessionContextInternal({
+  requestedTenantId,
+  requestedBranchId,
+  allowDevelopmentFallback,
+}: {
+  requestedTenantId?: string;
+  requestedBranchId?: string;
+  allowDevelopmentFallback: boolean;
+}): Promise<SessionContext | null> {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return isDevelopmentAuthEnabled() ? developmentSession : null;
+  if (!supabase)
+    return allowDevelopmentFallback && isDevelopmentAuthEnabled() ? developmentSession : null;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -145,6 +162,17 @@ export async function getRequestContext(
     requestId,
     workspace,
   );
+}
+
+export async function getVerifiedSessionContext(
+  requestedTenantId?: string,
+  requestedBranchId?: string,
+): Promise<SessionContext | null> {
+  return getSessionContextInternal({
+    requestedTenantId,
+    requestedBranchId,
+    allowDevelopmentFallback: false,
+  });
 }
 
 // Layouts and route pages both need the same session. React cache deduplicates

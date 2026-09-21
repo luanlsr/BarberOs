@@ -294,6 +294,7 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = useSessionContext();
   const pathname = usePathname();
   const isOnline = useOnlineStatus();
+  if (pathname === '/') return <>{children}</>;
   if (!session || pathname === '/login') return <AuthGate />;
 
   const entitlements = session.entitlements ?? [];
@@ -308,7 +309,7 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   );
   const activeHref = getActiveHref(pathname, visibleItems);
   const navigationGroups = groupNavigationItems(visibleItems);
-  const preferredMobileHrefs = ['/', '/agenda', '/comandas', '/clientes'];
+  const preferredMobileHrefs = ['/inicio', '/agenda', '/comandas', '/clientes'];
   const mobileCandidates = visibleItems.filter((item) => item.mobile);
   const preferredMobileItems = preferredMobileHrefs
     .map((href) => mobileCandidates.find((item) => item.href === href))

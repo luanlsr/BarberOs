@@ -39,10 +39,10 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
   const [items, setItems] = React.useState(() =>
     shouldFetchServerRecords ? [] : [...model.items],
   );
-  const [loadingServerRecords, setLoadingServerRecords] =
-    React.useState(shouldFetchServerRecords);
+  const [loadingServerRecords, setLoadingServerRecords] = React.useState(shouldFetchServerRecords);
   const [query, setQuery] = React.useState('');
   const [dialog, setDialog] = React.useState<DirectoryDialogState>(null);
+  const [detailsItem, setDetailsItem] = React.useState<OperationsDirectoryItem | null>(null);
   const [confirming, setConfirming] = React.useState<OperationsDirectoryItem | null>(null);
   const [toast, setToast] = React.useState<ToastState>(null);
   const [busy, setBusy] = React.useState(false);
@@ -52,6 +52,7 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
     let cancelled = false;
     setQuery('');
     setDialog(null);
+    setDetailsItem(null);
     setConfirming(null);
     setServerSynced(false);
 
@@ -123,6 +124,7 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
     } finally {
       setBusy(false);
       setDialog(null);
+      setDetailsItem(null);
     }
   }
 
@@ -202,18 +204,15 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
           {disabled ? <DirectoryWriteReason model={model} busy={busy} /> : null}
 
           {visibleItems.length ? (
-            <div className="directory-card-grid">
-              {visibleItems.map((item) => (
-                <DirectoryCard
-                  busy={busy}
-                  canUpdate={model.canUpdate && model.state !== 'offline'}
-                  item={item}
-                  key={item.id}
-                  onArchive={() => setConfirming(item)}
-                  onEdit={() => openEditDialog(item)}
-                />
-              ))}
-            </div>
+            <DirectoryTable
+              busy={busy}
+              canUpdate={model.canUpdate && model.state !== 'offline'}
+              items={visibleItems}
+              model={model}
+              onArchive={(item) => setConfirming(item)}
+              onDetails={(item) => setDetailsItem(item)}
+              onEdit={openEditDialog}
+            />
           ) : (
             <DirectoryEmptyState
               disabled={disabled}
@@ -245,6 +244,10 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
         />
       ) : null}
 
+      {detailsItem ? (
+        <DirectoryDetailsDialog item={detailsItem} onClose={() => setDetailsItem(null)} />
+      ) : null}
+
       <ToastRegion toast={toast} onDismiss={() => setToast(null)} />
     </div>
   );
@@ -273,67 +276,146 @@ function DirectoryWriteReason({
   );
 }
 
-function DirectoryCard({
+function DirectoryTable({
   busy,
   canUpdate,
-  item,
+  items,
+  model,
   onArchive,
+  onDetails,
   onEdit,
 }: Readonly<{
   busy: boolean;
   canUpdate: boolean;
-  item: OperationsDirectoryItem;
-  onArchive: () => void;
-  onEdit: () => void;
+  items: readonly OperationsDirectoryItem[];
+  model: OperationsDirectoryModel;
+  onArchive: (item: OperationsDirectoryItem) => void;
+  onDetails: (item: OperationsDirectoryItem) => void;
+  onEdit: (item: OperationsDirectoryItem) => void;
 }>) {
+  const columns = tableColumnsForArea(model.area);
   return (
-    <article className="directory-card">
-      <header>
-        <div>
-          <h3>{item.title}</h3>
-          <p>{item.subtitle}</p>
+    <div className="directory-table-wrap">
+      <div
+        className="directory-table"
+        role="table"
+        aria-label={`${model.title}: registros operacionais`}
+      >
+        <div className="directory-table-header" role="row">
+          {columns.map((column) => (
+            <span key={column.key} role="columnheader">
+              {column.label}
+            </span>
+          ))}
+          <span role="columnheader">Status</span>
+          <span role="columnheader">Ações</span>
         </div>
-        <StatusBadge variant={item.statusTone}>{item.statusLabel}</StatusBadge>
-      </header>
-      <dl className="directory-metrics">
-        {item.metrics.map((metric) => (
-          <div key={metric.label}>
-            <dt>{metric.label}</dt>
-            <dd>{metric.value}</dd>
+        {items.map((item) => (
+          <div className="directory-table-row" role="row" key={item.id}>
+            {columns.map((column) => (
+              <div className="directory-table-cell" role="cell" key={column.key}>
+                <span>{column.label}</span>
+                {column.key === 'primary' ? (
+                  <strong>{item.title}</strong>
+                ) : column.key === 'subtitle' ? (
+                  <span>{item.subtitle}</span>
+                ) : (
+                  <span>{metricValue(item, column.metricLabel)}</span>
+                )}
+              </div>
+            ))}
+            <div className="directory-table-cell directory-status-cell" role="cell">
+              <span>Status</span>
+              <StatusBadge variant={item.statusTone}>{item.statusLabel}</StatusBadge>
+            </div>
+            <div className="directory-table-actions" role="cell">
+              <button
+                className="icon-button"
+                type="button"
+                title="Ver detalhes"
+                aria-label={`Ver detalhes de ${item.title}`}
+                onClick={() => onDetails(item)}
+              >
+                <Search size={16} aria-hidden="true" />
+              </button>
+              {canUpdate ? (
+                <>
+                  <button
+                    className="icon-button"
+                    disabled={busy}
+                    type="button"
+                    title="Editar"
+                    aria-label={`Editar ${item.title}`}
+                    onClick={() => onEdit(item)}
+                  >
+                    <Pencil size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    className="icon-button danger"
+                    disabled={busy}
+                    type="button"
+                    title="Arquivar"
+                    aria-label={`Arquivar ${item.title}`}
+                    onClick={() => onArchive(item)}
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
         ))}
-      </dl>
-      <div className="directory-tags" aria-label="Marcadores">
-        {item.tags.map((tag) => (
-          <span key={tag}>{tag}</span>
-        ))}
       </div>
-      {canUpdate ? (
-        <div className="directory-card-actions">
-          <button
-            className="button button-secondary"
-            disabled={busy}
-            type="button"
-            onClick={onEdit}
-          >
-            <Pencil size={15} aria-hidden="true" />
-            Editar
-          </button>
-          <button
-            className="button button-danger"
-            disabled={busy}
-            type="button"
-            onClick={onArchive}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            Arquivar
-          </button>
-        </div>
-      ) : null}
-    </article>
+    </div>
   );
 }
 
+function DirectoryDetailsDialog({
+  item,
+  onClose,
+}: Readonly<{ item: OperationsDirectoryItem; onClose: () => void }>) {
+  const titleId = React.useId();
+
+  return (
+    <div className="app-dialog-backdrop" role="presentation">
+      <section
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="app-dialog directory-detail-dialog"
+        role="dialog"
+      >
+        <header className="app-dialog-header">
+          <div>
+            <p className="eyebrow">Detalhes</p>
+            <h2 id={titleId}>{item.title}</h2>
+            <p>{item.subtitle}</p>
+          </div>
+          <IconButton label="Fechar" onClick={onClose} type="button">
+            <X size={18} aria-hidden="true" />
+          </IconButton>
+        </header>
+        <dl className="directory-detail-list">
+          <div>
+            <dt>Status</dt>
+            <dd>
+              <StatusBadge variant={item.statusTone}>{item.statusLabel}</StatusBadge>
+            </dd>
+          </div>
+          {item.metrics.map((metric) => (
+            <div key={metric.label}>
+              <dt>{metric.label}</dt>
+              <dd>{metric.value}</dd>
+            </div>
+          ))}
+          <div>
+            <dt>Marcadores</dt>
+            <dd>{item.tags.length ? item.tags.join(' · ') : '-'}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  );
+}
 function DirectoryDialog({
   dialog,
   disabled,
@@ -920,6 +1002,42 @@ function normalize(value: string) {
     .trim();
 }
 
+type DirectoryTableColumn = {
+  key: 'primary' | 'subtitle' | 'metric';
+  label: string;
+  metricLabel?: string;
+};
+
+function tableColumnsForArea(area: OperationsDirectoryArea): readonly DirectoryTableColumn[] {
+  if (area === 'clientes') {
+    return [
+      { key: 'primary', label: 'Cliente' },
+      { key: 'subtitle', label: 'Telefone' },
+      { key: 'metric', label: 'Email', metricLabel: 'Email' },
+      { key: 'metric', label: 'Origem', metricLabel: 'Origem' },
+    ];
+  }
+  if (area === 'equipe') {
+    return [
+      { key: 'primary', label: 'Usuário' },
+      { key: 'subtitle', label: 'Papel' },
+      { key: 'metric', label: 'Filiais', metricLabel: 'Filiais' },
+      { key: 'metric', label: 'Telefone', metricLabel: 'Telefone' },
+    ];
+  }
+  return [
+    { key: 'primary', label: 'Serviço' },
+    { key: 'subtitle', label: 'Categoria' },
+    { key: 'metric', label: 'Duração', metricLabel: 'Duracao' },
+    { key: 'metric', label: 'Preço', metricLabel: 'Preco' },
+  ];
+}
+
+function metricValue(item: OperationsDirectoryItem, metricLabel?: string) {
+  if (!metricLabel) return '-';
+  const normalizedLabel = normalize(metricLabel);
+  return item.metrics.find((metric) => normalize(metric.label) === normalizedLabel)?.value ?? '-';
+}
 function sameToken(left: string, right: string) {
   return normalize(left) === normalize(right);
 }

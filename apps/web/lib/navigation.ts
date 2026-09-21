@@ -50,7 +50,7 @@ const tenantOperationRoles = [
 
 export const navigationItems: NavigationItem[] = [
   {
-    href: '/',
+    href: '/inicio',
     label: 'Visao geral',
     icon: 'layout',
     permission: 'dashboard.read',
