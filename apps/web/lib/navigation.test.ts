@@ -144,6 +144,98 @@ describe('filterNavigation', () => {
     expect(professional).toEqual(['/minha-carteira']);
     expect(owner).toEqual([]);
   });
+  it('models the four demo access profiles in role-aware navigation', () => {
+    expect(navFor('PLATFORM_MASTER', ['audit.read', 'settings.read'], [])).toEqual([
+      '/master',
+      '/configuracoes',
+    ]);
+
+    expect(
+      navFor(
+        'OWNER',
+        [
+          'dashboard.read',
+          'appointments.read',
+          'orders.read',
+          'customers.read',
+          'professionals.read',
+          'services.read',
+          'finance.read',
+          'commission.manage',
+          'inventory.read',
+          'settings.read',
+        ],
+        ['core.operations', 'finance', 'inventory'],
+      ),
+    ).toEqual([
+      '/',
+      '/agenda',
+      '/comandas',
+      '/clientes',
+      '/equipe',
+      '/servicos',
+      '/produtos',
+      '/estoque',
+      '/financeiro',
+      '/financeiro/despesas',
+      '/financeiro/comissoes',
+      '/caixa',
+      '/configuracoes',
+    ]);
+
+    expect(
+      navFor(
+        'RECEPTIONIST',
+        [
+          'dashboard.read',
+          'appointments.read',
+          'orders.read',
+          'customers.read',
+          'professionals.read',
+          'services.read',
+          'payments.receive',
+          'cash.open',
+          'finance.read',
+          'inventory.read',
+        ],
+        ['core.operations', 'finance', 'inventory'],
+      ),
+    ).toEqual([
+      '/',
+      '/agenda',
+      '/comandas',
+      '/clientes',
+      '/equipe',
+      '/servicos',
+      '/produtos',
+      '/estoque',
+      '/caixa',
+    ]);
+
+    expect(
+      navFor(
+        'PROFESSIONAL',
+        [
+          'dashboard.read',
+          'appointments.read',
+          'orders.read',
+          'customers.read',
+          'professionals.read',
+          'services.read',
+          'commission.read',
+        ],
+        ['core.operations', 'finance'],
+      ),
+    ).toEqual([
+      '/',
+      '/agenda',
+      '/comandas',
+      '/clientes',
+      '/equipe',
+      '/servicos',
+      '/minha-carteira',
+    ]);
+  });
 });
 it('models expenses and commissions as Financeiro submenus', () => {
   expect(

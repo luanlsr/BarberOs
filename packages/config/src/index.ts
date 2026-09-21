@@ -1,11 +1,22 @@
 import { z } from 'zod';
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().min(1).optional(),
+);
+const optionalUrlString = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().url().optional(),
+);
+
 const serverEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    SUPABASE_URL: z.string().url().optional(),
-    SUPABASE_ANON_KEY: z.string().min(1).optional(),
-    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    SUPABASE_URL: optionalUrlString,
+    SUPABASE_ANON_KEY: optionalNonEmptyString,
+    SUPABASE_SERVICE_ROLE_KEY: optionalNonEmptyString,
+    NEXT_PUBLIC_SUPABASE_URL: optionalUrlString,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmptyString,
     BARBEROS_DEV_AUTH: z.enum(['true', 'false']).default('true'),
     WORKER_PORT: z.coerce.number().int().positive().default(4001),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(2),
@@ -15,11 +26,16 @@ const serverEnvSchema = z
     WORKER_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(25).default(5),
     WORKER_RETRY_BASE_DELAY_MS: z.coerce.number().int().min(1000).max(3600000).default(60000),
     WORKER_RETRY_MAX_DELAY_MS: z.coerce.number().int().min(1000).max(86400000).default(1800000),
-    REDIS_URL: z.string().url().optional(),
+    REDIS_URL: optionalUrlString,
     REDIS_NAMESPACE: z.string().trim().min(1).max(80).default('barberos'),
     REDIS_TLS: z.enum(['true', 'false']).default('false'),
     AI_PORT: z.coerce.number().int().positive().default(8000),
   })
+  .transform((value) => ({
+    ...value,
+    SUPABASE_URL: value.SUPABASE_URL ?? value.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_ANON_KEY: value.SUPABASE_ANON_KEY ?? value.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  }))
   .refine((value) => value.WORKER_RETRY_BASE_DELAY_MS <= value.WORKER_RETRY_MAX_DELAY_MS, {
     message: 'WORKER_RETRY_BASE_DELAY_MS must be less than or equal to WORKER_RETRY_MAX_DELAY_MS.',
     path: ['WORKER_RETRY_BASE_DELAY_MS'],
@@ -28,6 +44,8 @@ const serverEnvSchema = z
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NEXT_PUBLIC_APP_NAME: z.string().min(1).default('BarberOS'),
+  NEXT_PUBLIC_SUPABASE_URL: optionalUrlString,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmptyString,
 });
 
 export function parseServerEnv(input: NodeJS.ProcessEnv) {

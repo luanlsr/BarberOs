@@ -39,12 +39,21 @@ type NavigationFilterOptions = {
   role?: NavigationRole;
 };
 
+const tenantOperationRoles = [
+  'OWNER',
+  'MANAGER',
+  'FINANCE',
+  'RECEPTIONIST',
+  'PROFESSIONAL',
+] as const satisfies readonly NavigationRole[];
+
 export const navigationItems: NavigationItem[] = [
   {
     href: '/',
     label: 'Visao geral',
     icon: 'layout',
     permission: 'dashboard.read',
+    roles: tenantOperationRoles,
     group: 'Operacao',
     mobile: true,
   },
@@ -54,6 +63,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'calendar',
     permission: 'appointments.read',
     entitlement: 'core.operations',
+    roles: tenantOperationRoles,
     mobile: true,
     group: 'Operacao',
   },
@@ -63,6 +73,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'receipt',
     permission: 'orders.read',
     entitlement: 'core.operations',
+    roles: tenantOperationRoles,
     mobile: true,
     group: 'Operacao',
   },
@@ -72,6 +83,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'users',
     permission: 'customers.read',
     entitlement: 'core.operations',
+    roles: tenantOperationRoles,
     mobile: true,
     group: 'Operacao',
   },
@@ -81,6 +93,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'team',
     permission: 'professionals.read',
     entitlement: 'core.operations',
+    roles: tenantOperationRoles,
     mobile: true,
     group: 'Operacao',
   },
@@ -90,6 +103,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'scissors',
     permission: 'services.read',
     entitlement: 'core.operations',
+    roles: tenantOperationRoles,
     mobile: true,
     group: 'Operacao',
   },
@@ -168,6 +182,14 @@ export const navigationItems: NavigationItem[] = [
     permission: 'worker.failures.read',
     entitlement: 'worker.operations',
     roles: ['OWNER', 'MANAGER'],
+    group: 'Sistema',
+  },
+  {
+    href: '/master',
+    label: 'Master Admin',
+    icon: 'layout',
+    permission: 'audit.read',
+    roles: ['PLATFORM_MASTER'],
     group: 'Sistema',
   },
   {

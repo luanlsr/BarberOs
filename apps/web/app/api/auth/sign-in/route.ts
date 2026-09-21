@@ -2,7 +2,21 @@ import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/auth/server';
 
 export async function POST(request: Request) {
-  const client = await createSupabaseServerClient();
+  let client: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  try {
+    client = await createSupabaseServerClient();
+  } catch (error) {
+    console.error('[BarberOS auth] Sign-in configuration error:', error);
+    return NextResponse.json(
+      {
+        code: 'AUTH_CONFIGURATION_ERROR',
+        message:
+          'Configuracao do Supabase invalida. Confira SUPABASE_URL e SUPABASE_ANON_KEY no .env.local.',
+      },
+      { status: 503 },
+    );
+  }
+
   if (!client)
     return NextResponse.json(
       {
@@ -11,6 +25,7 @@ export async function POST(request: Request) {
       },
       { status: 503 },
     );
+
   const body = (await request.json().catch(() => null)) as {
     email?: string;
     password?: string;
@@ -20,11 +35,13 @@ export async function POST(request: Request) {
       { code: 'INVALID_CREDENTIALS', message: 'Email e senha sao obrigatorios.' },
       { status: 400 },
     );
+
   const { error } = await client.auth.signInWithPassword({
     email: body.email,
     password: body.password,
   });
-  if (error)
+  if (error) {
+    console.warn('[BarberOS auth] Sign-in rejected:', error.message);
     return NextResponse.json(
       {
         code: 'INVALID_CREDENTIALS',
@@ -32,5 +49,6 @@ export async function POST(request: Request) {
       },
       { status: 401 },
     );
+  }
   return NextResponse.json({ ok: true });
 }

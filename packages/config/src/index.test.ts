@@ -13,6 +13,34 @@ describe('environment contracts', () => {
     expect(() => parsePublicEnv({ NEXT_PUBLIC_APP_URL: 'not-a-url' })).toThrow();
   });
 
+  it('treats empty optional Supabase variables as unconfigured', () => {
+    expect(
+      parseServerEnv({
+        SUPABASE_URL: '',
+        SUPABASE_ANON_KEY: '',
+        SUPABASE_SERVICE_ROLE_KEY: '',
+        NEXT_PUBLIC_SUPABASE_URL: '',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+      }),
+    ).toMatchObject({
+      SUPABASE_URL: undefined,
+      SUPABASE_ANON_KEY: undefined,
+      SUPABASE_SERVICE_ROLE_KEY: undefined,
+    });
+  });
+
+  it('uses public Supabase variables as a server fallback for local Next.js auth', () => {
+    expect(
+      parseServerEnv({
+        NEXT_PUBLIC_SUPABASE_URL: 'https://barberos.supabase.co',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      }),
+    ).toMatchObject({
+      SUPABASE_URL: 'https://barberos.supabase.co',
+      SUPABASE_ANON_KEY: 'anon-key',
+    });
+  });
+
   it('does not require service role credentials for local shell work', () => {
     expect(parseServerEnv({}).SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
   });

@@ -9,6 +9,51 @@ export const metadata: Metadata = {
   description: 'Operacao inteligente para barbearias',
 };
 
+const browserDiagnosticsScript = `
+(function () {
+  var suppressedStartTimeError = false;
+
+  function isNextWebVitalsStartTimeError(eventOrReason) {
+    var error = eventOrReason && (eventOrReason.error || eventOrReason.reason || eventOrReason);
+    var message = String(
+      (eventOrReason && eventOrReason.message) ||
+      (error && error.message) ||
+      eventOrReason ||
+      ''
+    );
+    var stack = String((error && error.stack) || '');
+    var filename = String((eventOrReason && eventOrReason.filename) || '');
+
+    return (
+      message.indexOf("Cannot read properties of undefined (reading 'startTime')") !== -1 &&
+      (
+        stack.indexOf('reportAllChanges') !== -1 ||
+        stack.indexOf('web-vitals') !== -1 ||
+        filename.indexOf('VM') !== -1 ||
+        filename === '<anonymous>' ||
+        filename === ''
+      )
+    );
+  }
+
+  function suppressKnownDevRuntimeError(event) {
+    if (!isNextWebVitalsStartTimeError(event)) return;
+    event.preventDefault();
+    if (typeof event.stopImmediatePropagation === 'function') {
+      event.stopImmediatePropagation();
+    }
+
+    if (!suppressedStartTimeError) {
+      suppressedStartTimeError = true;
+      console.info('[BarberOS diagnostics] suppressed Next/web-vitals startTime error during local navigation.');
+    }
+  }
+
+  window.addEventListener('error', suppressKnownDevRuntimeError, true);
+  window.addEventListener('unhandledrejection', suppressKnownDevRuntimeError, true);
+})();
+`;
+
 const themeInitScript = `
 (function () {
   try {
@@ -29,6 +74,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: browserDiagnosticsScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body suppressHydrationWarning>

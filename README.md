@@ -33,16 +33,26 @@ O shell usa uma sessao de desenvolvimento somente fora de producao quando `BARBE
 
 A migration em `supabase/migrations/` e o seed em `supabase/seed.sql` modelam auth, tenant, branch, membership, RBAC, entitlements, RLS e auditoria. A service role permanece server-side e nunca deve ser configurada no navegador.
 
-Para criar ou atualizar o usuario local no Supabase Auth e vincular ele ao tenant/filiais da seed, rode:
+Para criar ou atualizar os usuarios locais no Supabase Auth e vincular cada um ao tenant/filiais da seed, rode:
 
 ```bash
-npm run auth:create-dev-user
+npm run auth:create-demo-users
+```
+
+O comando tambem pode criar um perfil especifico:
+
+```bash
+npm run auth:create-demo-users -- --profile=barber
 ```
 
 Credenciais padrao criadas pelo comando:
 
-- Email: `dev@barberos.local`
-- Senha: `BarberOS@123456`
+| Perfil     | Role interna      | Email                       | Senha               |
+| ---------- | ----------------- | --------------------------- | ------------------- |
+| superAdmin | `PLATFORM_MASTER` | `superadmin@barberos.local` | `SuperAdmin@123456` |
+| admin      | `OWNER`           | `admin@barberos.local`      | `Admin@123456`      |
+| user       | `RECEPTIONIST`    | `recepcao@barberos.local`   | `Recepcao@123456`   |
+| barber     | `PROFESSIONAL`    | `barbeiro@barberos.local`   | `Barbeiro@123456`   |
 
 Para forcar o login real em desenvolvimento, configure `BARBEROS_DEV_AUTH=false`.
 

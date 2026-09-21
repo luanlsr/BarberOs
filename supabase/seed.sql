@@ -137,6 +137,17 @@ insert into public.role_permissions (role_code, permission_code) values
   ('FINANCE', 'commission.manage')
 on conflict (role_code, permission_code) do nothing;
 
+
+-- Demo access profiles aligned with BarberOS product roles:
+-- superAdmin -> PLATFORM_MASTER, admin -> OWNER, user -> RECEPTIONIST, barber -> PROFESSIONAL.
+insert into public.role_permissions (role_code, permission_code) values
+  ('RECEPTIONIST', 'cash.open'),
+  ('RECEPTIONIST', 'cash.close'),
+  ('RECEPTIONIST', 'finance.read'),
+  ('RECEPTIONIST', 'inventory.read'),
+  ('RECEPTIONIST', 'notifications.status.read'),
+  ('PROFESSIONAL', 'commission.read')
+on conflict (role_code, permission_code) do nothing;
 insert into public.entitlements (code, description) values
   ('core.operations', 'Operacao principal'),
   ('finance', 'Modulo financeiro'),
