@@ -3,20 +3,20 @@
 
 with requested_services (category, name, description, duration_minutes, price_cents, estimated_cost_cents) as (
   values
-    ('Design', 'Sobrancelha', 'Design e acabamento de sobrancelha.', 15, 1000, null),
-    ('Quimica', 'Platinado', 'Servico de descoloracao/platinado.', 120, 10000, null),
-    ('Coloracao', 'Pigmentacao', 'Pigmentacao capilar ou de barba.', 30, 2500, null),
-    ('Coloracao', 'Luzes', 'Aplicacao de luzes.', 90, 6000, null),
-    ('Estetica', 'Limpeza de pele', 'Limpeza de pele facial.', 45, 2500, null),
-    ('Tratamento', 'Hidratacao', 'Hidratacao capilar.', 30, 2500, null),
-    ('Cabelo', 'Freestyle (risquinho)', 'Risco/desenho freestyle no acabamento.', 15, 1000, null),
-    ('Depilacao', 'Depilacao nasal', 'Depilacao nasal.', 15, 2500, null),
-    ('Depilacao', 'Depilacao orelha', 'Depilacao de orelha.', 15, 2500, null),
-    ('Cabelo', 'Corte de cabelo', 'Corte de cabelo completo.', 45, 4500, null),
-    ('Barba', 'Barboterapia', 'Barboterapia com preparo e finalizacao.', 45, 4500, null),
-    ('Barba', 'Barba', 'Modelagem e acabamento de barba.', 30, 3500, null),
-    ('Quimica', 'Alisamento', 'Alisamento capilar.', 45, 3000, null),
-    ('Cabelo', 'Acabamento/pezinho', 'Acabamento de contorno e pezinho.', 15, 1000, null)
+    ('Design', 'Sobrancelha', 'Design e acabamento de sobrancelha.', 15, 1000, null::integer),
+    ('Quimica', 'Platinado', 'Servico de descoloracao/platinado.', 120, 10000, null::integer),
+    ('Coloracao', 'Pigmentacao', 'Pigmentacao capilar ou de barba.', 30, 2500, null::integer),
+    ('Coloracao', 'Luzes', 'Aplicacao de luzes.', 90, 6000, null::integer),
+    ('Estetica', 'Limpeza de pele', 'Limpeza de pele facial.', 45, 2500, null::integer),
+    ('Tratamento', 'Hidratacao', 'Hidratacao capilar.', 30, 2500, null::integer),
+    ('Cabelo', 'Freestyle (risquinho)', 'Risco/desenho freestyle no acabamento.', 15, 1000, null::integer),
+    ('Depilacao', 'Depilacao nasal', 'Depilacao nasal.', 15, 2500, null::integer),
+    ('Depilacao', 'Depilacao orelha', 'Depilacao de orelha.', 15, 2500, null::integer),
+    ('Cabelo', 'Corte de cabelo', 'Corte de cabelo completo.', 45, 4500, null::integer),
+    ('Barba', 'Barboterapia', 'Barboterapia com preparo e finalizacao.', 45, 4500, null::integer),
+    ('Barba', 'Barba', 'Modelagem e acabamento de barba.', 30, 3500, null::integer),
+    ('Quimica', 'Alisamento', 'Alisamento capilar.', 45, 3000, null::integer),
+    ('Cabelo', 'Acabamento/pezinho', 'Acabamento de contorno e pezinho.', 15, 1000, null::integer)
 ), upserted_services as (
   insert into public.services (
     id,

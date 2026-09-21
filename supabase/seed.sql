@@ -52,7 +52,9 @@ insert into public.permissions (code, description) values
   ('settings.read', 'Visualizar configuracoes'),
   ('memberships.read', 'Visualizar membros'),
   ('memberships.manage', 'Gerenciar membros'),
-  ('audit.read', 'Visualizar auditoria')
+  ('audit.read', 'Visualizar auditoria'),
+  ('worker.failures.read', 'Visualizar falhas operacionais de jobs e outbox'),
+  ('notifications.status.read', 'Visualizar status de notificacoes operacionais')
 on conflict (code) do update set description = excluded.description;
 
 insert into public.role_permissions (role_code, permission_code)
