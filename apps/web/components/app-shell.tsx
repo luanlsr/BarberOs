@@ -57,6 +57,16 @@ const icons = {
   settings: Settings,
 };
 
+const PUBLIC_STANDALONE_PATHS = ['/', '/login', '/forgotpassword'] as const;
+
+function isPublicStandalonePath(pathname: string) {
+  return (
+    PUBLIC_STANDALONE_PATHS.some((path) => pathname === path) ||
+    pathname === '/checkout' ||
+    pathname.startsWith('/checkout/')
+  );
+}
+
 const actionIcons = {
   appointment: CalendarPlus,
   cash: WalletCards,
@@ -294,10 +304,8 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = useSessionContext();
   const pathname = usePathname();
   const isOnline = useOnlineStatus();
-  const isStandalonePublicPage =
-    pathname === '/' || pathname === '/checkout' || pathname.startsWith('/checkout/');
-  if (isStandalonePublicPage) return <>{children}</>;
-  if (!session || pathname === '/login') return <AuthGate />;
+  if (isPublicStandalonePath(pathname)) return <>{children}</>;
+  if (!session) return <AuthGate />;
 
   const entitlements = session.entitlements ?? [];
   const visibleItems = filterNavigation(navigationItems, session.permissions, entitlements, {

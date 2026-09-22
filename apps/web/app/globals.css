@@ -727,9 +727,35 @@ h3 {
 .auth-form .button {
   margin-top: 8px;
 }
+.auth-form-row {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: -3px;
+}
+.auth-form-row a,
+.auth-back-link {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 750;
+}
+.auth-back-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
 .form-error {
   margin: 4px 0 0;
   color: var(--danger);
+  font-size: 13px;
+}
+.form-success {
+  margin: 4px 0 0;
+  color: var(--success);
   font-size: 13px;
 }
 .workspace-select-label {

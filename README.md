@@ -33,27 +33,28 @@ O shell usa uma sessao de desenvolvimento somente fora de producao quando `BARBE
 
 A migration em `supabase/migrations/` e o seed em `supabase/seed.sql` modelam auth, tenant, branch, membership, RBAC, entitlements, RLS e auditoria. A service role permanece server-side e nunca deve ser configurada no navegador.
 
-Para criar ou atualizar os usuarios locais no Supabase Auth e vincular cada um ao tenant/filiais da seed, rode:
+Para criar ou atualizar tenants demo, usuarios no Supabase Auth, filiais, memberships, servicos, clientes, agenda e estoque inicial, rode:
 
 ```bash
 npm run auth:create-demo-users
 ```
 
-O comando tambem pode criar um perfil especifico:
-
-```bash
-npm run auth:create-demo-users -- --profile=barber
-```
-
 Credenciais padrao criadas pelo comando:
 
-| Perfil     | Role interna      | Email                       | Senha               |
-| ---------- | ----------------- | --------------------------- | ------------------- |
-| superAdmin | `PLATFORM_MASTER` | `superadmin@barberos.local` | `SuperAdmin@123456` |
-| admin      | `OWNER`           | `admin@barberos.local`      | `Admin@123456`      |
-| user       | `RECEPTIONIST`    | `recepcao@barberos.local`   | `Recepcao@123456`   |
-| barber     | `PROFESSIONAL`    | `barbeiro@barberos.local`   | `Barbeiro@123456`   |
+| Tenant                | Role interna      | Email                                     | Senha               | Escopo de filial           |
+| --------------------- | ----------------- | ----------------------------------------- | ------------------- | -------------------------- |
+| Plataforma BarberOS   | `PLATFORM_MASTER` | `superadmin@barberos.local`               | `SuperAdmin@123456` | Plataforma + demo          |
+| Barbearia Modelo      | `OWNER`           | `admin@modelo.barberos.local`             | `Admin@123456`      | Todas as filiais do tenant |
+| Barbearia Modelo      | `RECEPTIONIST`    | `recepcao@modelo.barberos.local`          | `Recepcao@123456`   | Unidade inicial            |
+| Barbearia Modelo      | `PROFESSIONAL`    | `barbeiro1@modelo.barberos.local`         | `Barbeiro@123456`   | Unidade inicial            |
+| Barbearia Premium Sul | `OWNER`           | `admin@premium-sul.barberos.local`        | `Admin@123456`      | Todas as filiais do tenant |
+| Barbearia Premium Sul | `RECEPTIONIST`    | `recepcao@premium-sul.barberos.local`     | `Recepcao@123456`   | Unidade inicial            |
+| Barbearia Premium Sul | `PROFESSIONAL`    | `barbeiro1@premium-sul.barberos.local`    | `Barbeiro@123456`   | Unidade inicial            |
+| Rede Navalha Urbana   | `OWNER`           | `admin@navalha-urbana.barberos.local`     | `Admin@123456`      | Todas as filiais do tenant |
+| Rede Navalha Urbana   | `RECEPTIONIST`    | `recepcao@navalha-urbana.barberos.local`  | `Recepcao@123456`   | Unidade inicial            |
+| Rede Navalha Urbana   | `PROFESSIONAL`    | `barbeiro1@navalha-urbana.barberos.local` | `Barbeiro@123456`   | Unidade inicial            |
 
+O comando `npm run auth:create-dev-user` permanece disponivel para criar os usuarios locais legados `admin@barberos.local`, `recepcao@barberos.local` e `barbeiro@barberos.local`.
 Para forcar o login real em desenvolvimento, configure `BARBEROS_DEV_AUTH=false`.
 
 ## Validacao

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { LogIn } from 'lucide-react';
 import { Button } from '@barberos/ui';
@@ -70,6 +71,10 @@ export function AuthGate() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
+          <div className="auth-form-row">
+            <span />
+            <Link href="/forgotpassword">Esqueci a senha</Link>
+          </div>
           {error ? (
             <p className="form-error" role="alert">
               {error}

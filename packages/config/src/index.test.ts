@@ -44,6 +44,25 @@ describe('environment contracts', () => {
   it('does not require service role credentials for local shell work', () => {
     expect(parseServerEnv({}).SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
   });
+  it('provides safe Asaas checkout defaults and accepts webhook configuration', () => {
+    expect(parseServerEnv({})).toMatchObject({ ASAAS_ENVIRONMENT: 'sandbox' });
+    expect(
+      parseServerEnv({
+        ASAAS_API_KEY: 'asaas-key',
+        ASAAS_ENVIRONMENT: 'production',
+        ASAAS_WEBHOOK_TOKEN: 'webhook-token',
+      }),
+    ).toMatchObject({
+      ASAAS_API_KEY: 'asaas-key',
+      ASAAS_ENVIRONMENT: 'production',
+      ASAAS_WEBHOOK_TOKEN: 'webhook-token',
+    });
+  });
+
+  it('rejects invalid Asaas environments', () => {
+    expect(() => parseServerEnv({ ASAAS_ENVIRONMENT: 'staging' })).toThrow();
+  });
+
   it('provides safe worker and Redis defaults for local development', () => {
     expect(parseServerEnv({})).toMatchObject({
       NODE_ENV: 'development',

@@ -13,6 +13,10 @@ const tenants = [
     branchId: '00000000-0000-0000-0000-000000000011',
     branchName: 'Unidade Centro',
     slug: 'modelo',
+    branches: [
+      { id: '00000000-0000-0000-0000-000000000011', name: 'Unidade Centro' },
+      { id: '00000000-0000-0000-0000-000000000012', name: 'Unidade Norte' },
+    ],
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
@@ -20,6 +24,10 @@ const tenants = [
     branchId: '00000000-0000-0000-0000-000000000021',
     branchName: 'Unidade Campo Grande',
     slug: 'premium-sul',
+    branches: [
+      { id: '00000000-0000-0000-0000-000000000021', name: 'Unidade Campo Grande' },
+      { id: '00000000-0000-0000-0000-000000000022', name: 'Unidade Shopping' },
+    ],
   },
   {
     id: '00000000-0000-0000-0000-000000000003',
@@ -27,17 +35,51 @@ const tenants = [
     branchId: '00000000-0000-0000-0000-000000000031',
     branchName: 'Unidade Centro',
     slug: 'navalha-urbana',
+    branches: [
+      { id: '00000000-0000-0000-0000-000000000031', name: 'Unidade Centro' },
+      { id: '00000000-0000-0000-0000-000000000032', name: 'Unidade Paulista' },
+    ],
+  },
+];
+const roleProfiles = [
+  { role: 'OWNER', suffix: 'admin', name: 'Admin', password: 'Admin@123456', branchScope: 'ALL' },
+  {
+    role: 'RECEPTIONIST',
+    suffix: 'recepcao',
+    name: 'Recepcao',
+    password: 'Recepcao@123456',
+    branchScope: 'PRIMARY',
+  },
+  {
+    role: 'PROFESSIONAL',
+    suffix: 'barbeiro1',
+    name: 'Carlos Andrade',
+    password: 'Barbeiro@123456',
+    branchScope: 'PRIMARY',
+  },
+  {
+    role: 'PROFESSIONAL',
+    suffix: 'barbeiro2',
+    name: 'Lucas Pereira',
+    password: 'Barbeiro@123456',
+    branchScope: 'PRIMARY',
+  },
+  {
+    role: 'PROFESSIONAL',
+    suffix: 'barbeiro3',
+    name: 'Rafael Costa',
+    password: 'Barbeiro@123456',
+    branchScope: 'PRIMARY',
   },
 ];
 
-const roleProfiles = [
-  { role: 'OWNER', suffix: 'admin', name: 'Admin' },
-  { role: 'RECEPTIONIST', suffix: 'recepcao', name: 'Recepcao' },
-  { role: 'PROFESSIONAL', suffix: 'barbeiro1', name: 'Carlos Andrade' },
-  { role: 'PROFESSIONAL', suffix: 'barbeiro2', name: 'Lucas Pereira' },
-  { role: 'PROFESSIONAL', suffix: 'barbeiro3', name: 'Rafael Costa' },
-];
-
+const platformProfile = {
+  email: 'superadmin@barberos.local',
+  password: 'SuperAdmin@123456',
+  fullName: 'Super Admin BarberOS',
+  role: 'PLATFORM_MASTER',
+  platformRole: 'PLATFORM_MASTER',
+};
 const services = [
   ['Cabelo', 'Corte de cabelo', 'Corte de cabelo completo.', 45, 4500],
   ['Barba', 'Barba', 'Modelagem e acabamento de barba.', 30, 3500],
@@ -126,7 +168,13 @@ async function createOrUpdateAuthUser(supabase, profile) {
   return updated.user;
 }
 
-async function ensureMembership(supabase, { tenant, userId, role }) {
+function profileBranchIds(tenant, profile) {
+  return profile.branchScope === 'ALL'
+    ? tenant.branches.map((branch) => branch.id)
+    : [tenant.branchId];
+}
+
+async function ensureMembership(supabase, { tenant, userId, role, branchIds }) {
   const { data, error } = await supabase
     .from('memberships')
     .upsert(
@@ -142,9 +190,10 @@ async function ensureMembership(supabase, { tenant, userId, role }) {
     .single();
   if (error) throw error;
 
-  const { error: branchError } = await supabase
-    .from('membership_branches')
-    .upsert({ membership_id: data.id, branch_id: tenant.branchId }, { onConflict: 'membership_id,branch_id' });
+  const { error: branchError } = await supabase.from('membership_branches').upsert(
+    branchIds.map((branchId) => ({ membership_id: data.id, branch_id: branchId })),
+    { onConflict: 'membership_id,branch_id' },
+  );
   if (branchError) throw branchError;
   return data.id;
 }
@@ -156,20 +205,30 @@ async function ensureTenantBase(supabase, tenant) {
   if (tenantError) throw tenantError;
 
   const { error: branchError } = await supabase.from('branches').upsert(
-    {
-      id: tenant.branchId,
+    tenant.branches.map((branch) => ({
+      id: branch.id,
       tenant_id: tenant.id,
-      name: tenant.branchName,
+      name: branch.name,
       status: 'ACTIVE',
-    },
+    })),
     { onConflict: 'id' },
   );
   if (branchError) throw branchError;
 
-  for (const entitlement of ['core.operations', 'finance', 'inventory', 'worker.operations', 'notifications', 'ai']) {
+  for (const entitlement of [
+    'core.operations',
+    'finance',
+    'inventory',
+    'worker.operations',
+    'notifications',
+    'ai',
+  ]) {
     const { error } = await supabase
       .from('tenant_entitlements')
-      .upsert({ tenant_id: tenant.id, entitlement_code: entitlement, enabled: true }, { onConflict: 'tenant_id,entitlement_code' });
+      .upsert(
+        { tenant_id: tenant.id, entitlement_code: entitlement, enabled: true },
+        { onConflict: 'tenant_id,entitlement_code' },
+      );
     if (error) throw error;
   }
 }
@@ -266,7 +325,12 @@ async function ensureCustomers(supabase, tenant, professionalIds) {
       .from('customers')
       .select('id')
       .eq('tenant_id', tenant.id)
-      .eq('phone', phone.replace('+5511', '+55' + (11 + tenants.indexOf(tenant))).replace('9101', `9${tenants.indexOf(tenant) + 1}01`))
+      .eq(
+        'phone',
+        phone
+          .replace('+5511', '+55' + (11 + tenants.indexOf(tenant)))
+          .replace('9101', `9${tenants.indexOf(tenant) + 1}01`),
+      )
       .maybeSingle();
     if (selectError) throw selectError;
 
@@ -274,7 +338,9 @@ async function ensureCustomers(supabase, tenant, professionalIds) {
       tenant_id: tenant.id,
       branch_id: tenant.branchId,
       name,
-      phone: phone.replace('+5511', '+55' + (11 + tenants.indexOf(tenant))).replace('9101', `9${tenants.indexOf(tenant) + 1}01`),
+      phone: phone
+        .replace('+5511', '+55' + (11 + tenants.indexOf(tenant)))
+        .replace('9101', `9${tenants.indexOf(tenant) + 1}01`),
       email: `${name.toLowerCase().replaceAll(' ', '.')}@${tenant.slug}.demo`,
       source: 'seed-demo',
       preferred_professional_id: professionalIds[index % professionalIds.length],
@@ -343,6 +409,40 @@ async function ensureAppointments(supabase, { tenant, customerIds, professionalI
   }
 }
 
+async function ensurePlatformAdmin(supabase, tenant) {
+  const user = await createOrUpdateAuthUser(supabase, {
+    email: platformProfile.email,
+    password: platformProfile.password,
+    fullName: platformProfile.fullName,
+    role: platformProfile.role,
+    tenantSlug: 'platform',
+  });
+
+  const membershipId = await ensureMembership(supabase, {
+    tenant,
+    userId: user.id,
+    role: platformProfile.role,
+    branchIds: tenant.branches.map((branch) => branch.id),
+  });
+
+  const { error } = await supabase
+    .from('platform_memberships')
+    .upsert(
+      { user_id: user.id, role: platformProfile.platformRole, status: 'ACTIVE' },
+      { onConflict: 'user_id' },
+    );
+  if (error && error.code !== '42P01' && !error.message.includes('platform_memberships'))
+    throw error;
+
+  return {
+    tenant: 'Plataforma BarberOS',
+    role: platformProfile.role,
+    email: platformProfile.email,
+    password: platformProfile.password,
+    membershipId,
+  };
+}
+
 async function ensureProducts(supabase, tenant) {
   const { data: category, error: categoryError } = await supabase
     .from('product_categories')
@@ -367,10 +467,12 @@ async function ensureProducts(supabase, tenant) {
     categoryId = existing.id;
   }
 
-  await supabase.from('product_category_branches').upsert(
-    { tenant_id: tenant.id, category_id: categoryId, branch_id: tenant.branchId },
-    { onConflict: 'tenant_id,category_id,branch_id' },
-  );
+  await supabase
+    .from('product_category_branches')
+    .upsert(
+      { tenant_id: tenant.id, category_id: categoryId, branch_id: tenant.branchId },
+      { onConflict: 'tenant_id,category_id,branch_id' },
+    );
 
   const { data: location, error: locationError } = await supabase
     .from('inventory_locations')
@@ -419,15 +521,22 @@ async function ensureProducts(supabase, tenant) {
       .maybeSingle();
     if (existingProductError) throw existingProductError;
     const productQuery = existingProduct
-      ? supabase.from('products').update(productPayload).eq('id', existingProduct.id).select('id').single()
+      ? supabase
+          .from('products')
+          .update(productPayload)
+          .eq('id', existingProduct.id)
+          .select('id')
+          .single()
       : supabase.from('products').insert(productPayload).select('id').single();
     const { data: product, error } = await productQuery;
     if (error) throw error;
 
-    const { error: branchError } = await supabase.from('product_branches').upsert(
-      { tenant_id: tenant.id, product_id: product.id, branch_id: tenant.branchId },
-      { onConflict: 'tenant_id,product_id,branch_id' },
-    );
+    const { error: branchError } = await supabase
+      .from('product_branches')
+      .upsert(
+        { tenant_id: tenant.id, product_id: product.id, branch_id: tenant.branchId },
+        { onConflict: 'tenant_id,product_id,branch_id' },
+      );
     if (branchError) throw branchError;
 
     const { data: existingMovement } = await supabase
@@ -463,7 +572,9 @@ async function main() {
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY antes de rodar o seed demo.');
+    throw new Error(
+      'Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY antes de rodar o seed demo.',
+    );
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -471,8 +582,13 @@ async function main() {
   });
 
   const credentials = [];
+  let platformSeeded = false;
   for (const tenant of tenants) {
     await ensureTenantBase(supabase, tenant);
+    if (!platformSeeded) {
+      credentials.push(await ensurePlatformAdmin(supabase, tenant));
+      platformSeeded = true;
+    }
     const serviceRows = await ensureServices(supabase, tenant);
     const professionalIds = [];
 
@@ -481,13 +597,18 @@ async function main() {
       const email = `${profile.suffix}@${tenant.slug}.barberos.local`;
       const user = await createOrUpdateAuthUser(supabase, {
         email,
-        password: 'BarberOS@123456',
+        password: profile.password,
         fullName,
         role: profile.role,
         tenantSlug: tenant.slug,
         phone: '+5511999999999',
       });
-      await ensureMembership(supabase, { tenant, userId: user.id, role: profile.role });
+      await ensureMembership(supabase, {
+        tenant,
+        userId: user.id,
+        role: profile.role,
+        branchIds: profileBranchIds(tenant, profile),
+      });
       const professionalId = await ensureProfessional(supabase, {
         tenant,
         user,
@@ -495,7 +616,12 @@ async function main() {
         serviceRows,
       });
       if (professionalId) professionalIds.push(professionalId);
-      credentials.push({ tenant: tenant.name, role: profile.role, email, password: 'BarberOS@123456' });
+      credentials.push({
+        tenant: tenant.name,
+        role: profile.role,
+        email,
+        password: profile.password,
+      });
     }
 
     const customerIds = await ensureCustomers(supabase, tenant, professionalIds);
@@ -505,7 +631,9 @@ async function main() {
 
   console.log('[BarberOS seed] Demo tenants/users/data ready.');
   for (const credential of credentials) {
-    console.log(`${credential.tenant} | ${credential.role} | ${credential.email} | ${credential.password}`);
+    console.log(
+      `${credential.tenant} | ${credential.role} | ${credential.email} | ${credential.password}`,
+    );
   }
 }
 
