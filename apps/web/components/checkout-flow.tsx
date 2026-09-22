@@ -321,6 +321,7 @@ function Field({
   onChange,
   autoComplete,
   maxLength,
+  inputMode,
 }: {
   label: string;
   type?: string;
@@ -328,6 +329,7 @@ function Field({
   onChange: (value: string) => void;
   autoComplete?: string;
   maxLength?: number;
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
 }) {
   const id = label
     .toLowerCase()
@@ -343,6 +345,7 @@ function Field({
         value={value}
         maxLength={maxLength}
         autoComplete={autoComplete}
+        inputMode={inputMode}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
