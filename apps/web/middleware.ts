@@ -6,6 +6,7 @@ const PUBLIC_FILE_PATTERN = /\.(?:ico|png|jpg|jpeg|svg|webp|avif|gif|webmanifest
 
 function isPublicPath(pathname: string) {
   return (
+    pathname === '/' ||
     pathname === '/login' ||
     pathname.startsWith('/api/auth') ||
     pathname === '/manifest.webmanifest' ||
