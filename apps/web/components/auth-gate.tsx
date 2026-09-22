@@ -25,7 +25,7 @@ export function AuthGate() {
         const payload = (await response.json().catch(() => null)) as { message?: string } | null;
         throw new Error(payload?.message ?? 'Não foi possível autenticar.');
       }
-      window.location.assign('/');
+      window.location.assign('/inicio');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível autenticar.');
     } finally {

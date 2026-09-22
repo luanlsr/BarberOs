@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { DashboardView } from '../components/dashboard-view';
 import { LandingPage } from '../components/landing-page';
 import { getVerifiedSessionContext } from '../lib/auth/server';
 import { getPublicPlans } from '../lib/public-plans';
@@ -40,5 +39,5 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     return <LandingPage plans={plans} searchParams={resolvedSearchParams} />;
   }
   if (session.role === 'PLATFORM_MASTER') redirect('/master');
-  return <DashboardView session={session} />;
+  redirect('/inicio');
 }
