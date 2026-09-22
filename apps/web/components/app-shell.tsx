@@ -294,7 +294,9 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = useSessionContext();
   const pathname = usePathname();
   const isOnline = useOnlineStatus();
-  if (pathname === '/') return <>{children}</>;
+  const isStandalonePublicPage =
+    pathname === '/' || pathname === '/checkout' || pathname.startsWith('/checkout/');
+  if (isStandalonePublicPage) return <>{children}</>;
   if (!session || pathname === '/login') return <AuthGate />;
 
   const entitlements = session.entitlements ?? [];

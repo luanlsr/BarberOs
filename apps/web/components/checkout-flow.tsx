@@ -206,13 +206,17 @@ export function CheckoutFlow({ plans, selectedPlan, marketingParams = {} }: Chec
               <Field
                 label="WhatsApp"
                 value={form.customerPhone}
-                onChange={(value) => update('customerPhone', value)}
+                onChange={(value) => update('customerPhone', formatBrazilianPhone(value))}
                 autoComplete="tel"
+                inputMode="tel"
+                maxLength={15}
               />
               <Field
                 label="CPF/CNPJ"
                 value={form.document}
-                onChange={(value) => update('document', value)}
+                onChange={(value) => update('document', formatCpfCnpj(value))}
+                inputMode="numeric"
+                maxLength={18}
               />
             </div>
           </div>
@@ -354,6 +358,28 @@ function ReviewLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+function formatBrazilianPhone(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function formatCpfCnpj(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  if (digits.length <= 11) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  }
+  if (digits.length <= 12)
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
 function validateStep(step: number, form: CheckoutForm): boolean {
   if (step === 0) return Boolean(form.planCode);
   if (step === 1)
