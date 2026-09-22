@@ -283,6 +283,7 @@ describe('initial worker handlers', () => {
       'APPOINTMENT_REMINDER',
       'EXPIRED_RECORD_CLEANUP',
       'FINANCE_RECALCULATION',
+      'NOTIFICATION_DELIVERY',
       'POST_SERVICE_FOLLOW_UP',
       'STOCK_ALERT',
     ]);

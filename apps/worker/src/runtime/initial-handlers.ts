@@ -1,9 +1,17 @@
 import type {
   CreateNotificationIntentCommand,
+  NotificationIntent,
   OutboxSourceType,
+  RecordNotificationDeliveryAttemptCommand,
   WorkerJob,
   WorkerJobType,
 } from '@barberos/contracts';
+
+import {
+  handleNotificationDelivery,
+  LocalNoopNotificationProvider,
+  type NotificationProviderAdapter,
+} from './notification-delivery-handler';
 
 export type WorkerJobHandlerResult =
   | {
@@ -69,7 +77,10 @@ export type InitialWorkerHandlerPorts = {
   };
   notifications?: {
     createIntent(command: CreateNotificationIntentCommand): Promise<unknown>;
+    findIntentById?(id: string): Promise<NotificationIntent | null>;
+    recordDeliveryAttempt?(command: RecordNotificationDeliveryAttemptCommand): Promise<unknown>;
   };
+  notificationProvider?: NotificationProviderAdapter;
 };
 
 export type InitialWorkerJobHandler = (job: WorkerJob) => Promise<WorkerJobHandlerResult>;
@@ -86,6 +97,7 @@ export function createInitialWorkerHandlers(
     FINANCE_RECALCULATION: (job) => handleFinanceRecalculation(job, ports),
     STOCK_ALERT: (job) => handleStockAlert(job, ports),
     EXPIRED_RECORD_CLEANUP: (job) => handleExpiredRecordCleanup(job, ports, clock()),
+    NOTIFICATION_DELIVERY: (job) => handleNotificationDeliveryJob(job, ports, clock()),
   };
 }
 
@@ -215,6 +227,23 @@ export async function handleExpiredRecordCleanup(
   return succeeded('expired_records_deleted');
 }
 
+function handleNotificationDeliveryJob(
+  job: WorkerJob,
+  ports: InitialWorkerHandlerPorts,
+  now: Date,
+) {
+  if (!ports.notifications?.findIntentById || !ports.notifications.recordDeliveryAttempt) {
+    return Promise.resolve(skipped('notifications_delivery_port_not_configured'));
+  }
+  return handleNotificationDelivery(job, {
+    notifications: {
+      findIntentById: ports.notifications.findIntentById,
+      recordDeliveryAttempt: ports.notifications.recordDeliveryAttempt,
+    },
+    provider: ports.notificationProvider ?? new LocalNoopNotificationProvider(),
+    now: () => now,
+  });
+}
 function getSourceId(job: WorkerJob, expectedType: OutboxSourceType) {
   if (job.sourceType !== expectedType) return undefined;
   return job.sourceId;

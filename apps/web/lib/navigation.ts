@@ -6,6 +6,7 @@ export type NavigationItem = {
   href: string;
   label: string;
   icon:
+    | 'activity'
     | 'layout'
     | 'calendar'
     | 'receipt'
@@ -167,6 +168,15 @@ export const navigationItems: NavigationItem[] = [
     icon: 'layout',
     permission: 'audit.read',
     roles: ['PLATFORM_MASTER'],
+    group: 'Sistema',
+  },
+  {
+    href: '/operacoes/worker',
+    label: 'Operações',
+    icon: 'activity',
+    permission: 'worker.failures.read',
+    entitlement: 'worker.operations',
+    roles: ['OWNER', 'MANAGER', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
     group: 'Sistema',
   },
   {

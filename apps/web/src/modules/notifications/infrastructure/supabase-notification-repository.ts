@@ -116,7 +116,17 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       .select(attemptSelect)
       .single();
     if (error) throw error;
-    return toDeliveryAttempt(data);
+    const attempt = toDeliveryAttempt(data);
+    const nextStatus = intentStatusFromAttempt(command.status);
+    if (nextStatus) {
+      const { error: updateError } = await this.client
+        .from('notification_intents')
+        .update({ status: nextStatus, updated_at: new Date().toISOString() })
+        .eq('tenant_id', context.tenantId)
+        .eq('id', command.notificationIntentId);
+      if (updateError) throw updateError;
+    }
+    return attempt;
   }
 
   async listDeliveryAttempts(
@@ -141,6 +151,11 @@ export class SupabaseNotificationRepository implements NotificationRepository {
   }
 }
 
+function intentStatusFromAttempt(status: RecordNotificationDeliveryAttemptCommand['status']) {
+  if (status === 'SENT') return 'SENT';
+  if (status === 'FAILED' || status === 'DEAD_LETTERED') return 'FAILED';
+  return undefined;
+}
 function assertTenant(context: RequestContext, tenantId: string) {
   if (context.tenantId !== tenantId) throw new Error('Cross-tenant write is not allowed.');
 }

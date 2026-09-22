@@ -39,23 +39,23 @@
 
 ## 6. Notification Delivery Foundation
 
-- [ ] 6.1 Implement provider-agnostic notification intent creation and delivery attempt recording, and verify tests cover sent, retryable failure and permanent failure states.
-- [ ] 6.2 Add a local/noop notification provider adapter for development and tests, and verify worker handler tests record delivery attempts without calling external services.
-- [ ] 6.3 Add rate-limit and retry handling for notification delivery jobs, and verify tests cover provider unavailable and rate-limited responses.
-- [ ] 6.4 Ensure notification status reads enforce tenant, branch and permission scope, and verify route/service tests cover cross-tenant and unauthorized access denial.
+- [x] 6.1 Implement provider-agnostic notification intent creation and delivery attempt recording, and verify tests cover sent, retryable failure and permanent failure states.
+- [x] 6.2 Add a local/noop notification provider adapter for development and tests, and verify worker handler tests record delivery attempts without calling external services.
+- [x] 6.3 Add rate-limit and retry handling for notification delivery jobs, and verify tests cover provider unavailable and rate-limited responses.
+- [x] 6.4 Ensure notification status reads enforce tenant, branch and permission scope, and verify route/service tests cover cross-tenant and unauthorized access denial.
 
 ## 7. Operational Failure UI And APIs
 
-- [ ] 7.1 Add read APIs for worker/outbox/job/notification failure summaries with stable error envelopes, and verify route handler tests cover filters, permissions and sanitized errors.
-- [ ] 7.2 Add data loading model for operational failures with healthy, empty, failed, loading, error and permission-denied states, and verify data tests cover branch-scoped results.
-- [ ] 7.3 Add a compact operational failure surface in the app shell or operations area with failed job/outbox/notification summaries and retry metadata, and verify component tests cover mobile, tablet, desktop and empty/failed states.
-- [ ] 7.4 Update navigation/central actions to expose operational failure status only to authorized operators, and verify navigation tests cover allowed and forbidden roles.
+- [x] 7.1 Add read APIs for worker/outbox/job/notification failure summaries with stable error envelopes, and verify route handler tests cover filters, permissions and sanitized errors.
+- [x] 7.2 Add data loading model for operational failures with healthy, empty, failed, loading, error and permission-denied states, and verify data tests cover branch-scoped results.
+- [x] 7.3 Add a compact operational failure surface in the app shell or operations area with failed job/outbox/notification summaries and retry metadata, and verify component tests cover mobile, tablet, desktop and empty/failed states.
+- [x] 7.4 Update navigation/central actions to expose operational failure status only to authorized operators, and verify navigation tests cover allowed and forbidden roles.
 
 ## 8. E2E And Validation
 
-- [ ] 8.1 Add focused integration/E2E coverage for `payment -> outbox event -> worker job -> succeeded notification/noop delivery` and verify it passes in the local test environment.
-- [ ] 8.2 Add focused integration/E2E coverage for `appointment reminder job -> provider unavailable -> retry/dead-letter -> failure visible to operator` and verify it passes.
-- [ ] 8.3 Run focused unit/API/component tests for contracts, outbox, notifications, payments, orders, scheduling, finance, worker runtime and operational failure UI, and verify the selected `npx vitest run` command passes.
-- [ ] 8.4 Run `npm run validate:worker` or equivalent migration validation and verify worker/outbox/notification schema remains valid.
-- [ ] 8.5 Run `openspec validate worker-outbox-notifications --strict` and verify the change remains valid after implementation task updates.
+- [x] 8.1 Add focused integration/E2E coverage for `payment -> outbox event -> worker job -> succeeded notification/noop delivery` and verify it passes in the local test environment.
+- [x] 8.2 Add focused integration/E2E coverage for `appointment reminder job -> provider unavailable -> retry/dead-letter -> failure visible to operator` and verify it passes.
+- [x] 8.3 Run focused unit/API/component tests for contracts, outbox, notifications, payments, orders, scheduling, finance, worker runtime and operational failure UI, and verify the selected `npx vitest run` command passes.
+- [x] 8.4 Run `npm run validate:worker` or equivalent migration validation and verify worker/outbox/notification schema remains valid.
+- [x] 8.5 Run `openspec validate worker-outbox-notifications --strict` and verify the change remains valid after implementation task updates.
 - [ ] 8.6 Run the full validation gate with `npm run validate` and verify format, lint, typecheck, unit tests and build all pass.

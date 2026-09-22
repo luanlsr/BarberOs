@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Activity,
   Bell,
   Boxes,
   Building2,
@@ -49,6 +50,7 @@ import { WorkspaceSwitcher } from './workspace-switcher';
 type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
 
 const icons = {
+  activity: Activity,
   layout: LayoutDashboard,
   calendar: CalendarDays,
   receipt: ReceiptText,

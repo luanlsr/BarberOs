@@ -124,8 +124,15 @@ describe('filterNavigation', () => {
   });
 
   it('models the four demo access profiles in role-aware navigation', () => {
-    expect(navFor('PLATFORM_MASTER', ['audit.read', 'settings.read'], [])).toEqual([
+    expect(
+      navFor(
+        'PLATFORM_MASTER',
+        ['audit.read', 'worker.failures.read', 'settings.read'],
+        ['worker.operations'],
+      ),
+    ).toEqual([
       '/master',
+      '/operacoes/worker',
       '/configuracoes',
       '/configuracoes/barbearia-filiais',
       '/configuracoes/seguranca',
@@ -147,10 +154,11 @@ describe('filterNavigation', () => {
           'finance.read',
           'commission.manage',
           'inventory.read',
+          'worker.failures.read',
           'settings.read',
           'memberships.read',
         ],
-        ['core.operations', 'finance', 'inventory'],
+        ['core.operations', 'finance', 'inventory', 'worker.operations'],
       ),
     ).toEqual([
       '/inicio',
@@ -163,6 +171,7 @@ describe('filterNavigation', () => {
       '/estoque',
       '/financeiro',
       '/caixa',
+      '/operacoes/worker',
       '/configuracoes',
       '/configuracoes/barbearia-filiais',
       '/configuracoes/usuarios-permissoes',
