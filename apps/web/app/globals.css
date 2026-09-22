@@ -8629,3 +8629,283 @@ html[data-theme='dark'] {
     border-radius: 18px;
   }
 }
+
+/* Hero without duplicated device image */
+.landing-page .landing-hero {
+  grid-template-columns: minmax(0, 900px);
+  justify-content: start;
+  min-height: min(760px, calc(100dvh - 76px));
+}
+
+.landing-page .landing-hero-copy {
+  max-width: 900px;
+}
+
+@media (max-width: 1120px) {
+  .landing-page .landing-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Role profile cards contrast */
+.landing-page .role-list span {
+  border-color: rgba(255, 47, 139, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 47, 139, 0.16), rgba(255, 255, 255, 0.055)),
+    rgba(12, 9, 16, 0.88);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+
+.landing-page .role-list span:nth-child(even) {
+  background:
+    linear-gradient(135deg, rgba(176, 124, 255, 0.14), rgba(255, 47, 139, 0.08)),
+    rgba(12, 9, 16, 0.88);
+}
+
+.landing-page .role-list svg {
+  color: #ff4aa0;
+}
+
+/* Landing polish: consistent dark/pink contrast and spacing */
+.landing-page {
+  --landing-bg: #07050a;
+  --landing-panel: #130812;
+  --landing-panel-2: #1a0c19;
+  --landing-ink: #fff7fb;
+  --landing-muted: #d8c7d2;
+  --landing-border: rgba(255, 49, 139, 0.26);
+  --landing-copper: #ff2f8b;
+  --landing-copper-strong: #ff63ad;
+  background:
+    radial-gradient(circle at 50% -8%, rgba(255, 47, 139, 0.28), transparent 34%),
+    radial-gradient(circle at 0% 24%, rgba(255, 47, 139, 0.16), transparent 28%),
+    radial-gradient(circle at 100% 46%, rgba(176, 124, 255, 0.14), transparent 30%), #07050a;
+}
+
+.landing-header {
+  background: rgba(7, 5, 10, 0.86);
+}
+
+.landing-hero {
+  grid-template-columns: minmax(0, 980px) !important;
+  justify-content: center !important;
+  min-height: auto !important;
+  padding-block: clamp(72px, 10vw, 132px) clamp(46px, 7vw, 90px) !important;
+  text-align: center;
+}
+
+.landing-hero-copy {
+  max-width: 980px !important;
+  margin-inline: auto;
+}
+
+.landing-hero-copy h1 {
+  max-width: 980px;
+  margin-inline: auto;
+  font-size: clamp(44px, 7vw, 86px);
+  letter-spacing: 0;
+}
+
+.landing-lead {
+  max-width: 760px;
+  margin-inline: auto;
+  color: rgba(255, 247, 251, 0.84) !important;
+}
+
+.landing-cta-row,
+.landing-trust-row {
+  justify-content: center;
+}
+
+.landing-section {
+  padding-block: clamp(42px, 7vw, 84px);
+}
+
+.landing-section-heading {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.landing-section-heading.wide {
+  max-width: 860px;
+}
+
+.landing-section-heading h2,
+.landing-problem-section h2,
+.landing-security h2,
+.landing-final-cta h2,
+.landing-operator-copy h2,
+.landing-finance-copy h2,
+.landing-benefit-story h3,
+.landing-screen-card h3,
+.landing-plan-card h3,
+.landing-workflow h3,
+.chart-card strong,
+.landing-device-card strong {
+  color: #fff7fb !important;
+}
+
+.landing-section-heading p,
+.landing-problem-section p,
+.landing-security p,
+.landing-final-cta p,
+.landing-faq-list p,
+.landing-plan-card p,
+.landing-plan-card li,
+.landing-benefit-story p,
+.landing-benefit-strip span,
+.landing-device-card p,
+.chart-card span,
+.chart-card p,
+.landing-finance-copy p:not(.eyebrow),
+.landing-finance-card-grid p,
+.role-list span,
+.landing-inline-cta p {
+  color: var(--landing-muted) !important;
+}
+
+.landing-benefit-strip article,
+.landing-benefit-story,
+.landing-screen-card,
+.landing-plan-card,
+.landing-problem-list,
+.landing-security,
+.landing-final-cta,
+.landing-faq-list details,
+.landing-inline-cta,
+.landing-workflow article,
+.landing-device-card,
+.landing-chart-board,
+.chart-card,
+.landing-finance-metrics span,
+.landing-finance-card-grid article {
+  border-color: rgba(255, 49, 139, 0.24) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 49, 139, 0.075), rgba(255, 255, 255, 0.025)),
+    rgba(19, 8, 18, 0.92) !important;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34) !important;
+}
+
+.landing-benefit-strip article,
+.landing-workflow article,
+.landing-finance-card-grid article,
+.landing-benefit-story,
+.landing-screen-card,
+.chart-card {
+  backdrop-filter: blur(12px);
+}
+
+.landing-feature-visual {
+  width: min(100%, 1040px);
+  margin: 28px auto 22px;
+  border-color: rgba(255, 49, 139, 0.34) !important;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% 24%, rgba(255, 49, 139, 0.16), transparent 28%),
+    rgba(19, 8, 18, 0.86) !important;
+  box-shadow: 0 28px 76px rgba(0, 0, 0, 0.38) !important;
+}
+
+.landing-feature-visual img {
+  width: 100%;
+  max-height: 560px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.landing-benefit-story-grid,
+.landing-screen-grid,
+.landing-workflow-grid,
+.landing-pricing-grid {
+  margin-top: 22px;
+}
+
+.landing-problem-section,
+.landing-dashboard-story,
+.landing-operator-section,
+.landing-finance-focus,
+.landing-security {
+  gap: clamp(20px, 4vw, 38px);
+}
+
+.landing-finance-focus {
+  border: 1px solid rgba(255, 49, 139, 0.22);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 5% 0%, rgba(255, 49, 139, 0.16), transparent 34%),
+    rgba(19, 8, 18, 0.62) !important;
+  padding: clamp(24px, 5vw, 48px) clamp(18px, 4vw, 42px);
+}
+
+.landing-device-card {
+  min-height: 300px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 49, 139, 0.16), transparent 36%),
+    rgba(19, 8, 18, 0.92) !important;
+}
+
+.landing-page .role-list span {
+  border-color: rgba(255, 49, 139, 0.3) !important;
+  background: rgba(255, 49, 139, 0.1) !important;
+  color: rgba(255, 247, 251, 0.88) !important;
+}
+
+.landing-page .role-list span:nth-child(even) {
+  background: rgba(176, 124, 255, 0.1) !important;
+}
+
+.landing-inline-cta.colorful,
+.landing-final-cta {
+  background:
+    linear-gradient(135deg, rgba(255, 49, 139, 0.17), rgba(176, 124, 255, 0.08)),
+    rgba(19, 8, 18, 0.9) !important;
+}
+
+.landing-plan-card.is-featured {
+  background:
+    linear-gradient(180deg, rgba(255, 49, 139, 0.18), rgba(255, 255, 255, 0.035)),
+    rgba(19, 8, 18, 0.96) !important;
+}
+
+.landing-plan-price strong,
+.landing-finance-metrics strong {
+  color: #ff63ad !important;
+}
+
+.screen-lines p {
+  background: rgba(255, 255, 255, 0.055) !important;
+  color: rgba(255, 247, 251, 0.82) !important;
+}
+
+.screen-card-header span,
+.landing-benefit-story li,
+.landing-operation-ribbon span {
+  background: rgba(255, 49, 139, 0.11) !important;
+  color: #ffd7e9 !important;
+}
+
+.landing-footer {
+  border-top: 1px solid rgba(255, 49, 139, 0.18);
+}
+
+@media (max-width: 680px) {
+  .landing-hero {
+    padding-block: 46px 40px !important;
+    text-align: left;
+  }
+
+  .landing-section-heading {
+    text-align: left;
+  }
+
+  .landing-cta-row,
+  .landing-trust-row {
+    justify-content: flex-start;
+  }
+
+  .landing-feature-visual img {
+    max-height: none;
+    object-fit: contain;
+  }
+}

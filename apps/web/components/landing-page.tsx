@@ -273,7 +273,6 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
             </span>
           </div>
         </div>
-        <ProductMockup />
       </section>
 
       <section className="landing-benefit-strip" aria-label="Beneficios rápidos">
@@ -609,23 +608,6 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
   );
 }
 
-function ProductMockup() {
-  return (
-    <aside
-      className="landing-product-mockup"
-      aria-label="Prévia visual do BarberOS em celular e notebook"
-    >
-      <Image
-        src="/landing/barberos-devices.png"
-        alt="BarberOS exibido em notebook e celular com agenda, comandas, estoque, caixa e financeiro"
-        width={1152}
-        height={1536}
-        priority
-        sizes="(max-width: 1120px) 100vw, 54vw"
-      />
-    </aside>
-  );
-}
 function ProductScreen({ screen }: Readonly<{ screen: (typeof productScreens)[number] }>) {
   return (
     <article className={`landing-screen-card tone-${screen.color}`}>
