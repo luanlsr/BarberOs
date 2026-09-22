@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   Bell,
@@ -10,50 +11,29 @@ import {
   Users,
 } from 'lucide-react';
 import { getSessionContext } from '../../lib/auth/server';
+import {
+  canAccessSettingsSection,
+  settingsSections,
+  type SettingsSectionIcon,
+} from '../../lib/settings-sections';
 
-const settingsSections = [
-  {
-    title: 'Barbearia e filiais',
-    description: 'Dados da empresa, unidades, horários padrão e contexto operacional.',
-    icon: Building2,
-    status: 'Base configurada',
-  },
-  {
-    title: 'Usuários e permissões',
-    description: 'Convites, papéis, escopo por filial e acessos do time.',
-    icon: Users,
-    status: 'RBAC ativo',
-  },
-  {
-    title: 'Segurança',
-    description: 'Sessões, políticas de acesso, auditoria e proteção de dados.',
-    icon: ShieldCheck,
-    status: 'Obrigatório',
-  },
-  {
-    title: 'Integrações',
-    description: 'Supabase, WhatsApp, pagamentos, agenda externa e webhooks.',
-    icon: Link2,
-    status: 'Em preparação',
-  },
-  {
-    title: 'Plano e cobrança',
-    description: 'Assinatura SaaS, limites, entitlements e notas fiscais.',
-    icon: CreditCard,
-    status: 'Admin',
-  },
-  {
-    title: 'Preferências',
-    description: 'Tema, notificações, idioma, formato monetário e experiência.',
-    icon: Palette,
-    status: 'Por usuário',
-  },
-];
+const sectionIcons = {
+  building: Building2,
+  users: Users,
+  shield: ShieldCheck,
+  link: Link2,
+  'credit-card': CreditCard,
+  palette: Palette,
+} satisfies Record<SettingsSectionIcon, typeof Building2>;
 
 export default async function ConfiguracoesPage() {
   const session = await getSessionContext();
   if (!session) redirect('/login');
   if (!session.permissions.includes('settings.read')) redirect('/forbidden');
+
+  const visibleSections = settingsSections.filter((section) =>
+    canAccessSettingsSection(section, session),
+  );
 
   return (
     <div className="settings-page">
@@ -87,10 +67,14 @@ export default async function ConfiguracoesPage() {
       </section>
 
       <section className="settings-grid" aria-label="Áreas de configuração">
-        {settingsSections.map((section) => {
-          const Icon = section.icon;
+        {visibleSections.map((section) => {
+          const Icon = sectionIcons[section.icon];
           return (
-            <article className="settings-card" key={section.title}>
+            <Link
+              className="settings-card settings-card-link"
+              href={section.href}
+              key={section.key}
+            >
               <div className="settings-card-icon">
                 <Icon size={20} aria-hidden="true" />
               </div>
@@ -99,7 +83,7 @@ export default async function ConfiguracoesPage() {
                 <p>{section.description}</p>
               </div>
               <span>{section.status}</span>
-            </article>
+            </Link>
           );
         })}
       </section>

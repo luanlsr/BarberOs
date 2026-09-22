@@ -45,7 +45,7 @@ describe('filterNavigation', () => {
     );
 
     expect(visible.map((item) => item.href)).toEqual([
-      '/',
+      '/inicio',
       '/agenda',
       '/clientes',
       '/equipe',
@@ -92,7 +92,7 @@ describe('filterNavigation', () => {
     );
     const manager = navFor('MANAGER', ['finance.read', 'finance.write'], ['finance']);
 
-    expect(owner).toEqual(['/', '/financeiro', '/caixa']);
+    expect(owner).toEqual(['/inicio', '/financeiro', '/caixa']);
     expect(finance).toEqual(['/financeiro', '/caixa']);
     expect(manager).toEqual(['/financeiro']);
   });
@@ -127,6 +127,11 @@ describe('filterNavigation', () => {
     expect(navFor('PLATFORM_MASTER', ['audit.read', 'settings.read'], [])).toEqual([
       '/master',
       '/configuracoes',
+      '/configuracoes/barbearia-filiais',
+      '/configuracoes/seguranca',
+      '/configuracoes/integracoes',
+      '/configuracoes/plano-cobranca',
+      '/configuracoes/preferencias',
     ]);
 
     expect(
@@ -143,11 +148,12 @@ describe('filterNavigation', () => {
           'commission.manage',
           'inventory.read',
           'settings.read',
+          'memberships.read',
         ],
         ['core.operations', 'finance', 'inventory'],
       ),
     ).toEqual([
-      '/',
+      '/inicio',
       '/agenda',
       '/comandas',
       '/clientes',
@@ -158,6 +164,12 @@ describe('filterNavigation', () => {
       '/financeiro',
       '/caixa',
       '/configuracoes',
+      '/configuracoes/barbearia-filiais',
+      '/configuracoes/usuarios-permissoes',
+      '/configuracoes/seguranca',
+      '/configuracoes/integracoes',
+      '/configuracoes/plano-cobranca',
+      '/configuracoes/preferencias',
     ]);
 
     expect(
@@ -178,7 +190,7 @@ describe('filterNavigation', () => {
         ['core.operations', 'finance', 'inventory'],
       ),
     ).toEqual([
-      '/',
+      '/inicio',
       '/agenda',
       '/comandas',
       '/clientes',
@@ -204,7 +216,7 @@ describe('filterNavigation', () => {
         ['core.operations', 'finance'],
       ),
     ).toEqual([
-      '/',
+      '/inicio',
       '/agenda',
       '/comandas',
       '/clientes',

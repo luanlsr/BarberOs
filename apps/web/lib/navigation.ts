@@ -15,7 +15,12 @@ export type NavigationItem = {
     | 'wallet'
     | 'package'
     | 'boxes'
+    | 'building'
+    | 'credit-card'
+    | 'link'
     | 'more'
+    | 'palette'
+    | 'shield'
     | 'settings';
   permission: Permission;
   entitlement?: Entitlement;
@@ -169,6 +174,60 @@ export const navigationItems: NavigationItem[] = [
     label: 'Configurações',
     icon: 'settings',
     permission: 'settings.read',
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes/barbearia-filiais',
+    label: 'Barbearia e filiais',
+    icon: 'building',
+    permission: 'settings.read',
+    roles: ['OWNER', 'MANAGER', 'PLATFORM_MASTER'],
+    parentHref: '/configuracoes',
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes/usuarios-permissoes',
+    label: 'Usuários e permissões',
+    icon: 'users',
+    permission: 'memberships.read',
+    roles: ['OWNER', 'PLATFORM_MASTER'],
+    parentHref: '/configuracoes',
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes/seguranca',
+    label: 'Segurança',
+    icon: 'shield',
+    permission: 'settings.read',
+    roles: ['OWNER', 'MANAGER', 'PLATFORM_MASTER'],
+    parentHref: '/configuracoes',
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes/integracoes',
+    label: 'Integrações',
+    icon: 'link',
+    permission: 'settings.read',
+    roles: ['OWNER', 'PLATFORM_MASTER'],
+    parentHref: '/configuracoes',
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes/plano-cobranca',
+    label: 'Plano e cobrança',
+    icon: 'credit-card',
+    permission: 'settings.read',
+    roles: ['OWNER', 'PLATFORM_MASTER'],
+    parentHref: '/configuracoes',
+    group: 'Sistema',
+  },
+  {
+    href: '/configuracoes/preferencias',
+    label: 'Preferências',
+    icon: 'palette',
+    permission: 'settings.read',
+    roles: ['OWNER', 'MANAGER', 'PLATFORM_MASTER'],
+    parentHref: '/configuracoes',
     group: 'Sistema',
   },
 ];
