@@ -30,6 +30,9 @@ const serverEnvSchema = z
     REDIS_NAMESPACE: z.string().trim().min(1).max(80).default('barberos'),
     REDIS_TLS: z.enum(['true', 'false']).default('false'),
     AI_PORT: z.coerce.number().int().positive().default(8000),
+    ASAAS_API_KEY: optionalNonEmptyString,
+    ASAAS_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
+    ASAAS_WEBHOOK_TOKEN: optionalNonEmptyString,
   })
   .transform((value) => ({
     ...value,

@@ -8,7 +8,11 @@ function isPublicPath(pathname: string) {
   return (
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/checkout' ||
+    pathname.startsWith('/checkout/') ||
     pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/checkout') ||
+    pathname === '/api/webhooks/asaas' ||
     pathname === '/manifest.webmanifest' ||
     pathname === '/favicon.ico' ||
     pathname === '/icon.svg' ||

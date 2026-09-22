@@ -190,7 +190,7 @@ const faq = [
   ],
   [
     'Como funciona o pagamento?',
-    'A base de planos e assinaturas já existe. A etapa de checkout com Asaas deve ser conectada server-side antes de cobrar clientes reais.',
+    'O checkout usa a página hospedada do Asaas. O acesso ao BarberOS é criado após a confirmação do pagamento por webhook.',
   ],
   [
     'Meus dados ficam separados?',
@@ -209,7 +209,7 @@ const faq = [
 const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 
 export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPageProps>) {
-  const signupHref = withMarketingParams('/login?intent=signup', searchParams);
+  const signupHref = withMarketingParams('/checkout', searchParams);
   const demoHref = '#produto';
   const structuredData = buildStructuredData(plans);
 
@@ -653,7 +653,7 @@ function PlanCard({
   searchParams,
 }: Readonly<{ plan: PublicPlan; searchParams: LandingPageProps['searchParams'] }>) {
   const href = withMarketingParams(
-    `/login?intent=signup&plan=${encodeURIComponent(plan.code)}`,
+    `/checkout?plan=${encodeURIComponent(plan.code)}`,
     searchParams ?? {},
   );
   return (
