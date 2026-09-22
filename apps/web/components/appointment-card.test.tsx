@@ -59,8 +59,8 @@ describe('appointment agenda components', () => {
       <AppointmentDetailSurface detail={model.selectedAppointmentDetail} />,
     );
 
-    expect(html).toContain('Joao Pedro');
-    expect(html).toContain('Historico');
+    expect(html).toContain('João Pedro');
+    expect(html).toContain('Histórico');
     expect(html).toContain('Contato');
     expect(html).not.toContain('Cancelar');
     expect(html).not.toContain('Reagendar');

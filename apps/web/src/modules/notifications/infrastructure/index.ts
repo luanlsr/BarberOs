@@ -1,1 +1,1 @@
-export * from "./supabase-notification-repository";
+export * from './supabase-notification-repository';

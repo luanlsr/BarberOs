@@ -1,1 +1,1 @@
-export * from "./supabase-outbox-repository";
+export * from './supabase-outbox-repository';

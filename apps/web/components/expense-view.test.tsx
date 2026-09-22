@@ -27,7 +27,7 @@ describe('ExpenseView', () => {
     expect(html).toContain('Aluguel de outubro da Unidade Centro');
     expect(html).toContain('Honorarios contabeis de agosto');
     expect(html).toContain('Vence 10/09/2026');
-    expect(html).toContain('Mensal ate 01/12/2026');
+    expect(html).toContain('Mensal até 01/12/2026');
   });
 
   test('keeps expense forms and details in modals instead of inline drawers', () => {
@@ -35,7 +35,7 @@ describe('ExpenseView', () => {
       <ExpenseView model={getDevelopmentExpensesViewModel(developmentSession)} />,
     );
 
-    expect(html).toContain('aria-label="Acoes de despesas"');
+    expect(html).toContain('aria-label="Ações de despesas"');
     expect(html).toContain('Nova despesa');
     expect(html).toContain('Detalhes');
     expect(html).toContain('aria-label="Resumo da despesa"');
@@ -63,7 +63,7 @@ describe('ExpenseView', () => {
       />,
     );
 
-    expect(html).toContain('Nenhuma despesa encontrada para este periodo.');
+    expect(html).toContain('Nenhuma despesa encontrada para este período.');
     expect(html).toContain('Nova despesa');
     expect(html).not.toContain('Cadastrar despesa');
     expect(html).not.toContain('Energia da Unidade Centro');
@@ -90,7 +90,7 @@ describe('ExpenseView', () => {
     );
 
     expect(html).toContain('Falha ao carregar');
-    expect(html).toContain('Despesas locais indisponiveis.');
+    expect(html).toContain('Despesas locais indisponíveis.');
     expect(html).not.toContain('Energia da Unidade Centro');
   });
 
@@ -104,7 +104,7 @@ describe('ExpenseView', () => {
     );
 
     expect(html).toContain('Acesso restrito');
-    expect(html).toContain('Despesas indisponiveis');
+    expect(html).toContain('Despesas indisponíveis');
     expect(html).not.toContain('R$');
     expect(html).not.toContain('Aluguel');
   });

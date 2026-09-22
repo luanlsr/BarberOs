@@ -118,7 +118,7 @@ function groupNavigationItems(items: NavigationItem[]) {
   const treeItems = buildNavigationTree(items);
   const groups: Array<{ label: string; items: NavigationTreeItem[] }> = [];
   for (const item of treeItems) {
-    const label = item.group ?? 'Operacao';
+    const label = item.group ?? 'Operação';
     const group = groups.find((entry) => entry.label === label);
     if (group) group.items.push(item);
     else groups.push({ label, items: [item] });
@@ -193,7 +193,7 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
   if (!actions.length) {
     return (
       <button
-        aria-label="Nenhuma acao disponivel"
+        aria-label="Nenhuma ação disponível"
         className="mobile-add-button"
         disabled
         type="button"

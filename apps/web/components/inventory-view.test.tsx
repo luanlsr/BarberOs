@@ -99,7 +99,7 @@ describe('InventoryView', () => {
       sessionWith({ permissions: ['dashboard.read'], entitlements: ['core.operations'] }),
     );
     const deniedHtml = renderToStaticMarkup(<InventoryView model={denied} />);
-    expect(deniedHtml).toContain('Estoque indisponivel');
+    expect(deniedHtml).toContain('Estoque indisponível');
     expect(deniedHtml).not.toContain('Pomada Matte 80g');
   });
 });

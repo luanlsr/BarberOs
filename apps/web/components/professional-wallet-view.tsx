@@ -40,14 +40,14 @@ export function ProfessionalWalletView({
       {model.canViewElevated ? (
         <div className="wallet-elevated-banner">
           <ShieldCheck size={17} aria-hidden="true" />
-          <span>Visao elevada para gestao, restrita ao profissional selecionado.</span>
+          <span>Visão elevada para gestão, restrita ao profissional selecionado.</span>
         </div>
       ) : null}
       {model.state === 'offline' ? (
-        <WalletInlineState text="Modo offline: valores serao atualizados quando a conexao voltar." />
+        <WalletInlineState text="Modo offline: valores serão atualizados quando a conexão voltar." />
       ) : null}
       {model.state === 'empty' ? (
-        <WalletInlineState text="Nenhuma producao comissionada encontrada neste periodo." />
+        <WalletInlineState text="Nenhuma produção comissionada encontrada neste período." />
       ) : null}
 
       <section className="wallet-metric-grid" aria-label="Resumo da carteira">
@@ -57,7 +57,7 @@ export function ProfessionalWalletView({
       </section>
 
       <div className="wallet-workspace" aria-label="Carteira profissional responsiva">
-        <main className="wallet-primary" aria-label="Comissoes da carteira">
+        <main className="wallet-primary" aria-label="Comissões da carteira">
           <WalletAccruals accruals={model.accruals} />
         </main>
         <aside className="wallet-side" aria-label="Repasses da carteira">
@@ -73,7 +73,7 @@ function WalletActions({
   actions,
 }: Readonly<{ actions: readonly ProfessionalWalletActionModel[] }>) {
   return (
-    <div className="wallet-heading-actions" aria-label="Acoes da carteira">
+    <div className="wallet-heading-actions" aria-label="Ações da carteira">
       {actions.map((action) => (
         <button
           className="button button-secondary"
@@ -111,7 +111,7 @@ function WalletAccruals({
       <div className="wallet-panel-heading">
         <div>
           <p className="eyebrow">Producao</p>
-          <h2 id="wallet-accruals-title">Comissoes do periodo</h2>
+          <h2 id="wallet-accruals-title">Comissões do período</h2>
         </div>
         <ReceiptText size={20} aria-hidden="true" />
       </div>
@@ -135,7 +135,7 @@ function WalletAccruals({
           ))}
         </div>
       ) : (
-        <p className="wallet-muted">Sem comissoes para este periodo.</p>
+        <p className="wallet-muted">Sem comissões para este período.</p>
       )}
     </section>
   );
@@ -192,7 +192,7 @@ function WalletPayouts({
               <div>
                 <strong>{payout.periodLabel}</strong>
                 <span>
-                  {payout.paymentMethodLabel ?? 'Metodo nao informado'}
+                  {payout.paymentMethodLabel ?? 'Metodo não informado'}
                   {payout.paidAtLabel ? ' · Pago ' + payout.paidAtLabel : ''}
                 </span>
               </div>
@@ -206,7 +206,7 @@ function WalletPayouts({
           ))}
         </div>
       ) : (
-        <p className="wallet-muted">Nenhum repasse pago neste periodo.</p>
+        <p className="wallet-muted">Nenhum repasse pago neste período.</p>
       )}
     </section>
   );
@@ -232,7 +232,7 @@ function WalletBoundaryState({ model }: Readonly<{ model: ProfessionalWalletView
       )}
       <div>
         <p className="eyebrow">{denied ? 'Acesso restrito' : 'Falha ao carregar'}</p>
-        <h1 id="wallet-boundary-title">{denied ? 'Carteira indisponivel' : model.title}</h1>
+        <h1 id="wallet-boundary-title">{denied ? 'Carteira indisponível' : model.title}</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

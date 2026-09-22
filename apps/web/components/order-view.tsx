@@ -98,7 +98,7 @@ export function OrderView({
           ) : (
             <div className="order-empty-inline">
               <ClipboardList size={22} aria-hidden="true" />
-              <p>Esta Comanda ainda nao possui itens registrados.</p>
+              <p>Esta Comanda ainda não possui itens registrados.</p>
             </div>
           )}
         </section>
@@ -180,7 +180,7 @@ function OrderDetailActions({
       <button className="order-detail-button" type="button" onClick={() => onOpenDetail('history')}>
         <Clock3 size={18} aria-hidden="true" />
         <span>
-          <strong>Historico</strong>
+          <strong>Histórico</strong>
           <small>{order.history.length} eventos registrados</small>
         </span>
       </button>
@@ -216,7 +216,7 @@ function OrderDetailDialog({
     summary: {
       eyebrow: 'Resumo',
       title: 'Resumo e pagamento',
-      description: 'Totais, recebimentos e acao para quitar a Comanda.',
+      description: 'Totais, recebimentos e ação para quitar a Comanda.',
       content: <OrderTotals order={order} />,
     },
     notes: {
@@ -226,8 +226,8 @@ function OrderDetailDialog({
       content: <OrderNotes order={order} />,
     },
     history: {
-      eyebrow: 'Historico',
-      title: 'Historico da Comanda',
+      eyebrow: 'Histórico',
+      title: 'Histórico da Comanda',
       description: 'Linha do tempo de eventos e alteracoes relevantes.',
       content: <OrderHistory order={order} />,
     },
@@ -326,7 +326,7 @@ function OrderItemRow({
         </dl>
         {item.isCatalogProduct ? (
           <p className="order-item-note">
-            Produto vinculado ao catalogo. Estoque sera baixado apenas no pagamento.
+            Produto vinculado ao catálogo. Estoque será baixado apenas no pagamento.
           </p>
         ) : null}
         {item.notes ? <p className="order-item-note">{item.notes}</p> : null}
@@ -379,7 +379,7 @@ function OrderTotals({ order }: Readonly<{ order: ComandaDetailModel }>) {
       </dl>
       <dl className="order-type-breakdown" aria-label="Totais por tipo de item">
         <div>
-          <dt>Servicos</dt>
+          <dt>Serviços</dt>
           <dd>
             {order.itemBreakdown.serviceCount} - {order.itemBreakdown.serviceTotalLabel}
           </dd>
@@ -428,7 +428,7 @@ function OrderHistory({ order }: Readonly<{ order: ComandaDetailModel }>) {
   return (
     <section className="order-history-panel" aria-labelledby="order-history-title">
       <div className="order-section-title compact">
-        <h2 id="order-history-title">Historico</h2>
+        <h2 id="order-history-title">Histórico</h2>
         <span>{order.history.length}</span>
       </div>
       {order.history.length ? (
@@ -445,7 +445,7 @@ function OrderHistory({ order }: Readonly<{ order: ComandaDetailModel }>) {
           ))}
         </ol>
       ) : (
-        <p className="order-muted">Historico ainda nao registrado.</p>
+        <p className="order-muted">Histórico ainda não registrado.</p>
       )}
     </section>
   );
@@ -462,7 +462,7 @@ function OrderIndexWorkspace({
       <header className="orders-heading">
         <div className="orders-heading-main">
           <div>
-            <p className="eyebrow">Operacao</p>
+            <p className="eyebrow">Operação</p>
             <h1>Comandas</h1>
             <p className="subheading">{model.description}</p>
           </div>
@@ -510,7 +510,7 @@ function OrderIndexWorkspace({
         aria-labelledby="order-create-title"
       >
         <div>
-          <p className="eyebrow">Entrada rapida</p>
+          <p className="eyebrow">Entrada rápida</p>
           <h2 id="order-create-title">Abrir uma nova Comanda</h2>
           <p className="subheading">Crie um atendimento walk-in ou inicie a venda de um produto.</p>
         </div>
@@ -564,7 +564,7 @@ export function ProductSaleView({ model }: Readonly<{ model: ComandaViewModel }>
         <section className="product-sale-catalog panel" aria-labelledby="product-sale-title">
           <div className="panel-header">
             <div>
-              <h2 id="product-sale-title">Catalogo rapido</h2>
+              <h2 id="product-sale-title">Catálogo rápido</h2>
               <p className="section-caption">{picker.description}</p>
             </div>
             <Search size={18} aria-hidden="true" />
@@ -587,7 +587,7 @@ export function ProductSaleView({ model }: Readonly<{ model: ComandaViewModel }>
           ) : (
             <div className="order-empty-inline">
               <ReceiptText size={22} aria-hidden="true" />
-              <p>Nenhum produto disponivel para venda nesta unidade.</p>
+              <p>Nenhum produto disponível para venda nesta unidade.</p>
             </div>
           )}
         </section>
@@ -656,10 +656,10 @@ function OrderEmptyWorkspace({
         <section className="order-boundary-state" aria-labelledby="order-empty-title">
           <ClipboardList size={28} aria-hidden="true" />
           <div>
-            <p className="eyebrow">Operacao</p>
+            <p className="eyebrow">Operação</p>
             <h2 id="order-empty-title">Abra uma Comanda para continuar</h2>
             <p>
-              Use a agenda para fazer check-in ou crie um walk-in para atendimento sem horario
+              Use a agenda para fazer check-in ou crie um walk-in para atendimento sem horário
               marcado.
             </p>
             <Link className="button button-secondary" href="/agenda">
@@ -703,7 +703,7 @@ function OrderErrorState({ model }: Readonly<{ model: ComandaViewModel }>) {
       <AlertTriangle size={28} aria-hidden="true" />
       <div>
         <p className="eyebrow">Comandas</p>
-        <h1 id="order-error-title">Nao foi possivel abrir a Comanda</h1>
+        <h1 id="order-error-title">Não foi possível abrir a Comanda</h1>
         <p>{model.error?.message ?? model.description} Tente novamente em instantes.</p>
         <Link className="button button-secondary" href="/comandas">
           Tentar novamente

@@ -22,11 +22,11 @@ export function AuthGate() {
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message ?? 'Nao foi possivel autenticar.');
+        throw new Error(payload?.message ?? 'Não foi possível autenticar.');
       }
       window.location.assign('/');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Nao foi possivel autenticar.');
+      setError(cause instanceof Error ? cause.message : 'Não foi possível autenticar.');
     } finally {
       setPending(false);
     }
@@ -41,7 +41,7 @@ export function AuthGate() {
           </span>
           <div>
             <div className="brand-name">BarberOS</div>
-            <p className="brand-caption">operacao inteligente</p>
+            <p className="brand-caption">operação inteligente</p>
           </div>
         </div>
         <div>

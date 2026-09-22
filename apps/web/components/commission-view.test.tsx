@@ -23,19 +23,19 @@ describe('CommissionView', () => {
     expect(html).toContain('Secoes');
     expect(html).toContain('Tudo');
     expect(html).toContain('Regras');
-    expect(html).toContain('Comissoes');
+    expect(html).toContain('Comissões');
     expect(html).toContain('Repasses');
     expect(html).toContain('Ordem das regras');
-    expect(html).toContain('Item especifico');
-    expect(html).toContain('Servico ou produto');
+    expect(html).toContain('Item específico');
+    expect(html).toContain('Serviço ou produto');
     expect(html).toContain('Profissional');
     expect(html).toContain('Padrao');
     expect(html).toContain('Regras ativas');
     expect(html).toContain('Padrao da unidade');
-    expect(html).toContain('Servico especifico');
+    expect(html).toContain('Serviço específico');
     expect(html).toContain('Lucas Pereira');
     expect(html).toContain('Comanda #1002');
-    expect(html).toContain('Servico - 50%');
+    expect(html).toContain('Serviço - 50%');
   });
 
   test('renders payout actions as modal triggers with cash-payment warning', () => {
@@ -47,9 +47,9 @@ describe('CommissionView', () => {
       />,
     );
 
-    expect(html).toContain('aria-label="Acoes de comissoes"');
+    expect(html).toContain('aria-label="Ações de comissões"');
     expect(html).toContain('aria-label="Repasses"');
-    expect(html).toContain('Acoes por modal');
+    expect(html).toContain('Ações por modal');
     expect(html).toContain('Fechar repasse');
     expect(html).toContain('Pagamento em dinheiro exige caixa aberto da mesma unidade.');
     expect(html).toContain('Pagar repasse');
@@ -98,11 +98,11 @@ describe('CommissionView', () => {
       />,
     );
 
-    expect(html).toContain('Repasse pago com historico financeiro preservado.');
+    expect(html).toContain('Repasse pago com histórico financeiro preservado.');
     expect(html).toContain('Pago');
     expect(html).toContain('Carlos Andrade');
     expect(html).toContain('PIX');
-    expect(html).toContain('Repasse pago preserva historico; use correcao auditavel.');
+    expect(html).toContain('Repasse pago preserva histórico; use correcao auditável.');
     expect(html).toContain('Corrigir');
   });
 
@@ -129,7 +129,7 @@ describe('CommissionView', () => {
     );
 
     expect(html).toContain('Acesso restrito');
-    expect(html).toContain('Comissoes indisponiveis');
+    expect(html).toContain('Comissões indisponíveis');
     expect(html).not.toContain('R$');
     expect(html).not.toContain('Lucas Pereira');
   });

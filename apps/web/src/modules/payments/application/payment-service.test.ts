@@ -365,7 +365,7 @@ describe('PaymentApplicationService', () => {
       service.refundPayment(context, {
         paymentId: original.id,
         amountCents: 1_000,
-        reason: 'Sem permissao.',
+        reason: 'Sem permissão.',
         idempotencyKey: 'refund-denied-1',
       }),
     ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });

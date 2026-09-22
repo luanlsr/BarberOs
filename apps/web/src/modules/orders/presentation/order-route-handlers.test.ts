@@ -131,7 +131,7 @@ describe('order route handlers', () => {
       branchId: 'branch-1',
       customerId: 'customer-1',
       professionalId: 'professional-1',
-      notes: 'Cliente chegou sem horario.',
+      notes: 'Cliente chegou sem horário.',
     };
 
     const response = await handlers.POST(

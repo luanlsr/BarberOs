@@ -117,7 +117,7 @@ const developmentExpenseCategories: readonly ExpenseCategory[] = [
     tenantId: 'dev-tenant',
     branchId: 'dev-branch',
     name: 'Utilidades',
-    description: 'Energia e servicos essenciais',
+    description: 'Energia e serviços essenciais',
     status: 'ACTIVE',
     createdBy: 'dev-user',
     createdAt: '2026-09-01T12:00:00.000Z',
@@ -392,7 +392,7 @@ export function getDevelopmentFinanceViewModel(
     return buildFinanceModel(
       base,
       'permission-denied',
-      'Seu perfil nao pode visualizar o financeiro desta unidade.',
+      'Seu perfil não pode visualizar o financeiro desta unidade.',
       empty,
       [],
       emptyCommission(),
@@ -414,7 +414,7 @@ export function getDevelopmentFinanceViewModel(
     return buildFinanceModel(
       base,
       'offline',
-      'Voce esta offline. Acoes financeiras ficam pausadas ate a conexao voltar.',
+      'Você está offline. Ações financeiras ficam pausadas até a conexão voltar.',
       empty,
       [],
       emptyCommission(),
@@ -425,13 +425,13 @@ export function getDevelopmentFinanceViewModel(
     return buildFinanceModel(
       base,
       'error',
-      'Nao foi possivel carregar o financeiro local.',
+      'Não foi possível carregar o financeiro local.',
       empty,
       [],
       emptyCommission(),
       {
         code: 'FINANCE_VALIDATION_ERROR',
-        message: 'Financeiro local indisponivel.',
+        message: 'Financeiro local indisponível.',
         requestId: 'local-finance-error',
       },
     );
@@ -441,7 +441,7 @@ export function getDevelopmentFinanceViewModel(
     return buildFinanceModel(
       base,
       'empty',
-      'Nenhum lancamento financeiro neste periodo.',
+      'Nenhum lançamento financeiro neste período.',
       empty,
       [],
       emptyCommission(),
@@ -460,7 +460,7 @@ export function getDevelopmentFinanceViewModel(
   return buildFinanceModel(
     base,
     state,
-    'Resumo financeiro local com receitas, despesas, comissoes e repasses.',
+    'Resumo financeiro local com receitas, despesas, comissões e repasses.',
     summary,
     expenses.map(toExpenseModel),
     commission,
@@ -526,7 +526,7 @@ function actionsFor(
         ? state === 'loading'
           ? 'Carregamento em andamento.'
           : undefined
-        : 'Sem permissao para visualizar financeiro.',
+        : 'Sem permissão para visualizar financeiro.',
     },
     {
       id: 'finance.create-expense',
@@ -535,17 +535,17 @@ function actionsFor(
       reason: actionReason(
         base.canCreateExpense,
         stateReason,
-        'Sem permissao para criar despesas.',
+        'Sem permissão para criar despesas.',
       ),
     },
     {
       id: 'finance.manage-commissions',
-      label: 'Comissoes/Repasses',
+      label: 'Comissões/Repasses',
       enabled: base.canManageCommissions && mutationsAllowed,
       reason: actionReason(
         base.canManageCommissions,
         stateReason,
-        'Sem permissao para gerenciar comissoes.',
+        'Sem permissão para gerenciar comissões.',
       ),
     },
     {
@@ -568,19 +568,19 @@ function payoutActionReason(
   commission: FinanceCommissionModel,
   stateReason: string | undefined,
 ) {
-  if (!hasAccess) return 'Sem permissao para fechar repasses.';
+  if (!hasAccess) return 'Sem permissão para fechar repasses.';
   if (stateReason) return stateReason;
   if (state !== 'ready' || commission.openAccrualAmountCents === 0) {
-    return 'Nenhuma comissao aberta para fechar no periodo.';
+    return 'Nenhuma comissão aberta para fechar no período.';
   }
   return undefined;
 }
 
 function unavailableReasonForState(state: FinanceViewState) {
   if (state === 'loading') return 'Aguarde o carregamento.';
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue o financeiro antes de executar esta acao.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar financeiro.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue o financeiro antes de executar esta ação.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar financeiro.';
   return undefined;
 }
 function developmentStateFrom(state: string | undefined): DevelopmentFinanceOptions['state'] {
@@ -670,7 +670,7 @@ function metricsFor(summary: FinanceSummary): readonly FinanceMetricModel[] {
       tone: summary.resultAmountCents >= 0 ? 'success' : 'danger',
     },
     {
-      label: 'Comissoes abertas',
+      label: 'Comissões abertas',
       amountCents: summary.commissionLiabilityAmountCents,
       amountLabel: formatCurrency(summary.commissionLiabilityAmountCents),
       tone: summary.commissionLiabilityAmountCents > 0 ? 'warning' : 'neutral',

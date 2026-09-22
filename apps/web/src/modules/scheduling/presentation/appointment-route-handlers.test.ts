@@ -167,7 +167,7 @@ describe('appointment route handlers', () => {
     const body = {
       id: 'appointment-1',
       startsAt: '2026-09-07T13:00:00.000Z',
-      reason: 'Cliente pediu novo horario',
+      reason: 'Cliente pediu novo horário',
     };
 
     const response = await handlers.PATCH(

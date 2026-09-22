@@ -51,7 +51,7 @@ export function InventoryView({ model }: Readonly<{ model: InventoryViewModel }>
     <div className="inventory-page">
       <header className="inventory-heading">
         <div>
-          <p className="eyebrow">Gestao</p>
+          <p className="eyebrow">Gestão</p>
           <h1>{model.title}</h1>
           <p className="subheading">
             {model.branchName} · {model.description}
@@ -88,7 +88,7 @@ export function InventoryView({ model }: Readonly<{ model: InventoryViewModel }>
             onAdjust={(balance) => setModal({ type: 'adjust', balance })}
           />
         </main>
-        <aside className="inventory-side" aria-label="Historico de estoque">
+        <aside className="inventory-side" aria-label="Histórico de estoque">
           <MovementHistory
             movements={model.movements}
             onMovement={(movement) => setModal({ type: 'movement', movement })}
@@ -109,7 +109,7 @@ function InventoryActions({
   onAction: (action: InventoryActionModel) => void;
 }>) {
   return (
-    <div className="inventory-heading-actions" aria-label="Acoes de estoque">
+    <div className="inventory-heading-actions" aria-label="Ações de estoque">
       {actions.map((action) => (
         <button
           className={
@@ -256,7 +256,7 @@ function MovementHistory({
     >
       <div className="inventory-panel-heading">
         <div>
-          <p className="eyebrow">Historico</p>
+          <p className="eyebrow">Histórico</p>
           <h2 id="movement-history-title">Movimentacoes</h2>
         </div>
         <ClipboardList size={20} aria-hidden="true" />
@@ -298,7 +298,7 @@ function InventoryModalView({
   if (modal.type === 'movement') {
     return (
       <AppModal
-        description="Movimentacoes de estoque sao auditaveis e nao devem ser sobrescritas."
+        description="Movimentacoes de estoque sao auditáveis e não devem ser sobrescritas."
         eyebrow="Movimento"
         title={modal.movement.productName}
         onClose={onClose}
@@ -317,7 +317,7 @@ function InventoryModalView({
     modal.type === 'entry' ? 'produto selecionado' : (modal.balance?.productName ?? 'produto');
   return (
     <AppModal
-      description="Registre quantidade e motivo para preservar historico operacional."
+      description="Registre quantidade e motivo para preservar histórico operacional."
       eyebrow="Estoque"
       title={modalTitle(modal.type, productName)}
       onClose={onClose}
@@ -442,7 +442,7 @@ function InventoryBoundaryState({ model }: Readonly<{ model: InventoryViewModel 
       )}
       <div>
         <p className="eyebrow">{denied ? 'Acesso restrito' : 'Falha ao carregar'}</p>
-        <h1 id="inventory-boundary-title">{denied ? 'Estoque indisponivel' : model.title}</h1>
+        <h1 id="inventory-boundary-title">{denied ? 'Estoque indisponível' : model.title}</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

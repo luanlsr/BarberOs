@@ -62,7 +62,7 @@ export function ProductView({ model }: Readonly<{ model: ProductsViewModel }>) {
     <div className="products-page">
       <header className="products-heading">
         <div>
-          <p className="eyebrow">Gestao</p>
+          <p className="eyebrow">Gestão</p>
           <h1>{model.title}</h1>
           <p className="subheading">
             {model.branchName} · {model.description}
@@ -73,7 +73,7 @@ export function ProductView({ model }: Readonly<{ model: ProductsViewModel }>) {
 
       <ProductInlineStates model={model} />
 
-      <section className="inventory-summary-grid" aria-label="Resumo do catalogo">
+      <section className="inventory-summary-grid" aria-label="Resumo do catálogo">
         <SummaryTile label="Produtos" value={String(model.products.length)} tone="neutral" />
         <SummaryTile
           label="Ativos"
@@ -89,7 +89,7 @@ export function ProductView({ model }: Readonly<{ model: ProductsViewModel }>) {
         />
       </section>
 
-      <div className="inventory-workspace" aria-label="Catalogo de produtos responsivo">
+      <div className="inventory-workspace" aria-label="Catálogo de produtos responsivo">
         <main className="inventory-primary" aria-label="Lista de produtos">
           <ProductToolbar
             categories={model.categories}
@@ -125,7 +125,7 @@ function ProductActions({
   onAction: (action: ProductActionModel) => void;
 }>) {
   return (
-    <div className="inventory-heading-actions" aria-label="Acoes de produtos">
+    <div className="inventory-heading-actions" aria-label="Ações de produtos">
       {actions.map((action) => (
         <button
           className={
@@ -155,7 +155,7 @@ function iconForAction(id: ProductActionModel['id']) {
 
 function ProductInlineStates({ model }: Readonly<{ model: ProductsViewModel }>) {
   if (model.state === 'loading') {
-    return <InventoryInlineState tone="neutral" text="Carregando catalogo de produtos..." />;
+    return <InventoryInlineState tone="neutral" text="Carregando catálogo de produtos..." />;
   }
   if (model.state === 'offline') {
     return (
@@ -189,7 +189,7 @@ function ProductToolbar({
       <div className="inventory-panel-heading">
         <div>
           <p className="eyebrow">Filtros</p>
-          <h2 id="product-filters-title">Catalogo</h2>
+          <h2 id="product-filters-title">Catálogo</h2>
         </div>
         <Filter size={20} aria-hidden="true" />
       </div>
@@ -301,7 +301,7 @@ function ProductDetailSurface({
         <div className="inventory-empty-panel">
           <Box size={24} aria-hidden="true" />
           <h2 id="product-detail-empty-title">Selecione um produto</h2>
-          <p>Detalhes, estoque e historico aparecem aqui em telas maiores.</p>
+          <p>Detalhes, estoque e histórico aparecem aqui em telas maiores.</p>
         </div>
       </section>
     );
@@ -347,7 +347,7 @@ function ProductDetailContent({ product }: Readonly<{ product: ProductItemModel 
         <DetailTerm label="Minimo" value={String(product.minimumStockQuantity)} />
         <DetailTerm label="Politica" value={product.stockTrackingLabel} />
       </dl>
-      <ol className="inventory-timeline" aria-label="Historico do produto">
+      <ol className="inventory-timeline" aria-label="Histórico do produto">
         <li>
           <time>07/09 09:00</time>
           <div>
@@ -365,10 +365,10 @@ function ProductDetailContent({ product }: Readonly<{ product: ProductItemModel 
           </li>
         ) : (
           <li>
-            <time>Historico</time>
+            <time>Histórico</time>
             <div>
               <strong>Produto sem controle de estoque</strong>
-              <span>Vendas nao geram saldo fisico.</span>
+              <span>Vendas não geram saldo físico.</span>
             </div>
           </li>
         )}
@@ -398,7 +398,7 @@ function ProductModalView({
   if (modal.type === 'adjust') {
     return (
       <AppModal
-        description="Ajustes de estoque geram movimentacao auditavel."
+        description="Ajustes de estoque geram movimentacao auditável."
         eyebrow="Estoque"
         title={'Ajustar ' + modal.product.name}
         onClose={onClose}
@@ -409,7 +409,7 @@ function ProductModalView({
   }
   return (
     <AppModal
-      description="Metadados comerciais, politica de estoque e historico resumido."
+      description="Metadados comerciais, política de estoque e histórico resumido."
       eyebrow="Produto"
       title={modal.product.name}
       onClose={onClose}
@@ -562,7 +562,7 @@ function ProductBoundaryState({ model }: Readonly<{ model: ProductsViewModel }>)
       )}
       <div>
         <p className="eyebrow">{denied ? 'Acesso restrito' : 'Falha ao carregar'}</p>
-        <h1 id="product-boundary-title">{denied ? 'Produtos indisponiveis' : model.title}</h1>
+        <h1 id="product-boundary-title">{denied ? 'Produtos indisponíveis' : model.title}</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

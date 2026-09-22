@@ -135,7 +135,7 @@ const developmentProducts: readonly Product[] = [
     tenantId: 'dev-tenant',
     branchIds: ['dev-branch'],
     categoryId: 'dev-product-category-finishers',
-    name: 'Shampoo indisponivel',
+    name: 'Shampoo indisponível',
     status: 'INACTIVE',
     salePriceAmountCents: 2800,
     costAmountCents: 1100,
@@ -232,7 +232,7 @@ export function getDevelopmentProductPickerViewModel(
       commonProducts: [],
       error: {
         code: 'CATALOG_VALIDATION_ERROR',
-        message: 'Catalogo de produtos indisponivel.',
+        message: 'Catálogo de produtos indisponível.',
         requestId: 'local-product-picker-error',
       },
     };
@@ -245,7 +245,7 @@ export function getDevelopmentProductPickerViewModel(
       categories: [],
       products: [],
       commonProducts: [],
-      description: 'Voce esta offline. Produtos nao podem ser adicionados a Comanda.',
+      description: 'Você está offline. Produtos não podem ser adicionados à Comanda.',
     };
   }
 
@@ -287,7 +287,7 @@ function baseModel(
     hasBranch;
   return {
     title: 'Adicionar produto',
-    description: 'Catalogo rapido para itens de produto na Comanda.',
+    description: 'Catálogo rápido para itens de produto na Comanda.',
     branchId,
     branchName: branchNameFor(session, branchId),
     search,
@@ -328,9 +328,9 @@ function toPickerItem(product: Product, branchId: string): ProductPickerItemMode
 }
 
 function disabledReasonFor(product: Product, branchAvailable: boolean, hasStock: boolean) {
-  if (product.status !== 'ACTIVE') return 'Produto inativo no catalogo.';
-  if (!branchAvailable) return 'Produto indisponivel nesta unidade.';
-  if (!hasStock) return 'Produto sem estoque disponivel.';
+  if (product.status !== 'ACTIVE') return 'Produto inativo no catálogo.';
+  if (!branchAvailable) return 'Produto indisponível nesta unidade.';
+  if (!hasStock) return 'Produto sem estoque disponível.';
   return undefined;
 }
 
@@ -348,7 +348,7 @@ function categoriesFor(branchId: string) {
 function stockLabelFor(product: Product, balance: StockBalance | undefined) {
   if (product.stockTrackingPolicy === 'NOT_TRACKED') return 'Sem controle de estoque';
   if (!balance) return 'Sem saldo nesta unidade';
-  return `${balance.currentQuantity} disponiveis`;
+  return `${balance.currentQuantity} disponíveis`;
 }
 
 function stockToneFor(product: Product, balance: StockBalance | undefined): ProductPickerTone {

@@ -28,10 +28,10 @@ describe('agenda data loading layer', () => {
       professionalId: 'dev-professional-joao',
     });
 
-    expect(model.selectedProfessionalLabel).toBe('Joao Pereira');
+    expect(model.selectedProfessionalLabel).toBe('João Pereira');
     expect(model.appointments.map((appointment) => appointment.professionalName)).toEqual([
-      'Joao Pereira',
-      'Joao Pereira',
+      'João Pereira',
+      'João Pereira',
     ]);
   });
 
@@ -44,7 +44,7 @@ describe('agenda data loading layer', () => {
     expect(model.canCreateAppointment).toBe(false);
     expect(model.appointments).toEqual([]);
     expect(model.selectedAppointmentDetail).toBeUndefined();
-    expect(model.emptyMessage).toContain('permissao');
+    expect(model.emptyMessage).toContain('permissão');
   });
 
   test('limits professional role to its own operational column', () => {
@@ -60,7 +60,7 @@ describe('agenda data loading layer', () => {
       appointmentId: 'dev-appointment-1530',
     });
 
-    expect(model.selectedAppointmentDetail?.appointment.customerName).toBe('Joao Pedro');
+    expect(model.selectedAppointmentDetail?.appointment.customerName).toBe('João Pedro');
     expect(model.selectedAppointmentDetail?.history.map((item) => item.statusLabel)).toEqual([
       'Aguardando',
       'Confirmado',

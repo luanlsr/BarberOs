@@ -42,28 +42,28 @@ describe('OrderView', () => {
     const html = renderToStaticMarkup(<OrderView model={model} />);
 
     expect(html).toContain('Comanda #1001');
-    expect(html).toContain('Joao Silva');
+    expect(html).toContain('João Silva');
     expect(html).toContain('Carlos Andrade');
     expect(html).toContain('Agendamento');
     expect(html).toContain('Corte Masculino');
     expect(html).toContain('Pomada matte');
-    expect(html).toContain('Produto de catalogo');
-    expect(html).toContain('Estoque sera baixado apenas no pagamento.');
+    expect(html).toContain('Produto de catálogo');
+    expect(html).toContain('Estoque será baixado apenas no pagamento.');
     expect(html).toContain('Resumo e pagamento');
     expect(html).toContain('Observacoes');
-    expect(html).toContain('Historico');
+    expect(html).toContain('Histórico');
     expect(html).not.toContain('Subtotal');
     expect(html).not.toContain('Descontos');
     expect(html).not.toContain('Cliente pediu acabamento');
     expect(html).toContain('Adicionar item');
-    expect(html).toContain('Servicos, produtos e ajustes manuais abrem em modal');
+    expect(html).toContain('Serviços, produtos e ajustes manuais abrem em modal');
     expect(html).not.toContain('Agua mineral');
     expect(html).toContain('Editar item');
     expect(html).toContain('Remover');
     expect(html).toContain('Nova Comanda');
     expect(html).toContain('Abra uma Comanda sem agendamento usando consumidor avulso');
     expect(html).not.toContain('Consumidor avulso');
-    expect(html).not.toContain('Cadastro rapido');
+    expect(html).not.toContain('Cadastro rápido');
   });
 
   test('renders product catalog controls and disabled suggestions inside the add item modal', () => {
@@ -74,14 +74,14 @@ describe('OrderView', () => {
     const dialogText = container.querySelector('[role="dialog"]')?.textContent ?? '';
 
     expect(dialogText).toContain('Pomada matte');
-    expect(dialogText).toContain('Produto de catalogo');
-    expect(dialogText).toContain('Catalogo ativo nesta unidade.');
-    expect(dialogText).toContain('Shampoo indisponivel');
-    expect(dialogText).toContain('Indisponivel para esta filial');
+    expect(dialogText).toContain('Produto de catálogo');
+    expect(dialogText).toContain('Catálogo ativo nesta unidade.');
+    expect(dialogText).toContain('Shampoo indisponível');
+    expect(dialogText).toContain('Indisponível para esta filial');
 
     const disabledSuggestion = Array.from(
       container.querySelectorAll<HTMLButtonElement>('.order-suggestion-button'),
-    ).find((button) => button.textContent?.includes('Shampoo indisponivel'));
+    ).find((button) => button.textContent?.includes('Shampoo indisponível'));
 
     expect(disabledSuggestion?.disabled).toBe(true);
   });
@@ -124,7 +124,7 @@ describe('OrderView', () => {
       />,
     );
     expect(offline).toContain('Resumo e pagamento');
-    expect(offline).not.toContain('Pagamentos exigem conexao ativa.');
+    expect(offline).not.toContain('Pagamentos exigem conexão ativa.');
   });
 
   test('opens Comanda detail sections in modals instead of lateral panels', () => {
@@ -156,7 +156,7 @@ describe('OrderView', () => {
     expect(html).toContain('Abra uma Comanda sem agendamento usando consumidor avulso');
     expect(html).not.toContain('Consumidor avulso');
     expect(html).not.toContain('Cliente existente');
-    expect(html).not.toContain('Cadastro rapido');
+    expect(html).not.toContain('Cadastro rápido');
     expect(html).toContain('Abrir walk-in');
   });
 
@@ -164,7 +164,7 @@ describe('OrderView', () => {
     const model = getDevelopmentComandaViewModel(developmentSession, { state: 'error' });
     const html = renderToStaticMarkup(<OrderView model={model} />);
 
-    expect(html).toContain('Nao foi possivel abrir a Comanda');
+    expect(html).toContain('Não foi possível abrir a Comanda');
     expect(html).toContain('Tentar novamente');
     expect(html).not.toContain('dev-tenant');
   });

@@ -44,7 +44,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
       setSubmitState({
         type: 'error',
         code: 'CORE_PERMISSION_DENIED',
-        message: 'Seu perfil nao pode criar agendamentos nesta unidade.',
+        message: 'Seu perfil não pode criar agendamentos nesta unidade.',
         requestId: 'local-permission-denied',
       });
       return;
@@ -54,7 +54,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
       setSubmitState({
         type: 'error',
         code: 'CORE_PERMISSION_DENIED',
-        message: 'Seu perfil nao pode criar clientes rapidamente.',
+        message: 'Seu perfil não pode criar clientes rapidamente.',
         requestId: 'local-customer-permission-denied',
       });
       return;
@@ -64,7 +64,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
       setSubmitState({
         type: 'error',
         code: 'CORE_VALIDATION_ERROR',
-        message: 'Informe nome e telefone para criar o cliente rapido.',
+        message: 'Informe nome e telefone para criar o cliente rápido.',
         requestId: 'local-validation-error',
       });
       return;
@@ -94,7 +94,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
       setSubmitState({
         type: 'error',
         code: 'CORE_VALIDATION_ERROR',
-        message: 'Selecione servico, profissional e horario.',
+        message: 'Selecione serviço, profissional e horário.',
         requestId: 'local-selection-error',
       });
       return;
@@ -104,7 +104,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
       setSubmitState({
         type: 'error',
         code: 'APPOINTMENT_CONFLICT',
-        message: `Horario ocupado por ${conflict.customerName}. Escolha outro horario ou profissional.`,
+        message: `Horario ocupado por ${conflict.customerName}. Escolha outro horário ou profissional.`,
         requestId: `local-conflict-${professionalId}-${timeLabel}`,
       });
       return;
@@ -146,7 +146,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         <div>
           <p className="eyebrow">Criacao operacional</p>
           <h2 id="new-appointment-title">Novo agendamento</h2>
-          <p>Cliente, servico, profissional, data e horario em um fluxo rapido.</p>
+          <p>Cliente, serviço, profissional, data e horário em um fluxo rápido.</p>
         </div>
         <CalendarPlus size={22} aria-hidden="true" />
       </header>
@@ -213,7 +213,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
 
         <div className="new-appointment-inline-fields">
           <label>
-            <span>Servico</span>
+            <span>Serviço</span>
             <select value={serviceId} onChange={(event) => setServiceId(event.target.value)}>
               {model.services.map((service) => (
                 <option key={service.id} value={service.id}>
@@ -304,7 +304,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         <div className="new-appointment-footer">
           <span>
             <UserPlus size={15} aria-hidden="true" />
-            Cliente rapido {model.canCreateCustomer ? 'habilitado' : 'bloqueado'}
+            Cliente rápido {model.canCreateCustomer ? 'habilitado' : 'bloqueado'}
           </span>
           <Button disabled={!model.canCreateAppointment} type="submit">
             Criar agendamento

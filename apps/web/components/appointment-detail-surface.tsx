@@ -27,7 +27,7 @@ export function AppointmentDetailSurface({ detail }: AppointmentDetailSurfacePro
         <div className="appointment-detail-empty">
           <CalendarClock size={24} aria-hidden="true" />
           <h2 id="appointment-detail-empty-title">Selecione um agendamento</h2>
-          <p>Os detalhes aparecem aqui quando houver um agendamento visivel na agenda.</p>
+          <p>Os detalhes aparecem aqui quando houver um agendamento visível na agenda.</p>
         </div>
       </aside>
     );
@@ -87,7 +87,7 @@ export function AppointmentDetailSurface({ detail }: AppointmentDetailSurfacePro
 
       <section className="appointment-detail-section" aria-labelledby="appointment-actions-title">
         <div className="appointment-detail-section-title">
-          <h3 id="appointment-actions-title">Acoes permitidas</h3>
+          <h3 id="appointment-actions-title">Ações permitidas</h3>
           <span>{detail.actions.length}</span>
         </div>
         {detail.actions.length ? (
@@ -98,13 +98,13 @@ export function AppointmentDetailSurface({ detail }: AppointmentDetailSurfacePro
           </div>
         ) : (
           <p className="appointment-detail-muted">
-            Seu perfil pode consultar este agendamento, mas nao possui acoes operacionais para ele.
+            Seu perfil pode consultar este agendamento, mas não possui ações operacionais para ele.
           </p>
         )}
       </section>
 
       <section className="appointment-detail-section" aria-labelledby="appointment-history-title">
-        <h3 id="appointment-history-title">Historico</h3>
+        <h3 id="appointment-history-title">Histórico</h3>
         <ol className="appointment-history-list">
           {detail.history.map((item) => (
             <li key={item.id}>

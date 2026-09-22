@@ -23,14 +23,14 @@ describe('Commission data loading layer', () => {
     expect(model.periodLabel).toBe('01/09/2026 - 30/09/2026');
     expect(model.canRead).toBe(true);
     expect(model.canManage).toBe(true);
-    expect(model.rules.map((rule) => rule.scopeLabel)).toEqual(['Padrao', 'Servico']);
+    expect(model.rules.map((rule) => rule.scopeLabel)).toEqual(['Padrao', 'Serviço']);
     expect(model.openAccruals).toHaveLength(1);
     expect(model.openAccruals[0]).toMatchObject({
       professionalName: 'Lucas Pereira',
       orderLabel: 'Comanda #1002',
       commissionAmountCents: 4_250,
       statusLabel: 'Aberta',
-      ruleSnapshotLabel: 'Servico - 50%',
+      ruleSnapshotLabel: 'Serviço - 50%',
     });
     expect(model.totals).toMatchObject({
       openAccrualAmountCents: 4_250,
@@ -68,7 +68,7 @@ describe('Commission data loading layer', () => {
     });
     expect(action(model, 'commissions.close-payout')).toMatchObject({
       enabled: false,
-      reason: 'Nenhuma comissao aberta para fechar.',
+      reason: 'Nenhuma comissão aberta para fechar.',
     });
   });
 
@@ -117,7 +117,7 @@ describe('Commission data loading layer', () => {
       paymentMethodLabel: 'PIX',
       canPay: false,
       canCorrect: true,
-      unavailableReason: 'Repasse pago aceita apenas correcao auditavel.',
+      unavailableReason: 'Repasse pago aceita apenas correcao auditável.',
     });
     expect(model.totals).toMatchObject({
       settledAccrualAmountCents: 3_500,
@@ -139,16 +139,16 @@ describe('Commission data loading layer', () => {
     expect(action(offline, 'commissions.refresh').enabled).toBe(true);
     expect(action(offline, 'commissions.close-payout')).toMatchObject({
       enabled: false,
-      reason: 'Disponivel quando a conexao voltar.',
+      reason: 'Disponivel quando a conexão voltar.',
     });
     expect(error.error).toEqual({
       code: 'COMMISSION_VALIDATION_ERROR',
-      message: 'Comissoes locais indisponiveis.',
+      message: 'Comissões locais indisponíveis.',
       requestId: 'local-commissions-error',
     });
     expect(action(error, 'commissions.create-rule')).toMatchObject({
       enabled: false,
-      reason: 'Recarregue comissoes antes de executar esta acao.',
+      reason: 'Recarregue comissões antes de executar esta ação.',
     });
   });
 
@@ -166,7 +166,7 @@ describe('Commission data loading layer', () => {
     expect(model.totals.accrualCount).toBe(0);
     expect(model.allowedActions.every((item) => item.enabled === false)).toBe(true);
     expect(action(model, 'commissions.refresh').reason).toBe(
-      'Sem permissao para visualizar comissoes.',
+      'Sem permissão para visualizar comissões.',
     );
   });
 });

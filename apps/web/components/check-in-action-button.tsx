@@ -67,7 +67,7 @@ export function CheckInActionButton({
         setState({
           type: 'error',
           code: payload?.error?.code ?? 'HTTP_' + response.status,
-          message: payload?.error?.message ?? 'Nao conseguimos fazer check-in agora.',
+          message: payload?.error?.message ?? 'Não conseguimos fazer check-in agora.',
           requestId: payload?.error?.requestId ?? requestId,
         });
         return;
@@ -78,7 +78,7 @@ export function CheckInActionButton({
         setState({
           type: 'error',
           code: 'ORDER_NOT_RETURNED',
-          message: 'Check-in concluido, mas a Comanda nao foi retornada.',
+          message: 'Check-in concluido, mas a Comanda não foi retornada.',
           requestId,
         });
         return;
@@ -89,7 +89,7 @@ export function CheckInActionButton({
       setState({
         type: 'error',
         code: 'NETWORK_ERROR',
-        message: 'Nao conseguimos conectar. Tente novamente.',
+        message: 'Não conseguimos conectar. Tente novamente.',
         requestId,
       });
     }
@@ -114,7 +114,7 @@ export function CheckInActionButton({
       </button>
       {!online ? (
         <p className="check-in-action-feedback" id={stateId} role="status">
-          Check-in precisa de conexao.
+          Check-in precisa de conexão.
         </p>
       ) : null}
       {state.type === 'error' ? (

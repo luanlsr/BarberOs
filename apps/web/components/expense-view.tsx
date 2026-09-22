@@ -95,7 +95,7 @@ export function ExpenseView({ model }: Readonly<{ model: ExpensesViewModel }>) {
       ) : null}
 
       {model.state === 'empty' ? (
-        <ExpenseInlineState tone="neutral" text="Nenhuma despesa encontrada para este periodo." />
+        <ExpenseInlineState tone="neutral" text="Nenhuma despesa encontrada para este período." />
       ) : null}
 
       <section className="expenses-totals-grid" aria-label="Resumo de despesas">
@@ -138,7 +138,7 @@ function ExpenseActions({
   onAction: (action: ExpenseActionModel) => void;
 }>) {
   return (
-    <div className="expenses-heading-actions" aria-label="Acoes de despesas">
+    <div className="expenses-heading-actions" aria-label="Ações de despesas">
       {actions.map((action) => (
         <button
           className={
@@ -270,7 +270,7 @@ function ExpenseRow({
         <div className="expenses-row-title">
           <div>
             <strong>{expense.description}</strong>
-            <span>{expense.vendorName ?? 'Fornecedor nao informado'}</span>
+            <span>{expense.vendorName ?? 'Fornecedor não informado'}</span>
           </div>
           <StatusBadge variant={statusBadgeVariant(expense.statusTone)}>
             {expense.statusLabel}
@@ -357,7 +357,7 @@ function ExpenseModal({
   if (modal.type === 'pay') {
     return (
       <AppModal
-        description="Confirme o metodo antes de gerar o movimento financeiro auditavel."
+        description="Confirme o método antes de gerar o movimento financeiro auditável."
         eyebrow="Pagamento"
         title={'Pagar ' + modal.expense.description}
         onClose={onClose}
@@ -368,7 +368,7 @@ function ExpenseModal({
   }
   return (
     <AppModal
-      description="O cancelamento preserva historico e bloqueia novas alteracoes diretas nesta despesa."
+      description="O cancelamento preserva histórico e bloqueia novas alteracoes diretas nesta despesa."
       eyebrow="Confirmacao"
       title={'Cancelar ' + modal.expense.description + '?'}
       onClose={onClose}
@@ -439,7 +439,7 @@ function ExpenseFormContent({ model }: Readonly<{ model: ExpensesViewModel }>) {
           </select>
         </label>
         <label>
-          Descricao
+          Descrição
           <input maxLength={160} placeholder="Ex.: Energia da unidade" />
         </label>
         <label>
@@ -497,7 +497,7 @@ function ExpenseFormContent({ model }: Readonly<{ model: ExpensesViewModel }>) {
 function ExpenseDetails({ expense }: Readonly<{ expense: ExpenseItemModel }>) {
   return (
     <dl className="expenses-detail-list" aria-label="Detalhes da despesa">
-      <DetailTerm label="Fornecedor" value={expense.vendorName ?? 'Fornecedor nao informado'} />
+      <DetailTerm label="Fornecedor" value={expense.vendorName ?? 'Fornecedor não informado'} />
       <DetailTerm label="Categoria" value={expense.categoryName} />
       <DetailTerm label="Competencia" value={expense.competenceDateLabel} />
       <DetailTerm label="Vencimento" value={expense.dueDateLabel ?? '-'} />
@@ -605,7 +605,7 @@ function CategorySummary({
           ))}
         </dl>
       ) : (
-        <p className="expenses-muted">Sem categorias disponiveis.</p>
+        <p className="expenses-muted">Sem categorias disponíveis.</p>
       )}
     </section>
   );
@@ -638,7 +638,7 @@ function ExpenseBoundaryState({ model }: Readonly<{ model: ExpensesViewModel }>)
       )}
       <div>
         <p className="eyebrow">{denied ? 'Acesso restrito' : 'Falha ao carregar'}</p>
-        <h1 id="expenses-boundary-title">{denied ? 'Despesas indisponiveis' : model.title}</h1>
+        <h1 id="expenses-boundary-title">{denied ? 'Despesas indisponíveis' : model.title}</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

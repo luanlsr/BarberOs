@@ -32,13 +32,13 @@ describe('ProfessionalWalletView', () => {
     );
 
     expect(html).toContain('Minha carteira');
-    expect(html).toContain('aria-label="Acoes da carteira"');
+    expect(html).toContain('aria-label="Ações da carteira"');
     expect(html).toContain('aria-label="Resumo da carteira"');
     expect(html).toContain('aria-label="Carteira profissional responsiva"');
     expect(html).toContain('Lucas Pereira');
     expect(html).toContain('Producao');
     expect(html).toContain('R$ 145,00');
-    expect(html).toContain('Comissoes abertas');
+    expect(html).toContain('Comissões abertas');
     expect(html).toContain('R$ 42,50');
     expect(html).toContain('Repasses pagos');
     expect(html).toContain('R$ 30,00');
@@ -57,7 +57,7 @@ describe('ProfessionalWalletView', () => {
     );
 
     expect(html).toContain('Carteira profissional');
-    expect(html).toContain('Visao elevada para gestao, restrita ao profissional selecionado.');
+    expect(html).toContain('Visão elevada para gestão, restrita ao profissional selecionado.');
     expect(html).toContain('Lucas Pereira');
     expect(html).not.toContain('Carlos Andrade');
     expect(html).not.toContain('Resultado');
@@ -86,7 +86,7 @@ describe('ProfessionalWalletView', () => {
     );
 
     expect(html).toContain('Acesso restrito');
-    expect(html).toContain('Carteira indisponivel');
+    expect(html).toContain('Carteira indisponível');
     expect(html).not.toContain('R$');
     expect(html).not.toContain('Carlos Andrade');
   });
@@ -107,9 +107,9 @@ describe('ProfessionalWalletView', () => {
       />,
     );
 
-    expect(empty).toContain('Nenhuma producao comissionada encontrada neste periodo.');
-    expect(empty).toContain('Sem comissoes para este periodo.');
-    expect(offline).toContain('Modo offline: valores serao atualizados quando a conexao voltar.');
+    expect(empty).toContain('Nenhuma produção comissionada encontrada neste período.');
+    expect(empty).toContain('Sem comissões para este período.');
+    expect(offline).toContain('Modo offline: valores serão atualizados quando a conexão voltar.');
     expect(offline).toContain('disabled=""');
   });
 
@@ -123,7 +123,7 @@ describe('ProfessionalWalletView', () => {
     );
 
     expect(html).toContain('Falha ao carregar');
-    expect(html).toContain('Carteira profissional local indisponivel.');
+    expect(html).toContain('Carteira profissional local indisponível.');
     expect(html).not.toContain('Comanda #1002');
   });
 });

@@ -1,5 +1,14 @@
 import { redirect } from 'next/navigation';
-import { Bell, Building2, CreditCard, KeyRound, Link2, Palette, ShieldCheck, Users } from 'lucide-react';
+import {
+  Bell,
+  Building2,
+  CreditCard,
+  KeyRound,
+  Link2,
+  Palette,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { getSessionContext } from '../../lib/auth/server';
 
 const settingsSections = [
@@ -53,7 +62,8 @@ export default async function ConfiguracoesPage() {
           <p className="eyebrow">Sistema</p>
           <h1>Configurações</h1>
           <p className="subheading">
-            {session.tenantName} · Centralize usuários, filiais, segurança, integrações e preferências.
+            {session.tenantName} · Centralize usuários, filiais, segurança, integrações e
+            preferências.
           </p>
         </div>
       </header>

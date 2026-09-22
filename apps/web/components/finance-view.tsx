@@ -41,7 +41,7 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
 
       <section
         className="finance-period-panel"
-        aria-label="Controles de periodo financeiro"
+        aria-label="Controles de período financeiro"
         data-testid="finance-period-controls"
       >
         <button className="icon-button" type="button" aria-label="Periodo anterior">
@@ -51,7 +51,7 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
           <p className="eyebrow">Periodo</p>
           <strong>{model.periodLabel}</strong>
         </div>
-        <button className="icon-button" type="button" aria-label="Proximo periodo">
+        <button className="icon-button" type="button" aria-label="Proximo período">
           <ArrowRight size={18} aria-hidden="true" />
         </button>
       </section>
@@ -63,7 +63,7 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
         <FinanceInlineState tone="warning" text="Modo offline: dados financeiros pausados." />
       ) : null}
       {model.state === 'empty' ? (
-        <FinanceInlineState tone="neutral" text="Nenhum lancamento financeiro neste periodo." />
+        <FinanceInlineState tone="neutral" text="Nenhum lançamento financeiro neste período." />
       ) : null}
 
       <section
@@ -82,7 +82,7 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
           <RecentExpenses expenses={model.expenses} />
         </main>
 
-        <aside className="finance-side" aria-label="Comissoes e repasses">
+        <aside className="finance-side" aria-label="Comissões e repasses">
           <CommissionSummary model={model} />
           <PayoutSummary model={model} />
         </aside>
@@ -93,7 +93,7 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
 
 function FinanceActions({ actions }: Readonly<{ actions: readonly FinanceActionModel[] }>) {
   return (
-    <div className="finance-heading-actions" aria-label="Acoes financeiras">
+    <div className="finance-heading-actions" aria-label="Ações financeiras">
       {actions.map((action) => (
         <button
           className={
@@ -159,7 +159,7 @@ function CashFlowSummary({ model }: Readonly<{ model: FinanceViewModel }>) {
         </div>
       </dl>
       <p className="finance-muted">
-        {model.summary.entriesCount} lancamentos conciliados no periodo.
+        {model.summary.entriesCount} lancamentos conciliados no período.
       </p>
     </section>
   );
@@ -174,7 +174,7 @@ function CommissionSummary({ model }: Readonly<{ model: FinanceViewModel }>) {
     >
       <div className="finance-panel-heading">
         <div>
-          <p className="eyebrow">Comissoes</p>
+          <p className="eyebrow">Comissões</p>
           <h2 id="finance-commission-title">Obrigacoes abertas</h2>
         </div>
         <BadgePercent size={20} aria-hidden="true" />
@@ -213,7 +213,7 @@ function PayoutSummary({ model }: Readonly<{ model: FinanceViewModel }>) {
       </div>
       <dl className="finance-summary-list">
         <div>
-          <dt>Pago no periodo</dt>
+          <dt>Pago no período</dt>
           <dd>{model.commission.paidPayoutAmountLabel}</dd>
         </div>
         <div>
@@ -260,7 +260,7 @@ function RecentExpenses({ expenses }: Readonly<{ expenses: readonly FinanceExpen
           ))}
         </div>
       ) : (
-        <p className="finance-muted">Sem despesas registradas para este periodo.</p>
+        <p className="finance-muted">Sem despesas registradas para este período.</p>
       )}
     </section>
   );
@@ -293,7 +293,7 @@ function FinanceBoundaryState({ model }: Readonly<{ model: FinanceViewModel }>) 
       )}
       <div>
         <p className="eyebrow">{denied ? 'Acesso restrito' : 'Falha ao carregar'}</p>
-        <h1 id="finance-boundary-title">{denied ? 'Financeiro indisponivel' : model.title}</h1>
+        <h1 id="finance-boundary-title">{denied ? 'Financeiro indisponível' : model.title}</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

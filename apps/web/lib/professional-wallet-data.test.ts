@@ -43,7 +43,7 @@ describe('Professional wallet data loading layer', () => {
     expect(model.expectedBalanceAmountCents).toBe(4_250);
     expect(model.metrics.map((metric) => metric.label)).toEqual([
       'Producao',
-      'Comissoes abertas',
+      'Comissões abertas',
       'Repasses pagos',
       'A receber',
     ]);
@@ -89,7 +89,7 @@ describe('Professional wallet data loading layer', () => {
     expect(model.payouts).toEqual([]);
     expect(model.allowedActions.every((item) => item.enabled === false)).toBe(true);
     expect(action(model, 'wallet.refresh').reason).toBe(
-      'Sem permissao para visualizar esta carteira.',
+      'Sem permissão para visualizar esta carteira.',
     );
   });
 
@@ -113,11 +113,11 @@ describe('Professional wallet data loading layer', () => {
     expect(offline.state).toBe('offline');
     expect(action(offline, 'wallet.view-payouts')).toMatchObject({
       enabled: false,
-      reason: 'Disponivel quando a conexao voltar.',
+      reason: 'Disponivel quando a conexão voltar.',
     });
     expect(error.error).toEqual({
       code: 'COMMISSION_VALIDATION_ERROR',
-      message: 'Carteira profissional local indisponivel.',
+      message: 'Carteira profissional local indisponível.',
       requestId: 'local-wallet-error',
     });
     expect(action(error, 'wallet.view-payouts')).toMatchObject({

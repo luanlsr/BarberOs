@@ -23,7 +23,7 @@ export type NavigationItem = {
   roles?: readonly NavigationRole[];
   mobile?: boolean;
   parentHref?: string;
-  group?: 'Operacao' | 'Gestao' | 'Sistema';
+  group?: 'Operação' | 'Gestão' | 'Sistema';
 };
 
 export type PrimaryActionItem = {
@@ -51,11 +51,11 @@ const tenantOperationRoles = [
 export const navigationItems: NavigationItem[] = [
   {
     href: '/inicio',
-    label: 'Visao geral',
+    label: 'Visão geral',
     icon: 'layout',
     permission: 'dashboard.read',
     roles: tenantOperationRoles,
-    group: 'Operacao',
+    group: 'Operação',
     mobile: true,
   },
   {
@@ -66,7 +66,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'core.operations',
     roles: tenantOperationRoles,
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/comandas',
@@ -76,7 +76,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'core.operations',
     roles: tenantOperationRoles,
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/clientes',
@@ -86,7 +86,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'core.operations',
     roles: tenantOperationRoles,
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/equipe',
@@ -96,7 +96,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'core.operations',
     roles: tenantOperationRoles,
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/servicos',
@@ -106,7 +106,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'core.operations',
     roles: tenantOperationRoles,
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/produtos',
@@ -115,7 +115,7 @@ export const navigationItems: NavigationItem[] = [
     permission: 'inventory.read',
     entitlement: 'inventory',
     roles: ['OWNER', 'MANAGER', 'FINANCE', 'RECEPTIONIST'],
-    group: 'Gestao',
+    group: 'Gestão',
   },
   {
     href: '/estoque',
@@ -125,7 +125,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'inventory',
     roles: ['OWNER', 'MANAGER', 'FINANCE', 'RECEPTIONIST'],
     mobile: true,
-    group: 'Gestao',
+    group: 'Gestão',
   },
   {
     href: '/financeiro',
@@ -134,7 +134,7 @@ export const navigationItems: NavigationItem[] = [
     permission: 'finance.read',
     entitlement: 'finance',
     roles: ['OWNER', 'FINANCE', 'MANAGER'],
-    group: 'Gestao',
+    group: 'Gestão',
   },
   {
     href: '/minha-carteira',
@@ -144,7 +144,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'finance',
     roles: ['PROFESSIONAL'],
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/caixa',
@@ -154,7 +154,7 @@ export const navigationItems: NavigationItem[] = [
     entitlement: 'finance',
     roles: ['OWNER', 'FINANCE', 'RECEPTIONIST'],
     mobile: true,
-    group: 'Operacao',
+    group: 'Operação',
   },
   {
     href: '/master',

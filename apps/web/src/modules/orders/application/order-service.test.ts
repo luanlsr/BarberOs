@@ -305,7 +305,7 @@ describe('OrderApplicationService', () => {
     const created = await service.createWalkIn(managerContext, {
       branchId: 'branch-1',
       customerId: 'customer-1',
-      notes: 'Cliente chegou sem horario.',
+      notes: 'Cliente chegou sem horário.',
     });
 
     expect(created.id).toBe('order-created');
@@ -313,12 +313,12 @@ describe('OrderApplicationService', () => {
     expect(repository.createdWalkInCommand).toEqual({
       branchId: 'branch-1',
       customerId: 'customer-1',
-      notes: 'Cliente chegou sem horario.',
+      notes: 'Cliente chegou sem horário.',
     });
     expect(repository.history.at(-1)).toMatchObject({
       eventType: 'ORDER_CREATED',
       orderId: 'order-created',
-      reason: 'Cliente chegou sem horario.',
+      reason: 'Cliente chegou sem horário.',
     });
     expect(audit.events.at(-1)).toMatchObject({
       action: 'order.created',

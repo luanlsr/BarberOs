@@ -197,20 +197,20 @@ const statusTones: Record<OrderStatus, OrderTone> = {
 };
 
 const itemTypeLabels: Record<OrderItemSourceType, string> = {
-  SERVICE: 'Servico',
+  SERVICE: 'Serviço',
   PRODUCT: 'Produto',
   MANUAL: 'Manual',
 };
 
 const itemSourceLabels: Record<OrderItemSourceType, string> = {
-  SERVICE: 'Servico do catalogo',
-  PRODUCT: 'Produto de catalogo',
+  SERVICE: 'Serviço do catálogo',
+  PRODUCT: 'Produto de catálogo',
   MANUAL: 'Item manual',
 };
 
 const itemSourceDescriptions: Record<OrderItemSourceType, string> = {
-  SERVICE: 'Preco congelado do servico no atendimento.',
-  PRODUCT: 'Preco e custo congelados do catalogo; estoque so baixa no pagamento.',
+  SERVICE: 'Preço congelado do serviço no atendimento.',
+  PRODUCT: 'Preço e custo congelados do catálogo; estoque so baixa no pagamento.',
   MANUAL: 'Lancamento avulso sem vinculo com produto de estoque.',
 };
 
@@ -224,9 +224,9 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
 
 const devPeople = {
   customers: new Map([
-    ['dev-customer-joao', { name: 'Joao Silva', phone: '(11) 98888-0301' }],
+    ['dev-customer-joao', { name: 'João Silva', phone: '(11) 98888-0301' }],
     ['dev-customer-pedro', { name: 'Pedro Souza', phone: '(11) 98888-0302' }],
-    ['00000000-0000-0000-0000-000000000301', { name: 'Joao Silva', phone: '+55 11 98888-0301' }],
+    ['00000000-0000-0000-0000-000000000301', { name: 'João Silva', phone: '+55 11 98888-0301' }],
   ]),
   professionals: new Map([
     ['dev-professional-carlos', 'Carlos Andrade'],
@@ -263,19 +263,19 @@ const developmentItemSuggestions: readonly ComandaItemSuggestionModel[] = [
     sourceId: 'dev-product-pomade',
     typeLabel: itemTypeLabels.PRODUCT,
     sourceLabel: itemSourceLabels.PRODUCT,
-    helperLabel: 'Catalogo ativo nesta unidade.',
+    helperLabel: 'Catálogo ativo nesta unidade.',
     unitPriceAmountCents: 3200,
     unitPriceLabel: formatCurrency(3200),
   },
   {
     id: 'product-inactive',
-    name: 'Shampoo indisponivel',
+    name: 'Shampoo indisponível',
     sourceType: 'PRODUCT',
     sourceId: 'dev-product-inactive',
     typeLabel: itemTypeLabels.PRODUCT,
     sourceLabel: itemSourceLabels.PRODUCT,
-    helperLabel: 'Produto fora do catalogo ativo desta unidade.',
-    disabledReason: 'Indisponivel para esta filial',
+    helperLabel: 'Produto fora do catálogo ativo desta unidade.',
+    disabledReason: 'Indisponível para esta filial',
     unitPriceAmountCents: 2800,
     unitPriceLabel: formatCurrency(2800),
   },
@@ -408,7 +408,7 @@ const developmentOrder: OrderDetail = {
       orderId: 'dev-order-1001',
       eventType: 'ORDER_CREATED',
       actorId: 'dev-user',
-      reason: 'Check-in realizado pela recepcao.',
+      reason: 'Check-in realizado pela recepção.',
       metadata: { source: 'check_in' },
       createdAt: '2026-09-07T14:30:00.000Z',
     },
@@ -438,7 +438,7 @@ export async function getComandaViewModel(
       ...base,
       state: 'permission-denied',
       openOrders: [],
-      description: 'Seu perfil nao possui acesso de leitura para Comandas nesta unidade.',
+      description: 'Seu perfil não possui acesso de leitura para Comandas nesta unidade.',
     };
   }
 
@@ -449,7 +449,7 @@ export async function getComandaViewModel(
       openOrders: [],
       error: {
         code: 'ORDER_VALIDATION_ERROR',
-        message: 'Nao conseguimos carregar esta Comanda agora.',
+        message: 'Não conseguimos carregar esta Comanda agora.',
         requestId: 'local-comanda-error',
       },
     };
@@ -471,7 +471,7 @@ export async function getComandaViewModel(
         error: {
           code:
             error instanceof Error && 'code' in error ? String(error.code) : 'ORDER_LOAD_FAILED',
-          message: 'Nao conseguimos carregar esta Comanda agora.',
+          message: 'Não conseguimos carregar esta Comanda agora.',
           requestId: requestContext.requestId,
         },
       };
@@ -493,7 +493,7 @@ export function getDevelopmentComandaViewModel(
       ...base,
       state: 'permission-denied',
       openOrders: [],
-      description: 'Seu perfil nao possui acesso de leitura para Comandas nesta unidade.',
+      description: 'Seu perfil não possui acesso de leitura para Comandas nesta unidade.',
     };
   }
 
@@ -504,7 +504,7 @@ export function getDevelopmentComandaViewModel(
       openOrders: [],
       error: {
         code: 'ORDER_VALIDATION_ERROR',
-        message: 'Nao conseguimos carregar esta Comanda agora.',
+        message: 'Não conseguimos carregar esta Comanda agora.',
         requestId: 'local-comanda-error',
       },
     };
@@ -563,7 +563,7 @@ export function getDevelopmentComandaViewModel(
     openOrders: [toComandaSummaryModel(order)],
     description:
       order.paymentSummary.state === 'paid'
-        ? 'Comanda paga, com historico e resumo de recebimento.'
+        ? 'Comanda paga, com histórico e resumo de recebimento.'
         : 'Atendimento em andamento com itens, descontos, totais e observacoes.',
   };
 }
@@ -661,7 +661,7 @@ async function getPersistentComandaViewModel(
     ),
     description:
       order.paymentSummary.state === 'paid'
-        ? 'Comanda paga, com historico e resumo de recebimento.'
+        ? 'Comanda paga, com histórico e resumo de recebimento.'
         : 'Atendimento em andamento com itens, descontos, totais e observacoes.',
   };
 }
@@ -931,7 +931,7 @@ function toPaymentSummaryModel(
     canReceivePayment,
     receivePaymentLabel: canReceivePayment
       ? 'Receber ' + formatCurrency(amountDueCents)
-      : 'Pagamento indisponivel',
+      : 'Pagamento indisponível',
     unavailableReason: canReceivePayment
       ? undefined
       : paymentUnavailableReason(session, order, amountDueCents, isOnline),
@@ -961,14 +961,14 @@ function paymentUnavailableReason(
   amountDueCents: number,
   isOnline: boolean,
 ) {
-  if (!isOnline) return 'Pagamentos exigem conexao ativa.';
-  if (!hasPermission(session, 'payments.receive')) return 'Seu perfil nao pode receber pagamentos.';
+  if (!isOnline) return 'Pagamentos exigem conexão ativa.';
+  if (!hasPermission(session, 'payments.receive')) return 'Seu perfil não pode receber pagamentos.';
   if (!(session.entitlements ?? []).includes('core.operations'))
-    return 'Modulo operacional indisponivel.';
+    return 'Modulo operacional indisponível.';
   if (!session.branchScope.includes(order.branchId)) return 'Comanda fora do escopo da unidade.';
   if (order.totalAmountCents <= 0) return 'Comanda sem valor para receber.';
-  if (amountDueCents <= 0 || order.status === 'PAID') return 'Comanda ja esta paga.';
-  return 'Status da Comanda nao permite recebimento.';
+  if (amountDueCents <= 0 || order.status === 'PAID') return 'Comanda já está paga.';
+  return 'Status da Comanda não permite recebimento.';
 }
 
 function settlementUpdatesFor(
@@ -983,7 +983,7 @@ function settlementUpdatesFor(
     { id: 'finance', label: 'Financeiro atualizado', tone: 'success' },
   ];
   if (order.items.some((item) => Boolean(item.professionalId))) {
-    updates.push({ id: 'commission', label: 'Comissoes calculadas', tone: 'success' });
+    updates.push({ id: 'commission', label: 'Comissões calculadas', tone: 'success' });
   }
   if (payments.some((payment) => payment.method === 'CASH')) {
     updates.push({ id: 'cash', label: 'Caixa sincronizado', tone: 'success' });

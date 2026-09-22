@@ -18,7 +18,7 @@ const tenantCustomer: Customer = {
   id: 'customer-1',
   tenantId: 'tenant-1',
   branchId: 'branch-1',
-  name: 'Joao Silva',
+  name: 'João Silva',
   phone: '+5511988880001',
   email: 'joao@example.local',
   preferredProfessionalId: 'professional-1',
@@ -225,13 +225,13 @@ describe('CustomerApplicationService', () => {
   it('updates visible tenant customers only', async () => {
     const updated = await service.update(receptionistContext, {
       id: 'customer-1',
-      notes: 'Prefere horario da tarde',
+      notes: 'Prefere horário da tarde',
     });
 
-    expect(updated.notes).toBe('Prefere horario da tarde');
+    expect(updated.notes).toBe('Prefere horário da tarde');
     expect(customers.updatedCommand).toEqual({
       id: 'customer-1',
-      notes: 'Prefere horario da tarde',
+      notes: 'Prefere horário da tarde',
     });
     await expect(
       service.update(tenantBContext, { id: 'customer-1', notes: 'tentativa externa' }),

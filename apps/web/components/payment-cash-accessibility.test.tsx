@@ -35,7 +35,7 @@ describe('payment and cash accessibility affordances', () => {
       />,
     );
 
-    expect(deniedHtml).toContain('Seu perfil nao pode receber pagamentos.');
+    expect(deniedHtml).toContain('Seu perfil não pode receber pagamentos.');
     expect(deniedHtml).toContain('disabled=""');
   });
 

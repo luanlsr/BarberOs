@@ -13,15 +13,15 @@ describe('FinanceView', () => {
 
     expect(html).toContain('finance-page');
     expect(html).toContain('finance-period-controls');
-    expect(html).toContain('aria-label="Controles de periodo financeiro"');
+    expect(html).toContain('aria-label="Controles de período financeiro"');
     expect(html).toContain('aria-label="Periodo anterior"');
-    expect(html).toContain('aria-label="Proximo periodo"');
-    expect(html).toContain('aria-label="Acoes financeiras"');
+    expect(html).toContain('aria-label="Proximo período"');
+    expect(html).toContain('aria-label="Ações financeiras"');
     expect(html).toContain('Indicadores financeiros');
     expect(html).toContain('Receitas');
     expect(html).toContain('Despesas');
     expect(html).toContain('Resultado');
-    expect(html).toContain('Comissoes abertas');
+    expect(html).toContain('Comissões abertas');
   });
 
   test('renders tablet structural regions for cash flow and payouts', () => {
@@ -57,8 +57,8 @@ describe('FinanceView', () => {
       />,
     );
 
-    expect(html).toContain('Nenhum lancamento financeiro neste periodo.');
-    expect(html).toContain('Sem despesas registradas para este periodo.');
+    expect(html).toContain('Nenhum lançamento financeiro neste período.');
+    expect(html).toContain('Sem despesas registradas para este período.');
     expect(html).not.toContain('Energia da Unidade Centro');
   });
 
@@ -86,7 +86,7 @@ describe('FinanceView', () => {
     );
 
     expect(html).toContain('Acesso restrito');
-    expect(html).toContain('Financeiro indisponivel');
+    expect(html).toContain('Financeiro indisponível');
     expect(html).not.toContain('R$');
     expect(html).not.toContain('Fluxo de caixa');
   });

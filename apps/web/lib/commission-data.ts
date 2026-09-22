@@ -306,7 +306,7 @@ export function getDevelopmentCommissionsViewModel(
     return buildCommissionsModel(
       base,
       'permission-denied',
-      'Seu perfil nao pode visualizar comissoes e repasses desta unidade.',
+      'Seu perfil não pode visualizar comissões e repasses desta unidade.',
       [],
       [],
       [],
@@ -318,14 +318,14 @@ export function getDevelopmentCommissionsViewModel(
     return buildCommissionsModel(
       base,
       'error',
-      'Nao foi possivel carregar comissoes agora.',
+      'Não foi possível carregar comissões agora.',
       [],
       [],
       [],
       [],
       {
         code: 'COMMISSION_VALIDATION_ERROR',
-        message: 'Comissoes locais indisponiveis.',
+        message: 'Comissões locais indisponíveis.',
         requestId: 'local-commissions-error',
       },
     );
@@ -335,7 +335,7 @@ export function getDevelopmentCommissionsViewModel(
     return buildCommissionsModel(
       base,
       'offline',
-      'Voce esta offline. Fechamento e pagamento de repasses ficam pausados.',
+      'Você está offline. Fechamento e pagamento de repasses ficam pausados.',
       [],
       [],
       [],
@@ -347,7 +347,7 @@ export function getDevelopmentCommissionsViewModel(
     return buildCommissionsModel(
       base,
       'empty',
-      'Nenhuma comissao ou regra encontrada neste periodo.',
+      'Nenhuma comissão ou regra encontrada neste período.',
       [],
       [],
       [],
@@ -359,7 +359,7 @@ export function getDevelopmentCommissionsViewModel(
     return buildCommissionsModel(
       base,
       'no-rule',
-      'Existem itens pagos sem regra de comissao ativa.',
+      'Existem itens pagos sem regra de comissão ativa.',
       [],
       [],
       [],
@@ -383,7 +383,7 @@ export function getDevelopmentCommissionsViewModel(
     return buildCommissionsModel(
       base,
       'ready',
-      'Repasse pago com historico financeiro preservado.',
+      'Repasse pago com histórico financeiro preservado.',
       developmentRules,
       [settledAccrual],
       [paidPayout],
@@ -394,7 +394,7 @@ export function getDevelopmentCommissionsViewModel(
   return buildCommissionsModel(
     base,
     'ready',
-    'Comissoes abertas, regras ativas e repasses do periodo.',
+    'Comissões abertas, regras ativas e repasses do período.',
     developmentRules,
     [openAccrual],
     [],
@@ -406,8 +406,8 @@ function baseModel(session: SessionContext, branchId: string) {
   const hasFinanceEntitlement = (session.entitlements ?? []).includes('finance');
   const hasBranch = session.branchScope.includes(branchId);
   return {
-    title: 'Comissoes/Repasses',
-    description: 'Regras, producao comissionada e pagamentos de profissionais.',
+    title: 'Comissões/Repasses',
+    description: 'Regras, produção comissionada e pagamentos de profissionais.',
     branchId,
     branchName: branchNameFor(session, branchId),
     periodStart,
@@ -542,14 +542,14 @@ function actionsFor(
       id: 'commissions.refresh',
       label: 'Recarregar',
       enabled: base.canRead && state !== 'permission-denied',
-      reason: base.canRead ? undefined : 'Sem permissao para visualizar comissoes.',
+      reason: base.canRead ? undefined : 'Sem permissão para visualizar comissões.',
     },
     {
       id: 'commissions.create-rule',
       label: diagnostics.length > 0 ? 'Criar regra para item' : 'Nova regra',
       enabled:
         base.canManage && state !== 'offline' && state !== 'error' && state !== 'permission-denied',
-      reason: actionReason(base.canManage, stateReason, 'Sem permissao para configurar comissoes.'),
+      reason: actionReason(base.canManage, stateReason, 'Sem permissão para configurar comissões.'),
     },
     {
       id: 'commissions.close-payout',
@@ -559,7 +559,7 @@ function actionsFor(
         base.canManage,
         stateReason,
         hasOpenAccrual,
-        'Nenhuma comissao aberta para fechar.',
+        'Nenhuma comissão aberta para fechar.',
       ),
     },
     {
@@ -598,16 +598,16 @@ function selectedActionReason(
   hasSelectable: boolean,
   emptyReason: string,
 ) {
-  if (!hasAccess) return 'Sem permissao para gerenciar comissoes.';
+  if (!hasAccess) return 'Sem permissão para gerenciar comissões.';
   if (stateReason) return stateReason;
   if (!hasSelectable) return emptyReason;
   return undefined;
 }
 
 function unavailableReasonForState(state: CommissionsViewState) {
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue comissoes antes de executar esta acao.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar comissoes.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue comissões antes de executar esta ação.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar comissões.';
   return undefined;
 }
 
@@ -616,12 +616,12 @@ function payoutUnavailableReason(
   state: CommissionsViewState,
   payout: Payout,
 ) {
-  if (!base.canManage) return 'Sem permissao para gerenciar repasses.';
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue comissoes antes de executar esta acao.';
-  if (payout.status === 'PAID') return 'Repasse pago aceita apenas correcao auditavel.';
+  if (!base.canManage) return 'Sem permissão para gerenciar repasses.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue comissões antes de executar esta ação.';
+  if (payout.status === 'PAID') return 'Repasse pago aceita apenas correcao auditável.';
   if (!['CLOSED', 'APPROVED'].includes(payout.status))
-    return 'Status do repasse nao permite pagamento.';
+    return 'Status do repasse não permite pagamento.';
   return undefined;
 }
 
@@ -691,13 +691,13 @@ function ruleLabel(rule: CommissionRule) {
   if (rule.scope === 'TENANT_DEFAULT') return 'Padrao da unidade';
   if (rule.scope === 'PROFESSIONAL')
     return `Profissional ${professionalNameFor(rule.professionalId ?? '')}`;
-  return `${scopeLabel(rule.scope)} especifico`;
+  return `${scopeLabel(rule.scope)} específico`;
 }
 
 function scopeLabel(scope: CommissionRuleScope) {
   if (scope === 'TENANT_DEFAULT') return 'Padrao';
   if (scope === 'PROFESSIONAL') return 'Profissional';
-  if (scope === 'SERVICE') return 'Servico';
+  if (scope === 'SERVICE') return 'Serviço';
   if (scope === 'PRODUCT') return 'Produto';
   return 'Item manual';
 }

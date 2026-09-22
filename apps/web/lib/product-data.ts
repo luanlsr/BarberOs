@@ -278,20 +278,20 @@ export function getDevelopmentProductsViewModel(
     return buildProductsModel(
       base,
       'permission-denied',
-      'Seu perfil nao pode visualizar produtos desta unidade.',
+      'Seu perfil não pode visualizar produtos desta unidade.',
       [],
       [],
     );
   }
 
   if (options.state === 'loading') {
-    return buildProductsModel(base, 'loading', 'Carregando catalogo de produtos.', [], []);
+    return buildProductsModel(base, 'loading', 'Carregando catálogo de produtos.', [], []);
   }
 
   if (options.state === 'error') {
-    return buildProductsModel(base, 'error', 'Nao foi possivel carregar produtos agora.', [], [], {
+    return buildProductsModel(base, 'error', 'Não foi possível carregar produtos agora.', [], [], {
       code: 'CATALOG_VALIDATION_ERROR',
-      message: 'Produtos locais indisponiveis.',
+      message: 'Produtos locais indisponíveis.',
       requestId: 'local-products-error',
     });
   }
@@ -300,7 +300,7 @@ export function getDevelopmentProductsViewModel(
     return buildProductsModel(
       base,
       'offline',
-      'Voce esta offline. Cadastro e ajustes de produtos ficam pausados.',
+      'Você está offline. Cadastro e ajustes de produtos ficam pausados.',
       [],
       [],
     );
@@ -323,7 +323,7 @@ export function getDevelopmentProductsViewModel(
     base,
     visibleProducts.length ? 'ready' : 'empty',
     visibleProducts.length
-      ? 'Produtos, categorias, precos, custos e politica de estoque da unidade.'
+      ? 'Produtos, categorias, precos, custos e política de estoque da unidade.'
       : 'Nenhum produto encontrado para este filtro.',
     visibleProducts,
     branchProducts,
@@ -341,7 +341,7 @@ function baseModel(
   const hasBranch = session.branchScope.includes(branchId);
   return {
     title: 'Produtos',
-    description: 'Catalogo operacional de produtos para venda e estoque.',
+    description: 'Catálogo operacional de produtos para venda e estoque.',
     branchId,
     branchName: branchNameFor(session, branchId),
     selectedStatus,
@@ -425,14 +425,14 @@ function toProductItemModel(
     costAmountCents: product.costAmountCents,
     costLabel:
       product.costAmountCents === undefined
-        ? 'Custo nao informado'
+        ? 'Custo não informado'
         : formatCurrency(product.costAmountCents),
     grossMarginAmountCents,
     grossMarginLabel:
       grossMarginAmountCents === undefined
-        ? 'Margem nao calculada'
+        ? 'Margem não calculada'
         : formatCurrency(grossMarginAmountCents),
-    supplierName: product.supplierMetadata?.supplierName ?? 'Fornecedor nao informado',
+    supplierName: product.supplierMetadata?.supplierName ?? 'Fornecedor não informado',
     stockTrackingPolicy: product.stockTrackingPolicy,
     stockTrackingLabel:
       product.stockTrackingPolicy === 'TRACKED' ? 'Controla estoque' : 'Sem controle de estoque',
@@ -457,11 +457,11 @@ function unavailableReasonForProduct(
   product: Product,
   availableInBranch: boolean,
 ) {
-  if (!base.canWrite) return 'Sem permissao para alterar produtos.';
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue produtos antes de executar esta acao.';
+  if (!base.canWrite) return 'Sem permissão para alterar produtos.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue produtos antes de executar esta ação.';
   if (!availableInBranch) return 'Produto fora do escopo desta unidade.';
-  if (product.status === 'ARCHIVED') return 'Produto arquivado preserva historico.';
+  if (product.status === 'ARCHIVED') return 'Produto arquivado preserva histórico.';
   return undefined;
 }
 
@@ -480,13 +480,13 @@ function actionsFor(
       id: 'products.refresh',
       label: 'Recarregar',
       enabled: base.canRead && state !== 'permission-denied',
-      reason: base.canRead ? undefined : 'Sem permissao para visualizar produtos.',
+      reason: base.canRead ? undefined : 'Sem permissão para visualizar produtos.',
     },
     {
       id: 'products.create',
       label: 'Novo produto',
       enabled: base.canWrite && (state === 'ready' || state === 'empty'),
-      reason: actionReason(base.canWrite, stateReason, 'Sem permissao para criar produtos.'),
+      reason: actionReason(base.canWrite, stateReason, 'Sem permissão para criar produtos.'),
     },
     {
       id: 'products.edit-selected',
@@ -563,7 +563,7 @@ function statusFiltersFor(products: readonly Product[]): readonly ProductStatusF
 }
 
 function stockLabelFor(product: Product, balance: StockBalance | undefined) {
-  if (product.stockTrackingPolicy === 'NOT_TRACKED') return 'Estoque nao controlado';
+  if (product.stockTrackingPolicy === 'NOT_TRACKED') return 'Estoque não controlado';
   if (!balance) return 'Sem movimentos de estoque';
   return `${balance.currentQuantity} un. (min. ${balance.minimumStockQuantity})`;
 }
@@ -584,16 +584,16 @@ function selectedActionReason(
   hasSelectable: boolean,
   emptyReason: string,
 ) {
-  if (!hasAccess) return 'Sem permissao para alterar produtos.';
+  if (!hasAccess) return 'Sem permissão para alterar produtos.';
   if (stateReason) return stateReason;
   if (!hasSelectable) return emptyReason;
   return undefined;
 }
 
 function unavailableReasonForState(state: ProductsViewState) {
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue produtos antes de executar esta acao.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar produtos.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue produtos antes de executar esta ação.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar produtos.';
   if (state === 'loading') return 'Aguarde o carregamento.';
   return undefined;
 }

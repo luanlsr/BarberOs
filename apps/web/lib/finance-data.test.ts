@@ -42,7 +42,7 @@ describe('Finance data loading layer', () => {
       'Receitas',
       'Despesas',
       'Resultado',
-      'Comissoes abertas',
+      'Comissões abertas',
     ]);
     expect(model.expenses.map((expense) => expense.description)).toEqual([
       'Energia da Unidade Centro',
@@ -79,7 +79,7 @@ describe('Finance data loading layer', () => {
     expect(action(model, 'finance.create-expense').enabled).toBe(true);
     expect(action(model, 'finance.close-payout')).toMatchObject({
       enabled: false,
-      reason: 'Nenhuma comissao aberta para fechar no periodo.',
+      reason: 'Nenhuma comissão aberta para fechar no período.',
     });
   });
 
@@ -104,14 +104,14 @@ describe('Finance data loading layer', () => {
     expect(model.state).toBe('error');
     expect(model.error).toEqual({
       code: 'FINANCE_VALIDATION_ERROR',
-      message: 'Financeiro local indisponivel.',
+      message: 'Financeiro local indisponível.',
       requestId: 'local-finance-error',
     });
     expect(model.summary.entriesCount).toBe(0);
     expect(action(model, 'finance.refresh').enabled).toBe(true);
     expect(action(model, 'finance.create-expense')).toMatchObject({
       enabled: false,
-      reason: 'Recarregue o financeiro antes de executar esta acao.',
+      reason: 'Recarregue o financeiro antes de executar esta ação.',
     });
   });
 
@@ -125,7 +125,7 @@ describe('Finance data loading layer', () => {
     expect(action(model, 'finance.refresh').enabled).toBe(true);
     expect(action(model, 'finance.create-expense')).toMatchObject({
       enabled: false,
-      reason: 'Disponivel quando a conexao voltar.',
+      reason: 'Disponivel quando a conexão voltar.',
     });
     expect(action(model, 'finance.close-payout').enabled).toBe(false);
   });
@@ -142,7 +142,7 @@ describe('Finance data loading layer', () => {
     expect(model.commission.payoutCount).toBe(0);
     expect(model.allowedActions.every((item) => item.enabled === false)).toBe(true);
     expect(action(model, 'finance.refresh').reason).toBe(
-      'Sem permissao para visualizar financeiro.',
+      'Sem permissão para visualizar financeiro.',
     );
   });
 });

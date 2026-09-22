@@ -120,7 +120,7 @@ describe('ReceivePaymentPanel', () => {
       ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     await vi.waitFor(() => expect(container.textContent).toContain('Valor restante mudou.'));
-    expect(container.textContent).not.toContain('Nao foi possivel receber pagamento.');
+    expect(container.textContent).not.toContain('Não foi possível receber pagamento.');
   });
 
   test('disables payment while offline or permission denied', () => {
@@ -137,7 +137,7 @@ describe('ReceivePaymentPanel', () => {
     );
 
     expect(offlineResult.container.textContent).toContain(
-      'Voce esta offline. Pagamento precisa de conexao.',
+      'Você está offline. Pagamento precisa de conexão.',
     );
     expect(
       offlineResult.container.querySelector('button.order-payment-open-button'),
@@ -151,7 +151,7 @@ describe('ReceivePaymentPanel', () => {
       />,
     );
 
-    expect(deniedResult.container.textContent).toContain('Pagamentos exigem conexao ativa.');
+    expect(deniedResult.container.textContent).toContain('Pagamentos exigem conexão ativa.');
     expect(deniedResult.container.querySelector('button.order-payment-open-button')).toHaveProperty(
       'disabled',
       true,

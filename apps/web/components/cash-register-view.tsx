@@ -44,8 +44,8 @@ export function CashRegisterView({ model }: Readonly<{ model: CashRegisterViewMo
         ) : null}
       </header>
 
-      <div className="cash-register-workspace" aria-label="Operacao de caixa responsiva">
-        <main className="cash-register-primary" aria-label="Acoes principais do caixa">
+      <div className="cash-register-workspace" aria-label="Operação de caixa responsiva">
+        <main className="cash-register-primary" aria-label="Ações principais do caixa">
           {model.state === 'no-open-session' ? (
             <OpenCashRegisterPanel model={model} onOpen={() => setModal('open')} />
           ) : null}
@@ -162,7 +162,7 @@ function CashMovementPanels({
       <div className="cash-register-actions-grid">
         <CashMovementAction
           title="Sangria"
-          description="Retirada auditavel de dinheiro do caixa."
+          description="Retirada auditável de dinheiro do caixa."
           disabled={!model.canWithdraw}
           buttonLabel="Registrar sangria"
           onClick={onWithdraw}
@@ -265,7 +265,7 @@ function PaymentMethodTotals({ model }: Readonly<{ model: CashRegisterViewModel 
       <div className="cash-register-panel-heading">
         <div>
           <p className="eyebrow">Recebimentos</p>
-          <h2 id="cash-methods-title">Resumo por metodo</h2>
+          <h2 id="cash-methods-title">Resumo por método</h2>
         </div>
         <ReceiptText size={20} aria-hidden="true" />
       </div>
@@ -327,7 +327,7 @@ function CashRegisterModal({
   if (modal === 'open') {
     return (
       <AppModal
-        description="A abertura cria uma sessao auditavel para recebimentos e movimentos manuais."
+        description="A abertura cria uma sessao auditável para recebimentos e movimentos manuais."
         eyebrow="Inicio do dia"
         title="Abrir caixa"
         onClose={onClose}
@@ -534,7 +534,7 @@ function CashRegisterErrorState({ model }: Readonly<{ model: CashRegisterViewMod
       <AlertTriangle size={28} aria-hidden="true" />
       <div>
         <p className="eyebrow">Caixa</p>
-        <h1 id="cash-error-title">Nao foi possivel carregar o caixa</h1>
+        <h1 id="cash-error-title">Não foi possível carregar o caixa</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

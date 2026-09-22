@@ -83,12 +83,12 @@ export function CommissionView({ model }: Readonly<{ model: CommissionsViewModel
       ) : null}
 
       {model.state === 'empty' ? (
-        <CommissionInlineState text="Nenhuma comissao ou regra encontrada neste periodo." />
+        <CommissionInlineState text="Nenhuma comissão ou regra encontrada neste período." />
       ) : null}
 
-      <section className="commissions-totals-grid" aria-label="Resumo de comissoes">
+      <section className="commissions-totals-grid" aria-label="Resumo de comissões">
         <CommissionTotal
-          label="Comissoes abertas"
+          label="Comissões abertas"
           tone="warning"
           value={model.totals.openAccrualAmountLabel}
         />
@@ -111,8 +111,8 @@ export function CommissionView({ model }: Readonly<{ model: CommissionsViewModel
 
       <CommissionFilters model={model} selected={section} onSelect={setSection} />
 
-      <div className="commissions-workspace" aria-label="Comissoes e repasses responsivos">
-        <main className="commissions-primary" aria-label="Regras e comissoes abertas">
+      <div className="commissions-workspace" aria-label="Comissões e repasses responsivos">
+        <main className="commissions-primary" aria-label="Regras e comissões abertas">
           {sectionVisible(section, 'rules') ? <RulePrecedence /> : null}
           {sectionVisible(section, 'rules') ? (
             <CommissionRules
@@ -160,7 +160,7 @@ function CommissionActions({
   onAction: (action: CommissionActionModel) => void;
 }>) {
   return (
-    <div className="commissions-heading-actions" aria-label="Acoes de comissoes">
+    <div className="commissions-heading-actions" aria-label="Ações de comissões">
       {actions.map((action) => (
         <button
           className={
@@ -223,7 +223,7 @@ function CommissionFilters({
         model.noRuleItems.length,
     },
     { id: 'rules', label: 'Regras', count: model.rules.length },
-    { id: 'accruals', label: 'Comissoes', count: model.openAccruals.length },
+    { id: 'accruals', label: 'Comissões', count: model.openAccruals.length },
     { id: 'payouts', label: 'Repasses', count: model.payouts.length },
     { id: 'diagnostics', label: 'Diagnosticos', count: model.noRuleItems.length },
   ];
@@ -256,7 +256,7 @@ function CommissionFilters({
 }
 
 function RulePrecedence() {
-  const levels = ['Item especifico', 'Servico ou produto', 'Profissional', 'Padrao'];
+  const levels = ['Item específico', 'Serviço ou produto', 'Profissional', 'Padrao'];
   return (
     <section className="commissions-panel" aria-labelledby="commission-precedence-title">
       <div className="commissions-panel-heading">
@@ -336,7 +336,7 @@ function OpenAccruals({
       <div className="commissions-panel-heading">
         <div>
           <p className="eyebrow">Producao</p>
-          <h2 id="commission-accruals-title">Comissoes abertas</h2>
+          <h2 id="commission-accruals-title">Comissões abertas</h2>
         </div>
         <ReceiptText size={20} aria-hidden="true" />
       </div>
@@ -368,7 +368,7 @@ function OpenAccruals({
           ))}
         </div>
       ) : (
-        <p className="commissions-muted">Sem comissoes abertas neste periodo.</p>
+        <p className="commissions-muted">Sem comissões abertas neste período.</p>
       )}
     </section>
   );
@@ -433,7 +433,7 @@ function PayoutActions({
       <div className="commissions-panel-heading">
         <div>
           <p className="eyebrow">Repasse</p>
-          <h2 id="commission-payout-actions-title">Acoes por modal</h2>
+          <h2 id="commission-payout-actions-title">Ações por modal</h2>
         </div>
         <WalletCards size={20} aria-hidden="true" />
       </div>
@@ -486,7 +486,7 @@ function PayoutList({
     <section className="commissions-panel" aria-labelledby="commission-payouts-title">
       <div className="commissions-panel-heading">
         <div>
-          <p className="eyebrow">Historico</p>
+          <p className="eyebrow">Histórico</p>
           <h2 id="commission-payouts-title">Repasses</h2>
         </div>
         <WalletCards size={20} aria-hidden="true" />
@@ -502,7 +502,7 @@ function PayoutList({
                   {payout.paymentMethodLabel ? ' · ' + payout.paymentMethodLabel : ''}
                 </span>
                 {payout.status === 'PAID' ? (
-                  <small>Repasse pago preserva historico; use correcao auditavel.</small>
+                  <small>Repasse pago preserva histórico; use correcao auditável.</small>
                 ) : null}
               </div>
               <div>
@@ -540,7 +540,7 @@ function PayoutList({
           ))}
         </div>
       ) : (
-        <p className="commissions-muted">Nenhum repasse fechado neste periodo.</p>
+        <p className="commissions-muted">Nenhum repasse fechado neste período.</p>
       )}
     </section>
   );
@@ -555,9 +555,9 @@ function CommissionModal({
   if (modal.type === 'rule') {
     return (
       <AppModal
-        description="Configure a regra sem tirar a lista de producao da tela principal."
+        description="Configure a regra sem tirar a lista de produção da tela principal."
         eyebrow={modal.rule ? 'Detalhes da regra' : 'Nova regra'}
-        title={modal.rule?.label ?? 'Nova regra de comissao'}
+        title={modal.rule?.label ?? 'Nova regra de comissão'}
         onClose={onClose}
       >
         <RuleForm model={model} rule={modal.rule} />
@@ -567,7 +567,7 @@ function CommissionModal({
   if (modal.type === 'close-payout') {
     return (
       <AppModal
-        description="Selecione profissional e periodo para fechar um repasse auditavel."
+        description="Selecione profissional e período para fechar um repasse auditável."
         eyebrow="Fechamento"
         title="Fechar repasse"
         onClose={onClose}
@@ -591,7 +591,7 @@ function CommissionModal({
   if (modal.type === 'correct-payout') {
     return (
       <AppModal
-        description="Repasses pagos nao sao sobrescritos; correcao gera movimento auditavel."
+        description="Repasses pagos não sao sobrescritos; correcao gera movimento auditável."
         eyebrow="Correcao"
         title="Corrigir repasse pago"
         onClose={onClose}
@@ -603,8 +603,8 @@ function CommissionModal({
   if (modal.type === 'accrual-details') {
     return (
       <AppModal
-        description="Detalhes da comissao aberta selecionada."
-        eyebrow="Comissao"
+        description="Detalhes da comissão aberta selecionada."
+        eyebrow="Comissão"
         title={modal.accrual.professionalName}
         onClose={onClose}
       >
@@ -615,7 +615,7 @@ function CommissionModal({
   if (modal.type === 'payout-details') {
     return (
       <AppModal
-        description="Historico e status do repasse selecionado."
+        description="Histórico e status do repasse selecionado."
         eyebrow="Repasse"
         title={modal.payout.professionalName}
         onClose={onClose}
@@ -688,7 +688,7 @@ function RuleForm({
           <select defaultValue={rule?.scope ?? 'TENANT_DEFAULT'}>
             <option value="TENANT_DEFAULT">Padrao</option>
             <option value="PROFESSIONAL">Profissional</option>
-            <option value="SERVICE">Servico</option>
+            <option value="SERVICE">Serviço</option>
             <option value="PRODUCT">Produto</option>
             <option value="ORDER_ITEM">Item manual</option>
           </select>
@@ -803,7 +803,7 @@ function CorrectPayoutForm({ payout }: Readonly<{ payout?: PayoutModel }>) {
       <fieldset disabled={!payout?.canCorrect}>
         <label>
           Motivo da correcao
-          <input maxLength={500} placeholder="Explique o ajuste auditavel" />
+          <input maxLength={500} placeholder="Explique o ajuste auditável" />
         </label>
         <label>
           Valor do ajuste
@@ -841,7 +841,7 @@ function accrualDetails(accrual: CommissionAccrualModel) {
     { label: 'Base', value: accrual.baseAmountLabel },
     { label: 'Regra aplicada', value: accrual.ruleSnapshotLabel },
     { label: 'Status', value: accrual.statusLabel },
-    { label: 'Comissao', value: accrual.commissionAmountLabel },
+    { label: 'Comissão', value: accrual.commissionAmountLabel },
   ];
 }
 
@@ -894,7 +894,7 @@ function CommissionBoundaryState({ model }: Readonly<{ model: CommissionsViewMod
       )}
       <div>
         <p className="eyebrow">{denied ? 'Acesso restrito' : 'Falha ao carregar'}</p>
-        <h1 id="commissions-boundary-title">{denied ? 'Comissoes indisponiveis' : model.title}</h1>
+        <h1 id="commissions-boundary-title">{denied ? 'Comissões indisponíveis' : model.title}</h1>
         <p>{model.error?.message ?? model.description}</p>
       </div>
     </section>

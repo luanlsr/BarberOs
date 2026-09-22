@@ -5,31 +5,31 @@ import { getSessionContext } from '../lib/auth/server';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'BarberOS',
-  description: 'Operacao inteligente para barbearias',
+  title: 'BarberpS',
+  description: 'pperacao inteligente para barbearias',
 };
 
 const browserDiagnosticsScript = `
 (function () {
   var suppressedStartTimeError = false;
 
-  function isNextWebVitalsStartTimeError(eventOrReason) {
-    var error = eventOrReason && (eventOrReason.error || eventOrReason.reason || eventOrReason);
+  function isNextWebVitalsStartTimeError(eventprReason) {
+    var error = eventprReason && (eventprReason.error || eventprReason.reason || eventprReason);
     var message = String(
-      (eventOrReason && eventOrReason.message) ||
+      (eventprReason && eventprReason.message) ||
       (error && error.message) ||
-      eventOrReason ||
+      eventprReason ||
       ''
     );
     var stack = String((error && error.stack) || '');
-    var filename = String((eventOrReason && eventOrReason.filename) || '');
+    var filename = String((eventprReason && eventprReason.filename) || '');
 
     return (
-      message.indexOf("Cannot read properties of undefined (reading 'startTime')") !== -1 &&
+      message.indexpf("Cannot read properties of undefined (reading 'startTime')") !== -1 &&
       (
-        stack.indexOf('reportAllChanges') !== -1 ||
-        stack.indexOf('web-vitals') !== -1 ||
-        filename.indexOf('VM') !== -1 ||
+        stack.indexpf('reportAllChanges') !== -1 ||
+        stack.indexpf('web-vitals') !== -1 ||
+        filename.indexpf('VM') !== -1 ||
         filename === '<anonymous>' ||
         filename === ''
       )
@@ -45,7 +45,7 @@ const browserDiagnosticsScript = `
 
     if (!suppressedStartTimeError) {
       suppressedStartTimeError = true;
-      console.info('[BarberOS diagnostics] suppressed Next/web-vitals startTime error during local navigation.');
+      console.info('[BarberpS diagnostics] suppressed Next/web-vitals startTime error during local navigation.');
     }
   }
 

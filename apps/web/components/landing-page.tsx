@@ -1,17 +1,14 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
   BadgeCheck,
-  BellRing,
   Bot,
   Boxes,
   CalendarDays,
   Check,
   CircleDollarSign,
   Clock3,
-  CreditCard,
-  LayoutDashboard,
-  PackageCheck,
   ReceiptText,
   Scissors,
   ShieldCheck,
@@ -22,6 +19,7 @@ import {
   Users,
   WalletCards,
 } from 'lucide-react';
+import { BrandLogo } from './brand-logo';
 import { LandingAnalytics } from './landing-analytics';
 import type { PublicPlan } from '../lib/public-plans';
 
@@ -34,90 +32,77 @@ const quickBenefits = [
   {
     icon: CalendarDays,
     label: 'Agenda inteligente',
-    text: 'Horarios, profissionais e clientes com leitura rapida.',
+    text: 'Horários, profissionais e clientes com leitura rápida.',
   },
   {
     icon: ReceiptText,
     label: 'Comandas integradas',
-    text: 'Servicos e produtos conectados ao caixa.',
+    text: 'Serviços e produtos conectados ao caixa.',
   },
   {
     icon: Boxes,
     label: 'Estoque conectado',
-    text: 'Saldos, alertas e movimentacoes em tempo real.',
+    text: 'Saldos, alertas e movimentações em tempo real.',
   },
   {
     icon: CircleDollarSign,
-    label: 'Financeiro visivel',
-    text: 'Despesas, repasses e comissoes no mesmo fluxo.',
+    label: 'Financeiro visível',
+    text: 'Entradas, despesas, comissões e repasses em tempo real.',
   },
-  { icon: Bot, label: 'Barber AI', text: 'Base para insights e automacoes com permissao.' },
+  { icon: Bot, label: 'Barber AI', text: 'Base para insights e automações com permissão.' },
 ];
 
-const featureCards = [
+const benefitStories = [
   {
     icon: CalendarDays,
-    title: 'Agenda',
-    text: 'Organize horarios, servicos, profissionais e clientes por unidade.',
+    title: 'A barbearia começa o dia sabendo o que vai acontecer.',
+    text: 'Agenda, clientes e equipe ficam conectados para a recepção confirmar horários, fazer check-in e abrir a comanda sem retrabalho.',
+    highlights: [
+      'Agenda por profissional',
+      'Cliente com histórico',
+      'Check-in direto para Comanda',
+    ],
+    metric: 'Até 3 cliques do cliente chegar à venda',
     tone: 'copper',
-  },
-  {
-    icon: Users,
-    title: 'Clientes / CRM',
-    text: 'Cadastre contatos, origem e historico para atender com mais contexto.',
-    tone: 'green',
   },
   {
     icon: ReceiptText,
-    title: 'Comandas',
-    text: 'Acompanhe itens, descontos, pagamento e status da venda.',
-    tone: 'blue',
-  },
-  {
-    icon: CreditCard,
-    title: 'Caixa / PDV',
-    text: 'Venda servicos, bebidas, cosmeticos, alimentos e produtos cadastrados.',
-    tone: 'copper',
-  },
-  {
-    icon: PackageCheck,
-    title: 'Estoque',
-    text: 'Controle saldos, movimentos e produtos que exigem reposicao.',
+    title: 'Cada atendimento vira venda registrada do jeito certo.',
+    text: 'Serviços, produtos, descontos e pagamentos entram no mesmo fluxo. O estoque baixa quando o produto sai, e o caixa já nasce conferível.',
+    highlights: ['Comandas e PDV', 'Produtos e estoque', 'Caixa com sangria e reforço'],
+    metric: 'Menos anotação manual no balcão',
     tone: 'green',
   },
   {
-    icon: CircleDollarSign,
-    title: 'Financeiro',
-    text: 'Veja despesas, entradas, comissoes, repasses e indicadores essenciais.',
+    icon: WalletCards,
+    title: 'O dono acompanha dinheiro, comissões e repasses em tempo real.',
+    text: 'O financeiro mostra receitas, despesas, comissões, descontos de funcionários e previsão de recebimento antes do fechamento do mês.',
+    highlights: ['Financeiro por período', 'Despesas e comissões', 'Salário e repasse previstos'],
+    metric: 'Previsão do mês sempre atualizada',
     tone: 'blue',
   },
   {
-    icon: Scissors,
-    title: 'Equipe e servicos',
-    text: 'Gerencie barbeiros, recepcao, precos, categorias e duracao.',
-    tone: 'copper',
-  },
-  {
-    icon: Bot,
-    title: 'Inteligencia operacional',
-    text: 'Recursos de IA previstos para apoiar analises e automacoes com permissao.',
+    icon: ShieldCheck,
+    title: 'Cada pessoa vê só o que precisa para trabalhar melhor.',
+    text: 'Admin, recepção e barbeiro têm visões diferentes. Em redes, a base já está preparada para múltiplas unidades e IA futura.',
+    highlights: ['Permissões por perfil', 'Multiunidades', 'Barber AI em evolução'],
+    metric: 'Mais controle sem travar a operação',
     tone: 'violet',
   },
 ];
-
 const problems = [
-  'Agenda espalhada em WhatsApp, papel e memoria da equipe.',
+  'Agenda espalhada em WhatsApp, papel e memória da equipe.',
   'Comandas anotadas manualmente, sem ligar venda, caixa e estoque.',
   'Produtos vendidos sem baixa clara no estoque.',
-  'Comissao e repasse calculados no fim do dia com risco de erro.',
-  'Dono sem visao simples do que entrou, saiu e ficou pendente.',
+  'Comissão, desconto e salário calculados no fim do mês com risco de erro.',
+  'Dono sem saber em tempo real quanto entrou, saiu e quanto ainda vai receber.',
 ];
 
 const productScreens = [
   {
     eyebrow: 'Agenda',
     title: 'Atendimentos do dia',
-    value: '18 horarios',
+    value: '18 horários',
     color: 'copper',
     rows: [
       '09:00  Corte + Barba  Confirmado',
@@ -135,9 +120,13 @@ const productScreens = [
   {
     eyebrow: 'Financeiro',
     title: 'Resumo da unidade',
-    value: 'R$ 8.420',
+    value: 'R$ 18.740',
     color: 'green',
-    rows: ['Receitas pagas  R$ 9.120', 'Despesas abertas  R$ 700', 'Comissoes  R$ 1.860'],
+    rows: [
+      'Recebível do mês  R$ 18.740',
+      'Comissões previstas  R$ 4.180',
+      'Despesas e descontos  R$ 3.240',
+    ],
   },
   {
     eyebrow: 'Estoque',
@@ -149,48 +138,71 @@ const productScreens = [
 ];
 
 const workflowItems = [
-  { icon: CalendarDays, title: 'Agenda', text: 'Cliente marca ou chega na recepcao.' },
-  { icon: UserCheck, title: 'Check-in', text: 'A equipe confirma presenca e inicia atendimento.' },
-  { icon: ReceiptText, title: 'Comanda', text: 'Servicos e produtos entram na mesma venda.' },
+  { icon: CalendarDays, title: 'Agenda', text: 'Cliente marca ou chega na recepção.' },
+  { icon: UserCheck, title: 'Check-in', text: 'A equipe confirma presença e inicia atendimento.' },
+  { icon: ReceiptText, title: 'Comanda', text: 'Serviços e produtos entram na mesma venda.' },
   {
     icon: WalletCards,
     title: 'Pagamento',
-    text: 'Caixa, financeiro, estoque e comissao sao atualizados.',
+    text: 'Caixa, estoque, financeiro, comissão e repasse são atualizados na hora.',
+  },
+];
+
+const financeHighlights = [
+  {
+    icon: CircleDollarSign,
+    title: 'Receita em tempo real',
+    text: 'Cada corte, barba, produto e pagamento alimenta o financeiro sem depender de planilha no fim do dia.',
+  },
+  {
+    icon: WalletCards,
+    title: 'Comissões e repasses',
+    text: 'O dono acompanha quanto cada barbeiro produziu, quanto tem a receber e quais repasses ainda estão pendentes.',
+  },
+  {
+    icon: ReceiptText,
+    title: 'Descontos e salário',
+    text: 'Registre adiantamentos, descontos e despesas para chegar ao valor certo do funcionário no fechamento.',
+  },
+  {
+    icon: Clock3,
+    title: 'Menos horas de conferência',
+    text: 'O caixa, o estoque e as comissões conversam entre si, reduzindo retrabalho e erro manual todo mês.',
   },
 ];
 
 const faq = [
   [
     'Preciso instalar alguma coisa?',
-    'Nao. O BarberOS roda no navegador e foi pensado como PWA para funcionar bem no celular e no computador.',
+    'Não. O BarberOS roda no navegador e foi pensado como PWA para funcionar bem no celular e no computador.',
   ],
   [
     'Funciona no celular?',
     'Sim. Os fluxos principais foram pensados para smartphone, tablet e desktop.',
   ],
   [
-    'Consigo cadastrar varios barbeiros?',
-    'Sim. O sistema possui equipe, papeis, filiais e permissoes por usuario.',
+    'Consigo cadastrar vários barbeiros?',
+    'Sim. O sistema possui equipe, papeis, filiais e permissões por usuário.',
   ],
   [
     'Tem controle de produtos e comandas?',
-    'Sim. Produtos, estoque, comandas, pagamentos e caixa fazem parte da operacao atual.',
+    'Sim. Produtos, estoque, comandas, pagamentos e caixa fazem parte da operação atual.',
   ],
   [
     'Como funciona o pagamento?',
-    'A base de planos e assinaturas ja existe. A etapa de checkout com Asaas deve ser conectada server-side antes de cobrar clientes reais.',
+    'A base de planos e assinaturas já existe. A etapa de checkout com Asaas deve ser conectada server-side antes de cobrar clientes reais.',
   ],
   [
     'Meus dados ficam separados?',
-    'Sim. A arquitetura usa tenants e validacoes server-side para separar os dados de cada barbearia.',
+    'Sim. Cada barbearia opera com dados separados e validações server-side para proteger a operação.',
   ],
   [
     'Posso usar em mais de uma filial?',
-    'A estrutura de tenants, filiais e usuarios ja existe para evoluir operacoes com varias unidades.',
+    'A estrutura de filiais, equipes e usuários já existe para evoluir operações com várias unidades.',
   ],
   [
     'Existe suporte?',
-    'A operacao foi preparada para suporte e administracao pelo Master Admin da plataforma.',
+    'A operação foi preparada para suporte, configuração e acompanhamento seguro da barbearia.',
   ],
 ];
 
@@ -209,14 +221,10 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <header className="landing-header">
-        <Link className="brand-lockup landing-brand" href="/" aria-label="BarberOS">
-          <span className="brand-mark">B</span>
-          <span>
-            <span className="brand-name">BarberOS</span>
-            <span className="brand-caption">SaaS para barbearias</span>
-          </span>
+        <Link className="landing-brand" href="/" aria-label="BarberOS">
+          <BrandLogo />
         </Link>
-        <nav className="landing-nav" aria-label="Navegacao da landing page">
+        <nav className="landing-nav" aria-label="Navegação da landing page">
           <a href="#recursos">Recursos</a>
           <a href="#produto">Produto</a>
           <a href="#planos">Planos</a>
@@ -227,18 +235,18 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
             Entrar
           </Link>
           <Link className="button button-primary" href={signupHref} data-event="hero_cta_click">
-            Comecar agora
+            Começar agora
           </Link>
         </div>
       </header>
 
       <section className="landing-hero landing-color-band">
         <div className="landing-hero-copy">
-          <p className="eyebrow">Operacao, caixa e equipe no mesmo fluxo</p>
-          <h1>Transforme a rotina da barbearia em uma operacao organizada.</h1>
+          <p className="eyebrow">Operação, caixa e equipe no mesmo fluxo</p>
+          <h1>Transforme a rotina da barbearia em uma operação organizada.</h1>
           <p className="landing-lead">
             O BarberOS centraliza agenda, clientes, barbeiros, comandas, vendas, estoque, caixa e
-            financeiro para o dono enxergar o negocio com clareza antes do fim do dia.
+            financeiro para o dono enxergar o negócio com clareza antes do fim do dia.
           </p>
           <div className="landing-cta-row">
             <Link
@@ -246,14 +254,14 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
               href={signupHref}
               data-event="hero_cta_click"
             >
-              Comecar agora
+              Começar agora
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <a className="button button-secondary landing-cta" href={demoHref}>
               Ver telas do sistema
             </a>
           </div>
-          <div className="landing-trust-row" aria-label="Resumo de beneficios">
+          <div className="landing-trust-row" aria-label="Resumo de benefícios">
             <span>
               <Check size={15} aria-hidden="true" /> Mobile e desktop
             </span>
@@ -261,14 +269,14 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
               <Check size={15} aria-hidden="true" /> Dados por barbearia
             </span>
             <span>
-              <Check size={15} aria-hidden="true" /> Visao por perfil
+              <Check size={15} aria-hidden="true" /> Visão por perfil
             </span>
           </div>
         </div>
         <ProductMockup />
       </section>
 
-      <section className="landing-benefit-strip" aria-label="Beneficios rapidos">
+      <section className="landing-benefit-strip" aria-label="Beneficios rápidos">
         {quickBenefits.map((item) => {
           const Icon = item.icon;
           return (
@@ -284,10 +292,10 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
       <section className="landing-section landing-problem-section">
         <div>
           <p className="eyebrow">O problema</p>
-          <h2>Quando cada parte da barbearia fica em um lugar, o dono perde visao.</h2>
+          <h2>Quando cada parte da barbearia fica em um lugar, o dono perde visão.</h2>
           <p>
-            O BarberOS junta agenda, venda, produto, equipe e financeiro em uma rotina continua.
-            Menos retrabalho para a recepcao, mais clareza para o barbeiro e mais controle para o
+            O BarberOS junta agenda, venda, produto, equipe e financeiro em uma rotina contínua.
+            Menos retrabalho para a recepção, mais clareza para o barbeiro e mais controle para o
             dono.
           </p>
           <Link className="button button-primary" href={signupHref} data-event="problem_cta_click">
@@ -307,10 +315,10 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
       <section className="landing-section landing-showcase-section" id="produto">
         <div className="landing-section-heading wide">
           <p className="eyebrow">Telas do produto</p>
-          <h2>Mostre a operacao como ela acontece: agenda, comanda, estoque e dinheiro.</h2>
+          <h2>Mostre a operação como ela acontece: agenda, comanda, estoque e dinheiro.</h2>
           <p>
-            Os exemplos abaixo usam dados ficticios para apresentar a experiencia sem expor
-            informacoes de clientes ou tenants reais.
+            Os exemplos abaixo usam dados fictícios para apresentar a experiência sem expor
+            informações de clientes ou barbearias reais.
           </p>
         </div>
         <div className="landing-screen-grid">
@@ -323,23 +331,23 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
       <section className="landing-section landing-dashboard-story">
         <div className="landing-section-heading">
           <p className="eyebrow">Painel do dono</p>
-          <h2>Decisao rapida sem abrir dez abas.</h2>
+          <h2>Decisão rápida sem abrir dez abas.</h2>
           <p>
             O painel resume movimento, fila de atendimentos, comandas, estoque e financeiro para
             ajudar o dono a corrigir a rota durante o dia.
           </p>
         </div>
-        <div className="landing-chart-board" aria-label="Graficos demonstrativos do BarberOS">
+        <div className="landing-chart-board" aria-label="Gráficos demonstrativos do BarberOS">
           <div className="chart-card revenue">
             <div>
-              <span>Receita do mes</span>
+              <span>Receita do mês</span>
               <strong>R$ 24.680</strong>
             </div>
             <MiniBarChart />
           </div>
           <div className="chart-card split">
             <div>
-              <span>Servicos mais vendidos</span>
+              <span>Serviços mais vendidos</span>
               <strong>Corte, barba e sobrancelha</strong>
             </div>
             <MiniDonut />
@@ -347,18 +355,62 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
           <div className="chart-card alerts">
             <span>Alertas operacionais</span>
             <p>
-              <Clock3 size={16} aria-hidden="true" /> 2 horarios aguardando confirmacao
+              <Clock3 size={16} aria-hidden="true" /> 2 horários aguardando confirmação
             </p>
             <p>
-              <Boxes size={16} aria-hidden="true" /> 3 produtos abaixo do minimo
+              <Boxes size={16} aria-hidden="true" /> 3 produtos abaixo do mínimo
             </p>
             <p>
-              <CircleDollarSign size={16} aria-hidden="true" /> 4 comissoes pendentes
+              <CircleDollarSign size={16} aria-hidden="true" /> 4 comissões pendentes
             </p>
           </div>
         </div>
       </section>
 
+      <section className="landing-section landing-finance-focus" id="financeiro">
+        <div className="landing-finance-copy">
+          <p className="eyebrow">Gestão financeira</p>
+          <h2>
+            Saiba quanto a barbearia vai receber no fim do mês enquanto o mês ainda está
+            acontecendo.
+          </h2>
+          <p>
+            A cada corte feito, produto vendido ou pagamento recebido, o BarberOS atualiza caixa,
+            estoque, comissão e resultado. O admin consegue acompanhar despesas, descontos de
+            funcionários, repasses, previsão de salário e dinheiro pendente sem esperar fechamento
+            manual.
+          </p>
+          <div
+            className="landing-finance-metrics"
+            aria-label="Indicadores financeiros demonstrativos"
+          >
+            <span>
+              <strong>R$ 42.850</strong>
+              Recebível previsto
+            </span>
+            <span>
+              <strong>R$ 8.940</strong>
+              Comissões do mês
+            </span>
+            <span>
+              <strong>6h+</strong>
+              Economia semanal em conferência
+            </span>
+          </div>
+        </div>
+        <div className="landing-finance-card-grid">
+          {financeHighlights.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article key={item.title}>
+                <Icon size={20} aria-hidden="true" />
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
       <section className="landing-section landing-workflow" id="funciona">
         <div className="landing-section-heading wide">
           <p className="eyebrow">Fluxo operacional</p>
@@ -382,56 +434,89 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
       <section className="landing-section landing-operator-section">
         <div className="landing-device-card">
           <Smartphone size={26} aria-hidden="true" />
-          <strong>Recepcao no tablet, barbeiro no celular, dono no desktop.</strong>
+          <strong>Recepção no tablet, barbeiro no celular, dono no desktop.</strong>
           <p>
             A interface foi pensada para rotinas diferentes sem obrigar todo mundo a ver a mesma
             tela.
           </p>
         </div>
         <div className="landing-operator-copy">
-          <p className="eyebrow">Visoes por perfil</p>
-          <h2>Cada usuario ve o que precisa para trabalhar melhor.</h2>
+          <p className="eyebrow">Visões por perfil</p>
+          <h2>Cada usuário vê o que precisa para trabalhar melhor.</h2>
           <div className="role-list">
             <span>
-              <Store size={16} aria-hidden="true" /> Admin acompanha toda a operacao.
+              <Store size={16} aria-hidden="true" /> Admin acompanha toda a operação.
             </span>
             <span>
-              <Users size={16} aria-hidden="true" /> Recepcao opera agenda, caixa e clientes.
+              <Users size={16} aria-hidden="true" /> Recepção opera agenda, caixa e clientes.
             </span>
             <span>
               <Scissors size={16} aria-hidden="true" /> Barbeiro acompanha atendimentos e ganhos.
             </span>
             <span>
-              <ShieldCheck size={16} aria-hidden="true" /> Super admin gerencia tenants e
-              assinaturas.
+              <ShieldCheck size={16} aria-hidden="true" /> Admin gerencia unidades, equipe e
+              permissões.
             </span>
           </div>
         </div>
       </section>
 
-      <section className="landing-section" id="recursos">
+      <section className="landing-section landing-benefit-story-section" id="recursos">
         <div className="landing-section-heading wide">
-          <p className="eyebrow">Tudo em um lugar</p>
-          <h2>Recursos para vender, atender, controlar e crescer.</h2>
+          <p className="eyebrow">Como o BarberOS trabalha por você</p>
+          <h2>Menos conferência no fim do dia. Mais controle enquanto a barbearia acontece.</h2>
+          <p>
+            Em vez de abrir uma tela para cada problema, o BarberOS conecta a rotina inteira:
+            agenda, venda, estoque, caixa, equipe e financeiro conversam no mesmo fluxo.
+          </p>
         </div>
-        <div className="landing-feature-grid expanded">
-          {featureCards.map((feature) => {
-            const Icon = feature.icon;
+        <div className="landing-feature-visual">
+          <Image
+            src="/landing/barberos-devices.png"
+            alt="BarberOS em notebook e celular mostrando agenda, comandas, financeiro e próximos passos"
+            width={1680}
+            height={945}
+            sizes="(max-width: 1280px) 100vw, 1180px"
+          />
+        </div>
+        <div className="landing-benefit-story-grid">
+          {benefitStories.map((story) => {
+            const Icon = story.icon;
             return (
-              <article className={`landing-feature-card tone-${feature.tone}`} key={feature.title}>
-                <span>
-                  <Icon size={20} aria-hidden="true" />
-                </span>
-                <h3>{feature.title}</h3>
-                <p>{feature.text}</p>
+              <article className={`landing-benefit-story tone-${story.tone}`} key={story.title}>
+                <div className="benefit-story-icon">
+                  <Icon size={22} aria-hidden="true" />
+                </div>
+                <div>
+                  <h3>{story.title}</h3>
+                  <p>{story.text}</p>
+                </div>
+                <ul>
+                  {story.highlights.map((highlight) => (
+                    <li key={highlight}>{highlight}</li>
+                  ))}
+                </ul>
+                <strong>{story.metric}</strong>
               </article>
             );
           })}
         </div>
+        <div className="landing-operation-ribbon" aria-label="Fluxo resumido da operação">
+          <span>Agenda</span>
+          <ArrowRight size={16} aria-hidden="true" />
+          <span>Comanda</span>
+          <ArrowRight size={16} aria-hidden="true" />
+          <span>Pagamento</span>
+          <ArrowRight size={16} aria-hidden="true" />
+          <span>Estoque e financeiro atualizados</span>
+        </div>
         <div className="landing-inline-cta colorful">
           <div>
-            <strong>Pronto para tirar sua operacao do improviso?</strong>
-            <p>Comece pela agenda e evolua para comandas, estoque, financeiro e equipe.</p>
+            <strong>Pronto para tirar sua operação do improviso?</strong>
+            <p>
+              Comece simples e evolua para uma gestão com caixa, estoque, repasses e
+              previsibilidade.
+            </p>
           </div>
           <Link className="button button-primary" href={signupHref} data-event="features_cta_click">
             Testar agora
@@ -443,7 +528,10 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
         <div className="landing-section-heading wide">
           <p className="eyebrow">Planos</p>
           <h2>Escolha um plano para o momento da sua barbearia.</h2>
-          <p>Os valores abaixo sao carregados da estrutura de planos do sistema.</p>
+          <p>
+            O plano de entrada organiza a operação. O Financeiro Pro é o melhor custo-benefício para
+            donos que querem previsibilidade de caixa, repasses e lucro.
+          </p>
         </div>
         <div className="landing-pricing-grid" data-event="pricing_view">
           {plans.map((plan) => (
@@ -454,11 +542,11 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
 
       <section className="landing-section landing-security">
         <div>
-          <p className="eyebrow">Seguranca</p>
+          <p className="eyebrow">Segurança</p>
           <h2>Dados separados por barbearia e acesso por perfil.</h2>
           <p>
-            Cada barbearia opera em seu proprio tenant. Usuarios acessam apenas o que o perfil e as
-            permissoes liberam, com validacao no servidor para proteger a operacao.
+            Cada barbearia opera com dados separados. Usuários acessam apenas o que o perfil e as
+            permissões liberam, com validação no servidor para proteger a operação.
           </p>
         </div>
         <ShieldCheck size={64} aria-hidden="true" />
@@ -482,13 +570,13 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
       <section className="landing-final-cta">
         <Sparkles size={24} aria-hidden="true" />
         <h2>Pare de administrar sua barbearia no improviso.</h2>
-        <p>Centralize a operacao, acompanhe os numeros e de mais clareza para sua equipe.</p>
+        <p>Centralize a operação, acompanhe os números e dê mais clareza para sua equipe.</p>
         <Link
           className="button button-primary landing-cta"
           href={signupHref}
           data-event="final_cta_click"
         >
-          Comecar agora
+          Começar agora
           <ArrowRight size={17} aria-hidden="true" />
         </Link>
       </section>
@@ -498,7 +586,7 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
           <span className="brand-mark">B</span>
           <span>
             <span className="brand-name">BarberOS</span>
-            <span className="brand-caption">Operacao inteligente para barbearias</span>
+            <span className="brand-caption">Operação inteligente para barbearias</span>
           </span>
         </div>
         <div>
@@ -514,7 +602,7 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
           href={signupHref}
           data-event="mobile_sticky_cta_click"
         >
-          Comecar agora
+          Começar agora
         </Link>
       </div>
     </main>
@@ -523,53 +611,21 @@ export function LandingPage({ plans, searchParams = {} }: Readonly<LandingPagePr
 
 function ProductMockup() {
   return (
-    <aside className="landing-product-mockup" aria-label="Previa visual do BarberOS">
-      <div className="mockup-topbar">
-        <span />
-        <strong>Operacao de hoje</strong>
-        <BellRing size={16} aria-hidden="true" />
-      </div>
-      <div className="mockup-kpis">
-        <span>
-          <strong>R$ 2.480</strong>Caixa
-        </span>
-        <span>
-          <strong>18</strong>Agenda
-        </span>
-        <span>
-          <strong>6</strong>Comandas
-        </span>
-      </div>
-      <div className="mockup-board">
-        <div>
-          <LayoutDashboard size={18} aria-hidden="true" />
-          <strong>Operacao em tempo real</strong>
-          <p>Proximos horarios, comandas abertas e alertas de estoque.</p>
-        </div>
-        <div className="mockup-row">
-          <span>09:00</span>
-          <strong>Corte + barba</strong>
-          <em>Confirmado</em>
-        </div>
-        <div className="mockup-row">
-          <span>10:30</span>
-          <strong>Produto vendido</strong>
-          <em>Estoque</em>
-        </div>
-        <div className="mockup-row">
-          <span>12:15</span>
-          <strong>Comissao gerada</strong>
-          <em>Financeiro</em>
-        </div>
-      </div>
-      <div className="mockup-insight">
-        <Bot size={18} aria-hidden="true" />
-        <span>Insight: dois produtos estao proximos do minimo para o fim de semana.</span>
-      </div>
+    <aside
+      className="landing-product-mockup"
+      aria-label="Prévia visual do BarberOS em celular e notebook"
+    >
+      <Image
+        src="/landing/barberos-devices.png"
+        alt="BarberOS exibido em notebook e celular com agenda, comandas, estoque, caixa e financeiro"
+        width={1152}
+        height={1536}
+        priority
+        sizes="(max-width: 1120px) 100vw, 54vw"
+      />
     </aside>
   );
 }
-
 function ProductScreen({ screen }: Readonly<{ screen: (typeof productScreens)[number] }>) {
   return (
     <article className={`landing-screen-card tone-${screen.color}`}>
@@ -625,7 +681,7 @@ function PlanCard({
       <p>{plan.description}</p>
       <div className="landing-plan-price">
         <strong>{formatCurrency(plan.priceAmountCents)}</strong>
-        <span>/{plan.billingInterval === 'YEARLY' ? 'ano' : 'mes'}</span>
+        <span>/{plan.billingInterval === 'YEARLY' ? 'ano' : 'mês'}</span>
       </div>
       <ul>
         {plan.features.map((feature) => (
@@ -673,7 +729,7 @@ function buildStructuredData(plans: PublicPlan[]) {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     description:
-      'Sistema de gestao para barbearias com agenda, clientes, comandas, estoque, caixa e financeiro.',
+      'Sistema de gestão para barbearias com agenda, clientes, comandas, estoque, caixa e financeiro.',
     offers: plans.map((plan) => ({
       '@type': 'Offer',
       name: plan.name,

@@ -336,7 +336,7 @@ export function getDevelopmentInventoryViewModel(
     return buildInventoryModel(
       base,
       'permission-denied',
-      'Seu perfil nao pode visualizar estoque.',
+      'Seu perfil não pode visualizar estoque.',
       [],
       [],
       [],
@@ -358,13 +358,13 @@ export function getDevelopmentInventoryViewModel(
     return buildInventoryModel(
       base,
       'error',
-      'Nao foi possivel carregar estoque agora.',
+      'Não foi possível carregar estoque agora.',
       [],
       [],
       [],
       {
         code: 'INVENTORY_VALIDATION_ERROR',
-        message: 'Estoque local indisponivel.',
+        message: 'Estoque local indisponível.',
         requestId: 'local-inventory-error',
       },
     );
@@ -374,7 +374,7 @@ export function getDevelopmentInventoryViewModel(
     return buildInventoryModel(
       base,
       'offline',
-      'Voce esta offline. Entradas, perdas e ajustes ficam pausados.',
+      'Você está offline. Entradas, perdas e ajustes ficam pausados.',
       balancesForBranch(branchId),
       alertsForBranch(branchId),
       movementsForBranch(branchId),
@@ -401,7 +401,7 @@ export function getDevelopmentInventoryViewModel(
     base,
     balances.length ? 'ready' : 'empty',
     balances.length
-      ? 'Saldos, alertas de estoque baixo e historico recente da unidade.'
+      ? 'Saldos, alertas de estoque baixo e histórico recente da unidade.'
       : 'Nenhum saldo de estoque nesta unidade.',
     balances,
     alertsForBranch(branchId),
@@ -414,7 +414,7 @@ function baseModel(session: SessionContext, branchId: string) {
   const hasBranch = session.branchScope.includes(branchId);
   return {
     title: 'Estoque',
-    description: 'Saldos, alertas e movimentacoes auditaveis.',
+    description: 'Saldos, alertas e movimentacoes auditáveis.',
     branchId,
     branchName: branchNameFor(session, branchId),
     canRead: hasPermission(session, 'inventory.read') && hasInventoryEntitlement && hasBranch,
@@ -468,7 +468,7 @@ function toBalanceItemModel(
     lowStock: balance.lowStock,
     zeroStock,
     tone: zeroStock ? 'danger' : balance.lowStock ? 'warning' : 'success',
-    supplierName: product?.supplierMetadata?.supplierName ?? 'Fornecedor nao informado',
+    supplierName: product?.supplierMetadata?.supplierName ?? 'Fornecedor não informado',
     lastMovementLabel: balance.lastMovementAt
       ? dateTimeFormatter.format(new Date(balance.lastMovementAt))
       : 'Sem movimentos',
@@ -485,7 +485,7 @@ function toLowStockAlertModel(alert: LowStockAlert): LowStockAlertModel {
     productName: product?.name ?? 'Produto ' + shortId(alert.productId),
     currentQuantity: alert.currentQuantity,
     minimumStockQuantity: alert.minimumStockQuantity,
-    label: `${alert.currentQuantity} de minimo ${alert.minimumStockQuantity}`,
+    label: `${alert.currentQuantity} de mínimo ${alert.minimumStockQuantity}`,
     tone: zeroStock ? 'danger' : 'warning',
   };
 }
@@ -519,13 +519,13 @@ function actionsFor(
       id: 'inventory.refresh',
       label: 'Recarregar',
       enabled: base.canRead && state !== 'permission-denied',
-      reason: base.canRead ? undefined : 'Sem permissao para visualizar estoque.',
+      reason: base.canRead ? undefined : 'Sem permissão para visualizar estoque.',
     },
     {
       id: 'inventory.record-entry',
       label: 'Entrada',
       enabled: base.canWrite && state === 'ready',
-      reason: actionReason(base.canWrite, stateReason, 'Sem permissao para registrar entrada.'),
+      reason: actionReason(base.canWrite, stateReason, 'Sem permissão para registrar entrada.'),
     },
     {
       id: 'inventory.record-loss',
@@ -632,16 +632,16 @@ function selectedActionReason(
   hasSelectable: boolean,
   emptyReason: string,
 ) {
-  if (!hasAccess) return 'Sem permissao para alterar estoque.';
+  if (!hasAccess) return 'Sem permissão para alterar estoque.';
   if (stateReason) return stateReason;
   if (!hasSelectable) return emptyReason;
   return undefined;
 }
 
 function unavailableReasonForState(state: InventoryViewState) {
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue o estoque antes de executar esta acao.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar estoque.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue o estoque antes de executar esta ação.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar estoque.';
   if (state === 'loading') return 'Aguarde o carregamento.';
   return undefined;
 }

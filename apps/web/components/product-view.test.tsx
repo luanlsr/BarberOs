@@ -48,7 +48,7 @@ describe('ProductView', () => {
     expect(html).toContain('R$ 45,00');
     expect(html).toContain('R$ 18,00');
     expect(html).toContain('Controla estoque');
-    expect(html).toContain('Estoque nao controlado');
+    expect(html).toContain('Estoque não controlado');
     expect(html).toContain('Novo produto');
     expect(html).toContain('Finalizadores');
     expect(html).toContain('Bebidas');
@@ -78,7 +78,7 @@ describe('ProductView', () => {
     );
     const deniedHtml = renderToStaticMarkup(<ProductView model={denied} />);
 
-    expect(deniedHtml).toContain('Produtos indisponiveis');
+    expect(deniedHtml).toContain('Produtos indisponíveis');
     expect(deniedHtml).not.toContain('Pomada Matte 80g');
 
     const offlineHtml = renderToStaticMarkup(

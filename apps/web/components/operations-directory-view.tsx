@@ -116,11 +116,11 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
       const nextItem = apiRecordToItem(model.area, savedRecord);
       upsertItem(nextItem, dialog.mode);
       setServerSynced(true);
-      showToast(dialog.mode === 'create' ? 'Registro criado no servidor.' : 'Alteracoes salvas.');
+      showToast(dialog.mode === 'create' ? 'Registro criado no servidor.' : 'Alterações salvas.');
     } catch {
       upsertItem(fallbackItem, dialog.mode);
       setServerSynced(false);
-      showToast('Servidor indisponivel; alteracao mantida nesta sessao.', 'warning');
+      showToast('Servidor indisponível; alteracao mantida nesta sessão.', 'warning');
     } finally {
       setBusy(false);
       setDialog(null);
@@ -136,7 +136,7 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
       showToast(`${item.title} foi arquivado.`);
     } catch {
       setServerSynced(false);
-      showToast(`${item.title} foi arquivado apenas nesta sessao.`, 'warning');
+      showToast(`${item.title} foi arquivado apenas nesta sessão.`, 'warning');
     } finally {
       setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
       setConfirming(null);
@@ -260,9 +260,9 @@ function DirectoryWriteReason({
   const reason = busy
     ? 'Salvando alteracao operacional.'
     : !model.canCreate
-      ? 'Seu perfil nao possui permissao de criacao.'
+      ? 'Seu perfil não possui permissão de criação.'
       : model.state === 'offline'
-        ? 'Acoes de escrita ficam indisponiveis sem confirmacao do servidor.'
+        ? 'Ações de escrita ficam indisponíveis sem confirmacao do servidor.'
         : model.state === 'disabled'
           ? 'Formulario bloqueado para demonstrar estado disabled.'
           : null;
@@ -486,7 +486,7 @@ function DirectoryDialog({
               Cancelar
             </Button>
             <Button disabled={disabled || !isValid} type="submit">
-              {isEditing ? 'Salvar alteracoes' : model.primaryActionLabel}
+              {isEditing ? 'Salvar alterações' : model.primaryActionLabel}
             </Button>
           </div>
         </form>
@@ -591,7 +591,7 @@ function DirectoryPermissionDenied({ model }: Readonly<{ model: OperationsDirect
       <LockKeyhole size={26} aria-hidden="true" />
       <div>
         <h2 id="directory-denied-title">Acesso restrito</h2>
-        <p>{model.deniedDescription} Fale com o administrador para ajustar permissoes.</p>
+        <p>{model.deniedDescription} Fale com o administrador para ajustar permissões.</p>
       </div>
     </section>
   );
@@ -602,8 +602,8 @@ function DirectoryErrorState() {
     <section className="directory-boundary-state" aria-labelledby="directory-error-title">
       <AlertTriangle size={26} aria-hidden="true" />
       <div>
-        <h2 id="directory-error-title">Nao foi possivel carregar os registros</h2>
-        <p>O estado do sistema nao foi alterado. Tente novamente em instantes.</p>
+        <h2 id="directory-error-title">Não foi possível carregar os registros</h2>
+        <p>O estado do sistema não foi alterado. Tente novamente em instantes.</p>
         <button className="button button-secondary" type="button">
           <RefreshCw size={15} aria-hidden="true" />
           Tentar novamente
@@ -651,7 +651,7 @@ function ConfirmDialog({
             <p className="eyebrow">Confirmacao</p>
             <h2 id={titleId}>Arquivar {item.title}?</h2>
             <p id={descriptionId}>
-              O registro sai da lista operacional, mas o historico permanece auditavel quando houver
+              O registro sai da lista operacional, mas o histórico permanece auditável quando houver
               persistencia no servidor.
             </p>
           </div>
@@ -682,7 +682,7 @@ function ToastRegion({ onDismiss, toast }: Readonly<{ onDismiss: () => void; toa
         <div className={`app-toast ${toast.tone}`} role="status">
           <CheckCircle2 size={17} aria-hidden="true" />
           <span>{toast.message}</span>
-          <button type="button" onClick={onDismiss} aria-label="Fechar notificacao">
+          <button type="button" onClick={onDismiss} aria-label="Fechar notificação">
             <X size={15} aria-hidden="true" />
           </button>
         </div>
@@ -737,7 +737,7 @@ function validateDirectoryDraft(
       const numericValue = Number(value.replace(',', '.'));
       if (!Number.isFinite(numericValue)) errors[field.id] = 'Informe um numero valido.';
       if (field.min !== undefined && numericValue < field.min) {
-        errors[field.id] = `Valor minimo: ${field.min}.`;
+        errors[field.id] = `Valor mínimo: ${field.min}.`;
       }
       if (field.max !== undefined && numericValue > field.max) {
         errors[field.id] = `Valor maximo: ${field.max}.`;
@@ -895,8 +895,8 @@ function apiRecordToItem(
     statusLabel: service.status === 'ACTIVE' ? 'Ativo' : 'Inativo',
     statusTone: service.status === 'ACTIVE' ? 'success' : 'neutral',
     metrics: [
-      { label: 'Duracao', value: `${service.durationMinutes} min` },
-      { label: 'Preco', value: formatCurrency(service.priceCents) },
+      { label: 'Duração', value: `${service.durationMinutes} min` },
+      { label: 'Preço', value: formatCurrency(service.priceCents) },
       { label: 'Profissionais', value: String(service.enabledProfessionalIds.length) },
     ],
     tags: [
@@ -960,7 +960,7 @@ function itemFromDraft(
     statusLabel: existing?.statusLabel ?? 'Ativo',
     statusTone: existing?.statusTone ?? 'success',
     metrics,
-    tags: tags.length ? tags : ['Cadastro rapido'],
+    tags: tags.length ? tags : ['Cadastro rápido'],
   };
 }
 
@@ -1027,9 +1027,9 @@ function tableColumnsForArea(area: OperationsDirectoryArea): readonly DirectoryT
   }
   return [
     { key: 'primary', label: 'Serviço' },
-    { key: 'subtitle', label: 'Categoria' },
-    { key: 'metric', label: 'Duração', metricLabel: 'Duracao' },
-    { key: 'metric', label: 'Preço', metricLabel: 'Preco' },
+    { key: 'subtitle', label: 'Catégoria' },
+    { key: 'metric', label: 'Duração', metricLabel: 'Duração' },
+    { key: 'metric', label: 'Preço', metricLabel: 'Preço' },
   ];
 }
 

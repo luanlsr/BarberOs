@@ -159,7 +159,7 @@ const professionals: AgendaProfessional[] = [
   },
   {
     id: 'dev-professional-joao',
-    name: 'Joao Pereira',
+    name: 'João Pereira',
     roleLabel: 'Barbeiro',
     branchIds: ['dev-branch'],
   },
@@ -227,7 +227,7 @@ const appointmentSeeds: AppointmentSeed[] = [
     serviceIds: ['dev-service-beard'],
     startsAtLocal: '11:30',
     status: 'CHECKED_IN',
-    sourceLabel: 'Recepcao',
+    sourceLabel: 'Recepção',
   },
   {
     id: 'dev-appointment-1400',
@@ -241,7 +241,7 @@ const appointmentSeeds: AppointmentSeed[] = [
   },
   {
     id: 'dev-appointment-1530',
-    customerName: 'Joao Pedro',
+    customerName: 'João Pedro',
     customerPhone: '(11) 94400-5544',
     professionalId: 'dev-professional-joao',
     serviceIds: ['dev-service-premium'],
@@ -257,7 +257,7 @@ const appointmentSeeds: AppointmentSeed[] = [
     serviceIds: ['dev-service-combo'],
     startsAtLocal: '17:30',
     status: 'IN_SERVICE',
-    sourceLabel: 'Recepcao',
+    sourceLabel: 'Recepção',
   },
 ];
 
@@ -410,7 +410,7 @@ export function buildAgendaViewModel({
     kpis: buildKpis(appointments, visibleProfessionals.length),
     emptyMessage: hasReadPermission
       ? 'Nenhum agendamento encontrado para este filtro.'
-      : 'Seu perfil nao tem permissao para visualizar a agenda desta unidade.',
+      : 'Seu perfil não tem permissão para visualizar a agenda desta unidade.',
   };
 }
 
@@ -495,11 +495,11 @@ function buildAppointmentHistory(
       id: `${appointment.id}-current`,
       label: 'Status atualizado',
       atLabel: toLocalDateTimeLabel(updatedAt),
-      actorName: appointment.sourceLabel === 'WhatsApp' ? 'Automacao WhatsApp' : 'Recepcao',
+      actorName: appointment.sourceLabel === 'WhatsApp' ? 'Automacao WhatsApp' : 'Recepção',
       statusLabel: appointment.statusLabel,
       reason:
         appointment.status === 'CONFIRMED'
-          ? 'Cliente confirmado para o horario.'
+          ? 'Cliente confirmado para o horário.'
           : 'Fluxo operacional atualizado.',
     });
   }
@@ -569,7 +569,7 @@ function buildAppointmentActions(
     actions.push({
       id: 'reschedule',
       label: 'Reagendar',
-      description: 'Escolher outro profissional, data ou horario.',
+      description: 'Escolher outro profissional, data ou horário.',
       permission: 'appointments.update',
       href: `/agenda?appointmentId=${appointment.id}&mode=reschedule`,
       variant: 'secondary',
@@ -580,7 +580,7 @@ function buildAppointmentActions(
     actions.push({
       id: 'cancel',
       label: 'Cancelar',
-      description: 'Cancelar o agendamento com motivo auditavel.',
+      description: 'Cancelar o agendamento com motivo auditável.',
       permission: 'appointments.cancel',
       href: `/agenda?appointmentId=${appointment.id}&mode=cancel`,
       variant: 'danger',
@@ -635,7 +635,7 @@ function buildKpis(
       tone: 'success',
     },
     {
-      label: 'Em operacao',
+      label: 'Em operação',
       value: String(active).padStart(2, '0'),
       note: 'check-in ou atendimento',
       tone: active ? 'warning' : 'neutral',
@@ -643,7 +643,7 @@ function buildKpis(
     {
       label: 'Receita prevista',
       value: currencyFormatter.format(revenueCents / 100),
-      note: 'servicos do dia',
+      note: 'serviços do dia',
       tone: 'success',
     },
     {

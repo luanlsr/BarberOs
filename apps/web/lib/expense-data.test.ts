@@ -37,7 +37,7 @@ describe('Expense data loading layer', () => {
       categoryName: 'Aluguel',
       status: 'OPEN',
       statusLabel: 'Aberta',
-      recurrenceLabel: 'Mensal ate 01/12/2026',
+      recurrenceLabel: 'Mensal até 01/12/2026',
       canEdit: true,
       canPay: true,
       canCancel: true,
@@ -115,13 +115,13 @@ describe('Expense data loading layer', () => {
     expect(model.state).toBe('error');
     expect(model.error).toEqual({
       code: 'FINANCE_VALIDATION_ERROR',
-      message: 'Despesas locais indisponiveis.',
+      message: 'Despesas locais indisponíveis.',
       requestId: 'local-expenses-error',
     });
     expect(action(model, 'expenses.refresh').enabled).toBe(true);
     expect(action(model, 'expenses.create')).toMatchObject({
       enabled: false,
-      reason: 'Recarregue despesas antes de executar esta acao.',
+      reason: 'Recarregue despesas antes de executar esta ação.',
     });
   });
 
@@ -133,7 +133,7 @@ describe('Expense data loading layer', () => {
     expect(action(model, 'expenses.refresh').enabled).toBe(true);
     expect(action(model, 'expenses.create')).toMatchObject({
       enabled: false,
-      reason: 'Disponivel quando a conexao voltar.',
+      reason: 'Disponivel quando a conexão voltar.',
     });
   });
 
@@ -149,7 +149,7 @@ describe('Expense data loading layer', () => {
     expect(model.totals.totalAmountCents).toBe(0);
     expect(model.allowedActions.every((item) => item.enabled === false)).toBe(true);
     expect(action(model, 'expenses.refresh').reason).toBe(
-      'Sem permissao para visualizar despesas.',
+      'Sem permissão para visualizar despesas.',
     );
   });
 });

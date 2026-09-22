@@ -263,7 +263,7 @@ export async function getCashRegisterViewModel(
     return {
       ...base,
       state: 'permission-denied',
-      description: 'Seu perfil nao possui acesso ao caixa desta unidade.',
+      description: 'Seu perfil não possui acesso ao caixa desta unidade.',
       methodTotals: [],
       movements: [],
     };
@@ -273,12 +273,12 @@ export async function getCashRegisterViewModel(
     return {
       ...base,
       state: 'error',
-      description: 'Nao conseguimos carregar o caixa agora.',
+      description: 'Não conseguimos carregar o caixa agora.',
       methodTotals: [],
       movements: [],
       error: {
         code: 'CASH_REGISTER_LOAD_FAILED',
-        message: 'Nao conseguimos carregar o caixa agora.',
+        message: 'Não conseguimos carregar o caixa agora.',
         requestId: 'local-cash-register-error',
       },
     };
@@ -296,7 +296,7 @@ export async function getCashRegisterViewModel(
       return {
         ...base,
         state: 'error',
-        description: 'Nao conseguimos carregar o caixa agora.',
+        description: 'Não conseguimos carregar o caixa agora.',
         methodTotals: [],
         movements: [],
         error: {
@@ -304,7 +304,7 @@ export async function getCashRegisterViewModel(
             error instanceof Error && 'code' in error
               ? String(error.code)
               : 'CASH_REGISTER_LOAD_FAILED',
-          message: 'Nao conseguimos carregar o caixa agora.',
+          message: 'Não conseguimos carregar o caixa agora.',
           requestId: requestContext.requestId,
         },
       };
@@ -325,7 +325,7 @@ export function getDevelopmentCashRegisterViewModel(
     return {
       ...base,
       state: 'permission-denied',
-      description: 'Seu perfil nao possui acesso ao caixa desta unidade.',
+      description: 'Seu perfil não possui acesso ao caixa desta unidade.',
       methodTotals: [],
       movements: [],
     };
@@ -335,12 +335,12 @@ export function getDevelopmentCashRegisterViewModel(
     return {
       ...base,
       state: 'error',
-      description: 'Nao conseguimos carregar o caixa agora.',
+      description: 'Não conseguimos carregar o caixa agora.',
       methodTotals: [],
       movements: [],
       error: {
         code: 'CASH_REGISTER_LOAD_FAILED',
-        message: 'Nao conseguimos carregar o caixa agora.',
+        message: 'Não conseguimos carregar o caixa agora.',
         requestId: 'local-cash-register-error',
       },
     };

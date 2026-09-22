@@ -164,7 +164,7 @@ const developmentExpenseCategories: readonly ExpenseCategory[] = [
     tenantId: 'dev-tenant',
     branchId: 'dev-branch',
     name: 'Utilidades',
-    description: 'Energia, agua e servicos essenciais',
+    description: 'Energia, água e serviços essenciais',
     status: 'ACTIVE',
     createdBy: 'dev-user',
     createdAt: '2026-09-01T12:00:00.000Z',
@@ -175,7 +175,7 @@ const developmentExpenseCategories: readonly ExpenseCategory[] = [
     tenantId: 'dev-tenant',
     branchId: 'dev-branch',
     name: 'Contabilidade',
-    description: 'Servicos administrativos recorrentes',
+    description: 'Serviços administrativos recorrentes',
     status: 'ACTIVE',
     createdBy: 'dev-user',
     createdAt: '2026-09-01T12:00:00.000Z',
@@ -271,7 +271,7 @@ export function getDevelopmentExpensesViewModel(
     return buildExpensesModel(
       base,
       'permission-denied',
-      'Seu perfil nao pode visualizar despesas desta unidade.',
+      'Seu perfil não pode visualizar despesas desta unidade.',
       [],
       [],
     );
@@ -282,9 +282,9 @@ export function getDevelopmentExpensesViewModel(
   }
 
   if (options.state === 'error') {
-    return buildExpensesModel(base, 'error', 'Nao foi possivel carregar despesas agora.', [], [], {
+    return buildExpensesModel(base, 'error', 'Não foi possível carregar despesas agora.', [], [], {
       code: 'FINANCE_VALIDATION_ERROR',
-      message: 'Despesas locais indisponiveis.',
+      message: 'Despesas locais indisponíveis.',
       requestId: 'local-expenses-error',
     });
   }
@@ -293,7 +293,7 @@ export function getDevelopmentExpensesViewModel(
     return buildExpensesModel(
       base,
       'offline',
-      'Voce esta offline. Pagamentos e cancelamentos de despesas ficam pausados.',
+      'Você está offline. Pagamentos e cancelamentos de despesas ficam pausados.',
       [],
       [],
     );
@@ -303,7 +303,7 @@ export function getDevelopmentExpensesViewModel(
     return buildExpensesModel(
       base,
       'empty',
-      'Nenhuma despesa encontrada para este periodo.',
+      'Nenhuma despesa encontrada para este período.',
       [],
       [],
     );
@@ -423,12 +423,12 @@ function unavailableReasonForExpense(
   state: ExpensesViewState,
   expense: Expense,
 ) {
-  if (!base.canWrite) return 'Sem permissao para alterar despesas.';
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue despesas antes de executar esta acao.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar despesas.';
-  if (expense.status === 'PAID') return 'Despesa paga preserva historico financeiro.';
-  if (expense.status === 'CANCELLED') return 'Despesa cancelada nao aceita alteracoes.';
+  if (!base.canWrite) return 'Sem permissão para alterar despesas.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue despesas antes de executar esta ação.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar despesas.';
+  if (expense.status === 'PAID') return 'Despesa paga preserva histórico financeiro.';
+  if (expense.status === 'CANCELLED') return 'Despesa cancelada não aceita alteracoes.';
   return undefined;
 }
 
@@ -445,13 +445,13 @@ function actionsFor(
       id: 'expenses.refresh',
       label: 'Recarregar',
       enabled: base.canRead && state !== 'permission-denied',
-      reason: base.canRead ? undefined : 'Sem permissao para visualizar despesas.',
+      reason: base.canRead ? undefined : 'Sem permissão para visualizar despesas.',
     },
     {
       id: 'expenses.create',
       label: 'Nova despesa',
       enabled: base.canWrite && (state === 'ready' || state === 'empty'),
-      reason: actionReason(base.canWrite, stateReason, 'Sem permissao para criar despesas.'),
+      reason: actionReason(base.canWrite, stateReason, 'Sem permissão para criar despesas.'),
     },
     {
       id: 'expenses.pay-selected',
@@ -489,16 +489,16 @@ function selectedActionReason(
   hasSelectable: boolean,
   emptyReason: string,
 ) {
-  if (!hasAccess) return 'Sem permissao para alterar despesas.';
+  if (!hasAccess) return 'Sem permissão para alterar despesas.';
   if (stateReason) return stateReason;
   if (!hasSelectable) return emptyReason;
   return undefined;
 }
 
 function unavailableReasonForState(state: ExpensesViewState) {
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
-  if (state === 'error') return 'Recarregue despesas antes de executar esta acao.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar despesas.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
+  if (state === 'error') return 'Recarregue despesas antes de executar esta ação.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar despesas.';
   return undefined;
 }
 

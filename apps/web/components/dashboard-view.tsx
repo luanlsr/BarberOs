@@ -9,18 +9,18 @@ const ownerAppointments = [
   { time: '09:00', client: 'Marcos Vinicius', service: 'Corte + barba', status: 'Confirmado' },
   { time: '10:30', client: 'Rafael Alves', service: 'Corte classico', status: 'Aguardando' },
   { time: '14:00', client: 'Thiago Martins', service: 'Barba', status: 'Confirmado' },
-  { time: '16:30', client: 'Joao Pedro', service: 'Combo completo', status: 'Confirmado' },
+  { time: '16:30', client: 'João Pedro', service: 'Combo completo', status: 'Confirmado' },
 ];
 
 const receptionistAppointments = [
-  { time: '09:00', client: 'Joao Silva', service: 'Corte Masculino', status: 'Confirmado' },
+  { time: '09:00', client: 'João Silva', service: 'Corte Masculino', status: 'Confirmado' },
   { time: '09:40', client: 'Pedro Souza', service: 'Barba', status: 'Aguardando' },
   { time: '10:20', client: 'Marcos Lima', service: 'Corte + Barba', status: 'Confirmado' },
   { time: '11:30', client: 'Encaixe livre', service: 'Disponivel', status: 'Livre' },
 ];
 
 const barberAppointments = [
-  { time: '09:00', client: 'Joao Silva', service: 'Corte Masculino', status: 'Confirmado' },
+  { time: '09:00', client: 'João Silva', service: 'Corte Masculino', status: 'Confirmado' },
   { time: '11:00', client: 'Rafael Costa', service: 'Barba', status: 'Confirmado' },
   { time: '14:30', client: 'Pedro Souza', service: 'Corte + Barba', status: 'Aguardando' },
 ];
@@ -40,7 +40,7 @@ function AdminDashboard({ session }: DashboardViewProps) {
     <DashboardFrame
       eyebrow="Hoje na barbearia"
       title={`Bom dia, ${firstName(session.userName)}.`}
-      subtitle="Visao executiva da operacao, financeiro, equipe e oportunidades de crescimento."
+      subtitle="Visão executiva da operação, financeiro, equipe e oportunidades de crescimento."
       actionHref="/agenda?mode=new"
       actionLabel="Novo agendamento"
       metrics={[
@@ -58,22 +58,22 @@ function AdminDashboard({ session }: DashboardViewProps) {
       agendaTitle="Agenda de hoje"
       agendaCaption={`${session.branchName} · toda a equipe`}
       insightTitle="Barber AI"
-      insightCaption="Sinais que merecem atencao"
+      insightCaption="Sinais que merecem atenção"
       insights={[
         {
           icon: 'alert',
-          title: '12 clientes no periodo de retorno',
-          body: 'Uma campanha pode preencher os horarios livres da proxima semana.',
+          title: '12 clientes no período de retorno',
+          body: 'Uma campanha pode preencher os horários livres da próxima semana.',
         },
         {
           icon: 'calendar',
-          title: 'Dois horarios vagos hoje',
+          title: 'Dois horários vagos hoje',
           body: 'O intervalo entre 12h e 14h ainda pode ser aproveitado.',
         },
       ]}
-      nextTitle="Administracao"
-      nextCaption="Equipe, filiais e permissoes"
-      nextBody="Gerencie usuarios, profissionais, filiais, financeiro, estoque e repasses da barbearia."
+      nextTitle="Administração"
+      nextCaption="Equipe, filiais e permissões"
+      nextBody="Gerencie usuários, profissionais, filiais, financeiro, estoque e repasses da barbearia."
       nextActionLabel="Administrar equipe"
       nextHref="/equipe"
     />
@@ -83,7 +83,7 @@ function AdminDashboard({ session }: DashboardViewProps) {
 function ReceptionDashboard({ session }: DashboardViewProps) {
   return (
     <DashboardFrame
-      eyebrow="Balcao e atendimento"
+      eyebrow="Balcão e atendimento"
       title={`Bom trabalho, ${firstName(session.userName)}.`}
       subtitle="Atalhos para agenda, comandas, pagamentos, caixa e estoque do dia."
       actionHref="/comandas?mode=walk-in#nova-comanda"
@@ -96,24 +96,24 @@ function ReceptionDashboard({ session }: DashboardViewProps) {
       ]}
       appointments={receptionistAppointments}
       agendaTitle="Fila operacional"
-      agendaCaption={`${session.branchName} · recepcao`}
-      insightTitle="Acoes rapidas"
+      agendaCaption={`${session.branchName} · recepção`}
+      insightTitle="Ações rapidas"
       insightCaption="Prioridade do turno"
       insights={[
         {
           icon: 'calendar',
           title: 'Confirmar dois clientes pendentes',
-          body: 'Os horarios das 09h40 e 14h30 ainda precisam de confirmacao.',
+          body: 'Os horários das 09h40 e 14h30 ainda precisam de confirmacao.',
         },
         {
           icon: 'alert',
           title: 'Produto com estoque baixo',
-          body: 'Pomada Matte esta abaixo do minimo na Unidade Centro.',
+          body: 'Pomada Matte está abaixo do mínimo na Unidade Centro.',
         },
       ]}
       nextTitle="Proximo atendimento"
       nextCaption="Fluxo Agenda -> Comanda -> Pagamento"
-      nextBody="Use check-in para abrir a comanda com os servicos agendados e finalizar no caixa."
+      nextBody="Use check-in para abrir a comanda com os serviços agendados e finalizar no caixa."
       nextActionLabel="Abrir agenda"
       nextHref="/agenda"
     />
@@ -123,9 +123,9 @@ function ReceptionDashboard({ session }: DashboardViewProps) {
 function BarberDashboard({ session }: DashboardViewProps) {
   return (
     <DashboardFrame
-      eyebrow="Minha operacao"
+      eyebrow="Minha operação"
       title={`Sua agenda, ${firstName(session.userName)}.`}
-      subtitle="Acompanhe seus atendimentos, clientes, producao, comissoes, gorjetas e repasses."
+      subtitle="Acompanhe seus atendimentos, clientes, produção, comissões, gorjetas e repasses."
       actionHref="/minha-carteira"
       actionLabel="Minha carteira"
       metrics={[
@@ -133,11 +133,11 @@ function BarberDashboard({ session }: DashboardViewProps) {
         {
           label: 'Producao do mes',
           value: 'R$ 1.450',
-          note: 'Servicos finalizados',
+          note: 'Serviços finalizados',
           positive: true,
         },
         {
-          label: 'Comissoes abertas',
+          label: 'Comissões abertas',
           value: 'R$ 725',
           note: 'Previsto para repasse',
           positive: true,
@@ -153,17 +153,17 @@ function BarberDashboard({ session }: DashboardViewProps) {
         {
           icon: 'calendar',
           title: 'Proximo atendimento as 09h',
-          body: 'Cliente Joao Silva esta confirmado para Corte Masculino.',
+          body: 'Cliente João Silva está confirmado para Corte Masculino.',
         },
         {
           icon: 'alert',
-          title: 'Comissoes abertas para conferencia',
+          title: 'Comissões abertas para conferencia',
           body: 'Revise sua carteira para acompanhar valores a receber.',
         },
       ]}
       nextTitle="Carteira profissional"
       nextCaption="Producao, gorjetas e repasses"
-      nextBody="Veja seus cortes realizados, comissoes abertas, valores pagos e historico de repasses."
+      nextBody="Veja seus cortes realizados, comissões abertas, valores pagos e histórico de repasses."
       nextActionLabel="Ver carteira"
       nextHref="/minha-carteira"
     />

@@ -73,8 +73,8 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
             {agenda.branchName} · {agenda.selectedProfessionalLabel}
           </p>
         </div>
-        <div className="agenda-heading-actions" aria-label="Acoes da agenda">
-          <div className="agenda-view-switcher" aria-label="Visao da agenda">
+        <div className="agenda-heading-actions" aria-label="Ações da agenda">
+          <div className="agenda-view-switcher" aria-label="Visão da agenda">
             <button
               aria-pressed={calendarView === 'day'}
               className="agenda-view-button"
@@ -147,7 +147,7 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
       <div className="agenda-state-strip" aria-label="Estado da agenda">
         <span>
           <Clock3 size={15} aria-hidden="true" />
-          Clique em um horario para criar
+          Clique em um horário para criar
         </span>
         <span>
           <WifiOff size={15} aria-hidden="true" />

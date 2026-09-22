@@ -6,8 +6,12 @@ export class NotificationApplicationService {
 
   async createIntent(context: RequestContext, command: unknown) {
     const parsed = createNotificationIntentCommandSchema.parse(command);
-    if (parsed.tenantId !== context.tenantId) throw new Error('Cross-tenant notification writes are not allowed.');
-    const existing = await this.repository.findIntentByIdempotencyKey(context, parsed.idempotencyKey);
+    if (parsed.tenantId !== context.tenantId)
+      throw new Error('Cross-tenant notification writes are not allowed.');
+    const existing = await this.repository.findIntentByIdempotencyKey(
+      context,
+      parsed.idempotencyKey,
+    );
     if (existing) {
       if (isDuplicateNotificationIntent(existing, { ...parsed })) return existing;
       throw new Error('Notification idempotency key already belongs to another intent.');

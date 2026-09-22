@@ -113,12 +113,12 @@ describe('Inventory data loading layer', () => {
     expect(error.state).toBe('error');
     expect(error.error).toEqual({
       code: 'INVENTORY_VALIDATION_ERROR',
-      message: 'Estoque local indisponivel.',
+      message: 'Estoque local indisponível.',
       requestId: 'local-inventory-error',
     });
     expect(action(error, 'inventory.record-entry')).toMatchObject({
       enabled: false,
-      reason: 'Recarregue o estoque antes de executar esta acao.',
+      reason: 'Recarregue o estoque antes de executar esta ação.',
     });
 
     const offline = getDevelopmentInventoryViewModel(inventorySession(), { state: 'offline' });
@@ -126,7 +126,7 @@ describe('Inventory data loading layer', () => {
     expect(offline.balances.length).toBeGreaterThan(0);
     expect(action(offline, 'inventory.record-loss')).toMatchObject({
       enabled: false,
-      reason: 'Disponivel quando a conexao voltar.',
+      reason: 'Disponivel quando a conexão voltar.',
     });
   });
 

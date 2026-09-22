@@ -63,7 +63,7 @@ const customer: Customer = {
   id: 'customer-1',
   tenantId: 'tenant-1',
   branchId: 'branch-1',
-  name: 'Joao Silva',
+  name: 'João Silva',
   phone: '+5511999999999',
   consents: { whatsapp: true, marketing: false },
   status: 'ACTIVE',
@@ -477,7 +477,7 @@ describe('AppointmentApplicationService', () => {
     const updated = await service.reschedule(context, {
       id: 'appointment-1',
       startsAt: '2026-09-07T13:00:00.000Z',
-      reason: 'Cliente pediu novo horario',
+      reason: 'Cliente pediu novo horário',
     });
 
     expect(updated.startsAt).toBe('2026-09-07T13:00:00.000Z');

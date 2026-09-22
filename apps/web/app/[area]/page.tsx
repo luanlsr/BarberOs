@@ -36,7 +36,7 @@ export default async function AreaPage({
     return <OperationsDirectoryView model={model} />;
   }
 
-  const target = areas[area] ?? { label: 'Area', permission: 'dashboard.read' as Permission };
+  const target = areas[area] ?? { label: 'Área', permission: 'dashboard.read' as Permission };
   if (!session.permissions.includes(target.permission)) redirect('/forbidden');
   return (
     <div className="placeholder-page">
@@ -44,11 +44,11 @@ export default async function AreaPage({
         <p className="eyebrow">Fundacao do produto</p>
         <h1>{target.label}</h1>
         <p>
-          Esta area esta protegida pelo contexto autorizado do workspace. O fluxo de negocio entra
-          em uma proxima mudanca OpenSpec.
+          Esta área está protegida pelo contexto autorizado do workspace. O fluxo de negócio entra
+          em uma próxima mudanca OpenSpec.
         </p>
         <Link className="button button-secondary" href="/">
-          Voltar para a visao geral
+          Voltar para a visão geral
         </Link>
       </div>
     </div>

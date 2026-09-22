@@ -32,7 +32,7 @@ export const accessProfiles: Record<AccessProfileKey, AccessProfile> = {
     key: 'barber',
     label: 'Barbeiro',
     role: 'PROFESSIONAL',
-    description: 'Acompanha propria agenda, clientes permitidos, producao, comissoes e repasses.',
+    description: 'Acompanha própria agenda, clientes permitidos, produção, comissões e repasses.',
   },
 };
 

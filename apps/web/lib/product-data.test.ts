@@ -98,20 +98,20 @@ describe('Products data loading layer', () => {
     expect(error.state).toBe('error');
     expect(error.error).toEqual({
       code: 'CATALOG_VALIDATION_ERROR',
-      message: 'Produtos locais indisponiveis.',
+      message: 'Produtos locais indisponíveis.',
       requestId: 'local-products-error',
     });
     expect(action(error, 'products.refresh').enabled).toBe(true);
     expect(action(error, 'products.create')).toMatchObject({
       enabled: false,
-      reason: 'Recarregue produtos antes de executar esta acao.',
+      reason: 'Recarregue produtos antes de executar esta ação.',
     });
 
     const offline = getDevelopmentProductsViewModel(inventorySession(), { state: 'offline' });
     expect(offline.state).toBe('offline');
     expect(action(offline, 'products.create')).toMatchObject({
       enabled: false,
-      reason: 'Disponivel quando a conexao voltar.',
+      reason: 'Disponivel quando a conexão voltar.',
     });
   });
 
@@ -126,7 +126,7 @@ describe('Products data loading layer', () => {
     expect(model.categories).toEqual([]);
     expect(model.allowedActions.every((item) => item.enabled === false)).toBe(true);
     expect(action(model, 'products.refresh').reason).toBe(
-      'Sem permissao para visualizar produtos.',
+      'Sem permissão para visualizar produtos.',
     );
   });
 });

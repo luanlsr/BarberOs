@@ -415,7 +415,7 @@ describe('CatalogApplicationService', () => {
 
     await expect(service.listCategories(ownerContext)).resolves.toHaveLength(1);
     await expect(
-      service.updateCategory(ownerContext, { id: 'category-1', name: 'Nao pode mudar' }),
+      service.updateCategory(ownerContext, { id: 'category-1', name: 'Não pode mudar' }),
     ).rejects.toEqual(
       new CoreOperationsApplicationError(
         'CATALOG_VALIDATION_ERROR',
@@ -578,7 +578,7 @@ describe('CatalogApplicationService', () => {
       product: { status: 'ARCHIVED' },
     });
     await expect(
-      service.updateProduct(ownerContext, { id: 'product-1', name: 'Nao pode mudar' }),
+      service.updateProduct(ownerContext, { id: 'product-1', name: 'Não pode mudar' }),
     ).rejects.toEqual(
       new CoreOperationsApplicationError(
         'CATALOG_VALIDATION_ERROR',

@@ -168,7 +168,7 @@ export function ReceivePaymentPanel({
               manualPayload,
               manualResponse.status,
               requestId,
-              'Nao foi possivel registrar a baixa manual.',
+              'Não foi possível registrar a baixa manual.',
             ),
           );
           return;
@@ -193,7 +193,7 @@ export function ReceivePaymentPanel({
 
       if (!response.ok) {
         setFeedback(
-          errorFeedback(payload, response.status, requestId, 'Nao foi possivel receber pagamento.'),
+          errorFeedback(payload, response.status, requestId, 'Não foi possível receber pagamento.'),
         );
         return;
       }
@@ -209,7 +209,7 @@ export function ReceivePaymentPanel({
       setFeedback({
         type: 'error',
         code: 'NETWORK_ERROR',
-        message: 'Sem conexao com o servidor. Tente novamente.',
+        message: 'Sem conexão com o servidor. Tente novamente.',
         requestId,
       });
     }
@@ -241,7 +241,7 @@ export function ReceivePaymentPanel({
       </dl>
 
       {paymentSummary.methodTotals.length ? (
-        <div className="order-payment-methods" aria-label="Recebido por metodo">
+        <div className="order-payment-methods" aria-label="Recebido por método">
           {paymentSummary.methodTotals.map((method) => (
             <span key={method.method}>
               {method.methodLabel} {method.amountLabel}
@@ -257,7 +257,7 @@ export function ReceivePaymentPanel({
       ) : null}
       {!online ? (
         <p className="order-feedback warning" role="status">
-          <WifiOff size={15} aria-hidden="true" /> Voce esta offline. Pagamento precisa de conexao.
+          <WifiOff size={15} aria-hidden="true" /> Você está offline. Pagamento precisa de conexão.
         </p>
       ) : null}
       <button

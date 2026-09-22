@@ -9,20 +9,20 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: 'BarberOS | Sistema de gestao para barbearias',
+  title: 'BarberOS | Sistema de gestão para barbearias',
   description:
-    'Centralize agenda, clientes, equipe, comandas, estoque, caixa e financeiro da sua barbearia em um unico sistema.',
+    'Centralize agenda, clientes, equipe, comandas, estoque, caixa e financeiro da sua barbearia em um único sistema.',
   alternates: { canonical: '/' },
   openGraph: {
-    title: 'BarberOS | Sistema de gestao para barbearias',
+    title: 'BarberOS | Sistema de gestão para barbearias',
     description:
-      'Organize sua barbearia com agenda, comandas, estoque, caixa, financeiro e equipe em um unico lugar.',
+      'Organize sua barbearia com agenda, comandas, estoque, caixa, financeiro e equipe em um único lugar.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BarberOS | Sistema de gestao para barbearias',
-    description: 'Operacao inteligente para barbearias que querem controle e velocidade.',
+    title: 'BarberOS | Sistema de gestão para barbearias',
+    description: 'Operação inteligente para barbearias que querem controle e velocidade.',
   },
 };
 

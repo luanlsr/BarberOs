@@ -22,7 +22,7 @@ describe('Comanda data loading layer', () => {
     expect(model.itemSuggestions.map((item) => item.name)).toContain('Agua mineral');
     expect(model.order).toMatchObject({
       title: 'Comanda #1001',
-      customerName: 'Joao Silva',
+      customerName: 'João Silva',
       professionalName: 'Carlos Andrade',
       originLabel: 'Agendamento',
       subtotalLabel: 'R$\u00a0137,00',
@@ -37,7 +37,7 @@ describe('Comanda data loading layer', () => {
     expect(model.order?.notes).toContain('acabamento');
     expect(model.order?.items[0]).toMatchObject({
       sourceType: 'SERVICE',
-      sourceLabel: 'Servico do catalogo',
+      sourceLabel: 'Serviço do catálogo',
       quantity: 1,
       unitPriceAmountCents: 6000,
       finalAmountCents: 6000,
@@ -45,7 +45,7 @@ describe('Comanda data loading layer', () => {
     expect(model.order?.items[2]).toMatchObject({
       sourceType: 'PRODUCT',
       sourceId: 'dev-product-pomade',
-      sourceLabel: 'Produto de catalogo',
+      sourceLabel: 'Produto de catálogo',
       isCatalogProduct: true,
       costAmountCents: 1800,
       finalAmountCents: 3200,
@@ -69,12 +69,12 @@ describe('Comanda data loading layer', () => {
           name: 'Pomada matte',
           sourceType: 'PRODUCT',
           sourceId: 'dev-product-pomade',
-          sourceLabel: 'Produto de catalogo',
+          sourceLabel: 'Produto de catálogo',
         }),
         expect.objectContaining({
-          name: 'Shampoo indisponivel',
+          name: 'Shampoo indisponível',
           sourceType: 'PRODUCT',
-          disabledReason: 'Indisponivel para esta filial',
+          disabledReason: 'Indisponível para esta filial',
         }),
       ]),
     );
@@ -101,7 +101,7 @@ describe('Comanda data loading layer', () => {
       paidAmountCents: 12_700,
       amountDueCents: 0,
       canReceivePayment: false,
-      unavailableReason: 'Comanda ja esta paga.',
+      unavailableReason: 'Comanda já está paga.',
     });
   });
 
@@ -111,7 +111,7 @@ describe('Comanda data loading layer', () => {
     expect(model.order?.paymentSummary).toMatchObject({
       state: 'unpaid',
       canReceivePayment: false,
-      unavailableReason: 'Pagamentos exigem conexao ativa.',
+      unavailableReason: 'Pagamentos exigem conexão ativa.',
     });
   });
 
@@ -147,7 +147,7 @@ describe('Comanda data loading layer', () => {
     expect(model.canReceivePayment).toBe(false);
     expect(model.order?.paymentSummary).toMatchObject({
       canReceivePayment: false,
-      unavailableReason: 'Seu perfil nao pode receber pagamentos.',
+      unavailableReason: 'Seu perfil não pode receber pagamentos.',
     });
   });
 });

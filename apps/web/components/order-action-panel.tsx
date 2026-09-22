@@ -68,7 +68,7 @@ export function OrderActionPanel({
   }, [canCreateWalkIn, openWalkInRequest, orderId]);
 
   return (
-    <div className="order-action-panel" aria-label="Acoes da Comanda">
+    <div className="order-action-panel" aria-label="Ações da Comanda">
       {orderId ? (
         <section className="order-action-section" aria-labelledby="order-add-item-cta-title">
           <div className="order-action-header">
@@ -79,7 +79,7 @@ export function OrderActionPanel({
             <Plus size={18} aria-hidden="true" />
           </div>
           <p className="order-action-copy">
-            Servicos, produtos e ajustes manuais abrem em modal para manter a Comanda limpa.
+            Serviços, produtos e ajustes manuais abrem em modal para manter a Comanda limpa.
           </p>
           <button
             className="button button-primary"
@@ -102,7 +102,7 @@ export function OrderActionPanel({
         </div>
         <p className="order-action-copy">
           Abra uma Comanda sem agendamento usando consumidor avulso, cliente existente ou cadastro
-          rapido.
+          rápido.
         </p>
         <button
           className="button button-secondary"
@@ -237,7 +237,7 @@ function ManualItemForm({
       setFeedback({
         type: 'error',
         code: 'PRODUCT_REQUIRED',
-        message: 'Selecione um produto ativo do catalogo para adicionar na Comanda.',
+        message: 'Selecione um produto ativo do catálogo para adicionar na Comanda.',
         requestId: randomRequestToken(),
       });
       return;
@@ -263,7 +263,7 @@ function ManualItemForm({
       const payload = (await response.json().catch(() => null)) as OrderApiResponse | null;
       if (!response.ok) {
         setFeedback(
-          errorFeedback(payload, response.status, requestId, 'Nao foi possivel adicionar o item.'),
+          errorFeedback(payload, response.status, requestId, 'Não foi possível adicionar o item.'),
         );
         return;
       }
@@ -273,7 +273,7 @@ function ManualItemForm({
       setFeedback({
         type: 'error',
         code: 'NETWORK_ERROR',
-        message: 'Sem conexao com o servidor. Tente novamente.',
+        message: 'Sem conexão com o servidor. Tente novamente.',
         requestId,
       });
     }
@@ -317,12 +317,12 @@ function ManualItemForm({
       </div>
       {!canManageItems ? (
         <p className="order-feedback warning" role="status">
-          Voce pode visualizar esta Comanda, mas nao tem permissao para editar itens.
+          Você pode visualizar esta Comanda, mas não tem permissão para editar itens.
         </p>
       ) : null}
       {!online ? (
         <p className="order-feedback warning" role="status">
-          <WifiOff size={15} aria-hidden="true" /> Voce esta offline. Edicoes ficam indisponiveis.
+          <WifiOff size={15} aria-hidden="true" /> Você está offline. Edições ficam indisponíveis.
         </p>
       ) : null}
       {itemSuggestions.length ? (
@@ -380,8 +380,8 @@ function ManualItemForm({
                 value={sourceType}
               >
                 <option value="MANUAL">Manual</option>
-                <option value="SERVICE">Servico</option>
-                <option value="PRODUCT">Produto de catalogo</option>
+                <option value="SERVICE">Serviço</option>
+                <option value="PRODUCT">Produto de catálogo</option>
               </select>
             </label>
             <label>
@@ -433,7 +433,7 @@ function ManualItemForm({
         <div className="order-form-footer">
           <span>
             {productCatalogRequired
-              ? 'Selecione um produto ativo do catalogo para continuar.'
+              ? 'Selecione um produto ativo do catálogo para continuar.'
               : (selectedSuggestion?.helperLabel ?? 'Totais recalculados no servidor.')}
           </span>
           <button className="button button-primary" disabled={submitDisabled} type="submit">
@@ -471,7 +471,7 @@ function ProductPickerPanel({
     <section className="order-product-picker" aria-labelledby="order-product-picker-title">
       <div className="order-action-header">
         <div>
-          <p className="eyebrow">Catalogo</p>
+          <p className="eyebrow">Catálogo</p>
           <h3 id="order-product-picker-title">Produtos</h3>
         </div>
         <ReceiptText size={18} aria-hidden="true" />
@@ -506,7 +506,7 @@ function ProductPickerPanel({
           </button>
         ))}
       </div>
-      <div className="order-suggestion-grid" aria-label="Produtos do catalogo">
+      <div className="order-suggestion-grid" aria-label="Produtos do catálogo">
         {products.map((product) => (
           <button
             aria-disabled={!product.available}
@@ -624,7 +624,7 @@ function WalkInOrderForm({
               customerPayload,
               customerResponse.status,
               requestId,
-              'Nao foi possivel cadastrar o cliente rapido.',
+              'Não foi possível cadastrar o cliente rápido.',
             ),
           );
           return;
@@ -651,7 +651,7 @@ function WalkInOrderForm({
             orderPayload,
             orderResponse.status,
             requestId,
-            'Nao foi possivel abrir a Comanda.',
+            'Não foi possível abrir a Comanda.',
           ),
         );
         return;
@@ -662,7 +662,7 @@ function WalkInOrderForm({
       setFeedback({
         type: 'error',
         code: 'NETWORK_ERROR',
-        message: 'Sem conexao com o servidor. Tente novamente.',
+        message: 'Sem conexão com o servidor. Tente novamente.',
         requestId,
       });
     }
@@ -683,13 +683,13 @@ function WalkInOrderForm({
       </div>
       {!canCreateWalkIn ? (
         <p className="order-feedback warning" role="status">
-          Seu perfil nao possui permissao para abrir Comanda sem agendamento.
+          Seu perfil não possui permissão para abrir Comanda sem agendamento.
         </p>
       ) : null}
       {!online ? (
         <p className="order-feedback warning" role="status">
-          <WifiOff size={15} aria-hidden="true" /> Voce esta offline. Nova Comanda precisa de
-          conexao.
+          <WifiOff size={15} aria-hidden="true" /> Você está offline. Nova Comanda precisa de
+          conexão.
         </p>
       ) : null}
       <form className="order-form" onSubmit={handleSubmit} aria-describedby={feedbackId}>
@@ -723,7 +723,7 @@ function WalkInOrderForm({
                 type="radio"
                 name="walk-in-client-mode"
               />
-              Cadastro rapido
+              Cadastro rápido
             </label>
           </fieldset>
           {mode === 'existing' ? (
@@ -767,7 +767,7 @@ function WalkInOrderForm({
           <label>
             Profissional (opcional)
             <RelatedSelect
-              emptyLabel="Nenhum profissional disponivel"
+              emptyLabel="Nenhum profissional disponível"
               loading={relationshipsLoading}
               onChange={setProfessionalId}
               options={professionals}
@@ -780,7 +780,7 @@ function WalkInOrderForm({
             <textarea
               maxLength={500}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Ex.: cliente entrou sem horario marcado"
+              placeholder="Ex.: cliente entrou sem horário marcado"
               rows={2}
               value={notes}
             />
@@ -840,7 +840,7 @@ export function OrderItemControls({
       const payload = (await response.json().catch(() => null)) as OrderApiResponse | null;
       if (!response.ok) {
         setFeedback(
-          errorFeedback(payload, response.status, requestId, 'Nao foi possivel alterar o item.'),
+          errorFeedback(payload, response.status, requestId, 'Não foi possível alterar o item.'),
         );
         return;
       }
@@ -850,7 +850,7 @@ export function OrderItemControls({
       setFeedback({
         type: 'error',
         code: 'NETWORK_ERROR',
-        message: 'Sem conexao com o servidor. Tente novamente.',
+        message: 'Sem conexão com o servidor. Tente novamente.',
         requestId,
       });
     }
@@ -867,7 +867,7 @@ export function OrderItemControls({
     <div className="order-item-controls" aria-describedby={feedbackId}>
       {!online ? (
         <p className="order-feedback warning" role="status">
-          <WifiOff size={15} aria-hidden="true" /> Item indisponivel offline.
+          <WifiOff size={15} aria-hidden="true" /> Item indisponível offline.
         </p>
       ) : null}
       <div className="order-item-action-row">
@@ -924,7 +924,7 @@ export function OrderItemControls({
               </div>
             </fieldset>
             <div className="order-form-footer">
-              <span>Os totais da Comanda serao recalculados apos salvar.</span>
+              <span>Os totais da Comanda serão recalculados após salvar.</span>
               <button className="button button-primary" disabled={disabled} type="submit">
                 {feedback.type === 'loading' ? (
                   <LoaderCircle className="check-in-action-spinner" size={15} aria-hidden="true" />
@@ -941,7 +941,7 @@ export function OrderItemControls({
 
       {modal === 'delete' ? (
         <AppModal
-          description="Esta acao remove o item e recalcula os totais da Comanda."
+          description="Esta ação remove o item e recalcula os totais da Comanda."
           eyebrow="Confirmacao"
           title="Remover item"
           onClose={() => setModal(null)}

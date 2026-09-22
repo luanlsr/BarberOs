@@ -16,7 +16,7 @@ describe('CashRegisterView', () => {
     expect(html).toContain('cash-register-side');
     expect(html).toContain('Resumo do caixa');
     expect(html).toContain('Esperado');
-    expect(html).toContain('Resumo por metodo');
+    expect(html).toContain('Resumo por método');
     expect(html).toContain('Sangria e reforco');
     expect(html).toContain('Fechar caixa');
     expect(html).toContain('Movimentos');

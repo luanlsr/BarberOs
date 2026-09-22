@@ -30,7 +30,7 @@ describe('OperationsDirectoryView', () => {
     const html = renderToStaticMarkup(<OperationsDirectoryView model={model} />);
 
     expect(html).toContain('Acesso restrito');
-    expect(html).toContain('Seu perfil nao pode visualizar clientes');
+    expect(html).toContain('Seu perfil não pode visualizar clientes');
     expect(html).not.toContain('Marcos Vinicius');
   });
 
@@ -47,6 +47,6 @@ describe('OperationsDirectoryView', () => {
     );
 
     expect(disabledHtml).toContain('Formulario bloqueado');
-    expect(offlineHtml).toContain('Acoes de escrita ficam indisponiveis');
+    expect(offlineHtml).toContain('Ações de escrita ficam indisponíveis');
   });
 });

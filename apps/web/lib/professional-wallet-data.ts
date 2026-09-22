@@ -210,7 +210,7 @@ export function getDevelopmentProfessionalWalletViewModel(
     return buildWalletModel(
       base,
       'permission-denied',
-      'Seu perfil nao pode visualizar esta carteira profissional.',
+      'Seu perfil não pode visualizar esta carteira profissional.',
       [],
       [],
     );
@@ -220,12 +220,12 @@ export function getDevelopmentProfessionalWalletViewModel(
     return buildWalletModel(
       base,
       'error',
-      'Nao foi possivel carregar Minha carteira agora.',
+      'Não foi possível carregar Minha carteira agora.',
       [],
       [],
       {
         code: 'COMMISSION_VALIDATION_ERROR',
-        message: 'Carteira profissional local indisponivel.',
+        message: 'Carteira profissional local indisponível.',
         requestId: 'local-wallet-error',
       },
     );
@@ -235,7 +235,7 @@ export function getDevelopmentProfessionalWalletViewModel(
     return buildWalletModel(
       base,
       'offline',
-      'Voce esta offline. A carteira sera atualizada quando a conexao voltar.',
+      'Você está offline. A carteira será atualizada quando a conexão voltar.',
       [],
       [],
     );
@@ -245,7 +245,7 @@ export function getDevelopmentProfessionalWalletViewModel(
     return buildWalletModel(
       base,
       'empty',
-      'Nenhuma producao comissionada encontrada neste periodo.',
+      'Nenhuma produção comissionada encontrada neste período.',
       [],
       [],
     );
@@ -262,8 +262,8 @@ export function getDevelopmentProfessionalWalletViewModel(
     base,
     accruals.length || payouts.length ? 'ready' : 'empty',
     accruals.length || payouts.length
-      ? 'Producao, comissoes abertas e repasses pagos do periodo.'
-      : 'Nenhuma producao comissionada encontrada neste periodo.',
+      ? 'Producao, comissões abertas e repasses pagos do período.'
+      : 'Nenhuma produção comissionada encontrada neste período.',
     accruals,
     payouts,
   );
@@ -356,7 +356,7 @@ function metricsFor(
       tone: productionAmountCents > 0 ? 'success' : 'neutral',
     },
     {
-      label: 'Comissoes abertas',
+      label: 'Comissões abertas',
       amountCents: openCommissionAmountCents,
       amountLabel: formatCurrency(openCommissionAmountCents),
       tone: openCommissionAmountCents > 0 ? 'warning' : 'neutral',
@@ -417,22 +417,22 @@ function actionsFor(
       id: 'wallet.refresh',
       label: 'Recarregar',
       enabled: base.canRead && state !== 'permission-denied',
-      reason: base.canRead ? undefined : 'Sem permissao para visualizar esta carteira.',
+      reason: base.canRead ? undefined : 'Sem permissão para visualizar esta carteira.',
     },
     {
       id: 'wallet.view-payouts',
       label: 'Ver repasses',
       enabled:
         base.canRead && state !== 'offline' && state !== 'error' && state !== 'permission-denied',
-      reason: base.canRead ? stateReason : 'Sem permissao para visualizar esta carteira.',
+      reason: base.canRead ? stateReason : 'Sem permissão para visualizar esta carteira.',
     },
   ];
 }
 
 function unavailableReasonForState(state: ProfessionalWalletViewState) {
-  if (state === 'offline') return 'Disponivel quando a conexao voltar.';
+  if (state === 'offline') return 'Disponivel quando a conexão voltar.';
   if (state === 'error') return 'Recarregue a carteira antes de navegar.';
-  if (state === 'permission-denied') return 'Sem permissao para visualizar esta carteira.';
+  if (state === 'permission-denied') return 'Sem permissão para visualizar esta carteira.';
   return undefined;
 }
 

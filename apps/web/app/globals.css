@@ -7225,6 +7225,7 @@ html[data-theme='dark'] {
 .landing-plan-card p,
 .landing-plan-card li,
 .landing-feature-card p,
+.landing-benefit-story p,
 .landing-benefit-strip span,
 .landing-device-card p {
   color: var(--landing-muted);
@@ -7337,6 +7338,7 @@ html[data-theme='dark'] {
 .landing-product-mockup,
 .landing-benefit-strip article,
 .landing-feature-card,
+.landing-benefit-story,
 .landing-screen-card,
 .landing-demo-panel,
 .landing-plan-card,
@@ -7730,6 +7732,89 @@ html[data-theme='dark'] {
   color: var(--landing-copper);
 }
 
+.landing-finance-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1fr);
+  gap: clamp(22px, 4vw, 46px);
+  align-items: center;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(135deg, rgba(35, 138, 85, 0.15), rgba(55, 127, 199, 0.13)),
+    rgba(255, 255, 255, 0.72);
+  padding-block: clamp(34px, 6vw, 64px);
+}
+
+.landing-finance-copy h2 {
+  margin: 0 0 14px;
+  color: #1d1a17;
+  font-size: clamp(30px, 4vw, 50px);
+  line-height: 1.03;
+}
+
+.landing-finance-copy p:not(.eyebrow) {
+  color: var(--landing-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.landing-finance-metrics,
+.landing-finance-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.landing-finance-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.landing-finance-metrics span,
+.landing-finance-card-grid article {
+  border: 1px solid var(--landing-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 42px rgba(32, 74, 56, 0.08);
+}
+
+.landing-finance-metrics span {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  color: var(--landing-muted);
+  font-size: 12px;
+}
+
+.landing-finance-metrics strong {
+  color: var(--landing-green);
+  font-size: clamp(20px, 2.2vw, 28px);
+  line-height: 1;
+}
+
+.landing-finance-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.landing-finance-card-grid article {
+  display: grid;
+  gap: 10px;
+  min-height: 190px;
+  padding: 18px;
+}
+
+.landing-finance-card-grid svg {
+  color: var(--landing-green);
+}
+
+.landing-finance-card-grid h3,
+.landing-finance-card-grid p {
+  margin: 0;
+}
+
+.landing-finance-card-grid p {
+  color: var(--landing-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
 .landing-workflow-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -7830,6 +7915,119 @@ html[data-theme='dark'] {
 .landing-feature-card p {
   margin-bottom: 0;
   font-size: 13px;
+}
+
+.landing-benefit-story-section {
+  width: min(100%, 1280px);
+}
+
+.landing-benefit-story-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.landing-benefit-story {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 16px;
+  align-content: start;
+  min-height: 260px;
+  overflow: hidden;
+  padding: 22px;
+}
+
+.landing-benefit-story::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--tone, var(--landing-copper));
+  content: '';
+}
+
+.benefit-story-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tone, var(--landing-copper)) 14%, #ffffff);
+  color: var(--tone, var(--landing-copper));
+}
+
+.landing-benefit-story h3,
+.landing-benefit-story p,
+.landing-benefit-story ul {
+  margin: 0;
+}
+
+.landing-benefit-story h3 {
+  color: #1d1a17;
+  font-size: 20px;
+  line-height: 1.18;
+}
+
+.landing-benefit-story p {
+  margin-top: 9px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.landing-benefit-story ul {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-benefit-story li {
+  border: 1px solid
+    color-mix(in srgb, var(--tone, var(--landing-copper)) 24%, var(--landing-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone, var(--landing-copper)) 8%, #ffffff);
+  color: #302923;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.landing-benefit-story > strong {
+  grid-column: 1 / -1;
+  width: fit-content;
+  border-radius: 999px;
+  background: #1d1a17;
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.landing-operation-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  border: 1px solid var(--landing-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 14px 16px;
+  color: var(--landing-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.landing-operation-ribbon span {
+  border-radius: 999px;
+  background: rgba(186, 99, 60, 0.1);
+  color: #302923;
+  padding: 7px 10px;
+}
+
+.landing-operation-ribbon svg {
+  color: var(--landing-copper);
 }
 
 .landing-inline-cta {
@@ -7992,7 +8190,8 @@ html[data-theme='dark'] {
   .landing-problem-section,
   .landing-security,
   .landing-dashboard-story,
-  .landing-operator-section {
+  .landing-operator-section,
+  .landing-finance-focus {
     grid-template-columns: 1fr;
   }
 
@@ -8057,7 +8256,9 @@ html[data-theme='dark'] {
   .landing-screen-grid,
   .landing-workflow-grid,
   .mockup-kpis,
-  .chart-card.split {
+  .chart-card.split,
+  .landing-finance-metrics,
+  .landing-finance-card-grid {
     grid-template-columns: 1fr;
   }
 
@@ -8087,5 +8288,344 @@ html[data-theme='dark'] {
 
   .landing-mobile-cta .button {
     width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-benefit-story {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-operation-ribbon {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .landing-operation-ribbon svg {
+    transform: rotate(90deg);
+  }
+}
+
+/* Landing refresh: dark neon sales direction */
+.landing-page {
+  --landing-bg: #07060a;
+  --landing-cream: #100d14;
+  --landing-panel: #141019;
+  --landing-ink: #f8f4f8;
+  --landing-muted: #c8bdc8;
+  --landing-border: rgba(255, 49, 139, 0.24);
+  --landing-copper: #ff2f8b;
+  --landing-copper-strong: #ff4aa0;
+  --landing-gold: #ff77b8;
+  --landing-green: #31d789;
+  --landing-blue: #7cc3ff;
+  --landing-violet: #b07cff;
+  background:
+    radial-gradient(circle at 7% 0%, rgba(255, 47, 139, 0.34), transparent 28%),
+    radial-gradient(circle at 94% 12%, rgba(176, 124, 255, 0.2), transparent 34%),
+    linear-gradient(180deg, #07060a 0%, #100b13 52%, #07060a 100%);
+  color: var(--landing-ink);
+}
+
+.landing-header {
+  border-bottom-color: rgba(255, 47, 139, 0.2);
+  background: rgba(7, 6, 10, 0.78);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.26);
+}
+
+.landing-brand .brand-logo-name,
+.landing-nav,
+.landing-nav a,
+.landing-page .brand-caption {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.landing-nav a:hover {
+  color: var(--landing-copper-strong);
+}
+
+.landing-page .button-primary {
+  background: linear-gradient(135deg, #ff2f8b 0%, #ff5dad 58%, #ff8ec8 100%);
+  box-shadow: 0 20px 48px rgba(255, 47, 139, 0.32);
+}
+
+.landing-page .button-primary:hover {
+  background: linear-gradient(135deg, #ff4aa0 0%, #ff79bd 100%);
+}
+
+.landing-page .button-secondary,
+.landing-page .button-ghost {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.landing-page .button-secondary:hover,
+.landing-page .button-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.landing-hero {
+  width: min(100%, 1440px);
+  grid-template-columns: minmax(0, 0.85fr) minmax(420px, 1.15fr);
+  min-height: calc(100dvh - 76px);
+  padding-block: clamp(44px, 7vw, 94px) clamp(26px, 4vw, 54px);
+}
+
+.landing-color-band::before {
+  inset: 5% auto auto 44%;
+  width: min(46vw, 620px);
+  height: min(46vw, 620px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 47, 139, 0.28), transparent 67%);
+  filter: blur(6px);
+  transform: none;
+}
+
+.landing-hero-copy h1 {
+  color: #fff;
+  text-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+}
+
+.landing-hero-copy h1 span {
+  color: #ff2f8b;
+}
+
+.landing-page .eyebrow {
+  color: #ff5dad;
+  letter-spacing: 0.18em;
+}
+
+.landing-lead {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.landing-trust-row span {
+  border-color: rgba(255, 47, 139, 0.24);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.landing-trust-row svg {
+  color: #ff4aa0;
+}
+
+.landing-product-mockup {
+  align-self: end;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.landing-product-mockup img {
+  display: block;
+  width: min(100%, 680px);
+  height: auto;
+  margin-inline: auto;
+  border-radius: 30px;
+  filter: drop-shadow(0 34px 70px rgba(255, 47, 139, 0.18));
+}
+
+.landing-benefit-strip article,
+.landing-benefit-story,
+.landing-screen-card,
+.landing-plan-card,
+.landing-problem-list,
+.landing-security,
+.landing-final-cta,
+.landing-faq-list details,
+.landing-inline-cta,
+.landing-workflow article,
+.landing-device-card,
+.landing-chart-board,
+.chart-card,
+.landing-finance-metrics span,
+.landing-finance-card-grid article {
+  border-color: rgba(255, 47, 139, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.045));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  color: var(--landing-ink);
+}
+
+.landing-section-heading h2,
+.landing-problem-section h2,
+.landing-security h2,
+.landing-final-cta h2,
+.landing-operator-copy h2,
+.landing-finance-copy h2,
+.landing-benefit-story h3,
+.landing-feature-card h3,
+.landing-screen-card h3,
+.landing-plan-card h3,
+.landing-workflow h3,
+.chart-card strong {
+  color: #fff;
+}
+
+.landing-section-heading p,
+.landing-problem-section p,
+.landing-security p,
+.landing-final-cta p,
+.landing-faq-list p,
+.landing-plan-card p,
+.landing-plan-card li,
+.landing-benefit-story p,
+.landing-benefit-strip span,
+.landing-device-card p,
+.chart-card span,
+.chart-card p,
+.landing-finance-copy p:not(.eyebrow),
+.landing-finance-card-grid p,
+.role-list span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.landing-benefit-strip svg,
+.benefit-story-icon,
+.landing-security svg,
+.landing-final-cta > svg,
+.workflow-number,
+.landing-finance-card-grid svg {
+  color: #ff4aa0;
+}
+
+.landing-benefit-story li,
+.landing-operation-ribbon span {
+  border-color: rgba(255, 47, 139, 0.25);
+  background: rgba(255, 47, 139, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.landing-benefit-story > strong {
+  background: rgba(255, 47, 139, 0.18);
+  color: #fff;
+}
+
+.landing-operation-ribbon {
+  border-color: rgba(255, 47, 139, 0.22);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.landing-plan-card.is-featured {
+  border-color: rgba(255, 47, 139, 0.62);
+  background: linear-gradient(180deg, rgba(255, 47, 139, 0.18), rgba(255, 255, 255, 0.055));
+  box-shadow: 0 28px 80px rgba(255, 47, 139, 0.22);
+}
+
+.landing-plan-price strong,
+.landing-finance-metrics strong {
+  color: #ff5dad;
+}
+
+.mini-donut span {
+  background: #100d14;
+  color: #fff;
+}
+
+.landing-footer {
+  border-top: 1px solid rgba(255, 47, 139, 0.18);
+  color: rgba(255, 255, 255, 0.74);
+}
+
+@media (max-width: 1120px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-product-mockup img {
+    width: min(100%, 760px);
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-header {
+    background: rgba(7, 6, 10, 0.9);
+  }
+
+  .landing-brand .brand-logo-name {
+    font-size: 15px;
+  }
+
+  .landing-product-mockup img {
+    border-radius: 20px;
+  }
+}
+
+/* Dark landing product cards contrast */
+.landing-page .landing-screen-card {
+  border-color: color-mix(in srgb, var(--tone, #ff2f8b) 44%, rgba(255, 255, 255, 0.12));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tone, #ff2f8b) 14%, transparent),
+      transparent 52%
+    ),
+    rgba(13, 10, 17, 0.88);
+}
+
+.landing-page .screen-window-bar span {
+  background: color-mix(in srgb, var(--tone, #ff2f8b) 72%, rgba(255, 255, 255, 0.4));
+}
+
+.landing-page .screen-card-header span {
+  border: 1px solid color-mix(in srgb, var(--tone, #ff2f8b) 44%, rgba(255, 255, 255, 0.16));
+  background: color-mix(in srgb, var(--tone, #ff2f8b) 16%, rgba(255, 255, 255, 0.04));
+  color: color-mix(in srgb, var(--tone, #ff2f8b) 82%, #ffffff);
+}
+
+.landing-page .screen-card-header strong {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.landing-page .landing-screen-card h3 {
+  color: #ffffff;
+}
+
+.landing-page .screen-lines p {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.landing-page .screen-lines p:hover {
+  border-color: color-mix(in srgb, var(--tone, #ff2f8b) 38%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--tone, #ff2f8b) 10%, rgba(255, 255, 255, 0.06));
+}
+
+/* Landing feature visual */
+.landing-feature-visual {
+  position: relative;
+  overflow: hidden;
+  margin: 26px 0 18px;
+  border: 1px solid rgba(255, 47, 139, 0.28);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 10% 30%, rgba(255, 47, 139, 0.22), transparent 28%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: 0 34px 88px rgba(0, 0, 0, 0.34);
+}
+
+.landing-feature-visual::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  content: '';
+  pointer-events: none;
+}
+
+.landing-feature-visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 680px) {
+  .landing-feature-visual {
+    margin-top: 18px;
+    border-radius: 18px;
   }
 }

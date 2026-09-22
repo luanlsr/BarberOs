@@ -19,7 +19,7 @@ const customer: Customer = {
   id: 'customer-1',
   tenantId: 'tenant-1',
   branchId: 'branch-1',
-  name: 'Joao Silva',
+  name: 'João Silva',
   phone: '+5511999999999',
   consents: { whatsapp: true, marketing: false },
   status: 'ACTIVE',
@@ -40,7 +40,7 @@ describe('customer route handlers', () => {
     customers = {
       search: vi.fn(async () => [customer]),
       create: vi.fn(async () => customer),
-      update: vi.fn(async () => ({ ...customer, name: 'Joao Atualizado' })),
+      update: vi.fn(async () => ({ ...customer, name: 'João Atualizado' })),
       archive: vi.fn(async () => ({ ...customer, status: 'ARCHIVED' as const })),
     };
     handlers = createCustomerRouteHandlers({
@@ -52,7 +52,7 @@ describe('customer route handlers', () => {
   it('searches customers with branch, text and phone filters', async () => {
     const response = await handlers.GET(
       new Request(
-        'https://barberos.local/api/v1/customers?branchId=branch-1&search=Joao&phone=9999',
+        'https://barberos.local/api/v1/customers?branchId=branch-1&search=João&phone=9999',
         {
           headers: { 'x-request-id': 'request-1' },
         },
@@ -63,13 +63,13 @@ describe('customer route handlers', () => {
     expect(await response.json()).toEqual({ data: [customer], requestId: 'request-1' });
     expect(customers.search).toHaveBeenCalledWith(context, {
       branchId: 'branch-1',
-      query: 'Joao',
+      query: 'João',
       phone: '9999',
     });
   });
 
   it('creates customers and returns 201', async () => {
-    const body = { branchId: 'branch-1', name: 'Joao Silva', phone: '+5511999999999' };
+    const body = { branchId: 'branch-1', name: 'João Silva', phone: '+5511999999999' };
 
     const response = await handlers.POST(
       new Request('https://barberos.local/api/v1/customers', {
@@ -85,7 +85,7 @@ describe('customer route handlers', () => {
   });
 
   it('updates customers through the application service', async () => {
-    const body = { id: 'customer-1', name: 'Joao Atualizado' };
+    const body = { id: 'customer-1', name: 'João Atualizado' };
 
     const response = await handlers.PATCH(
       new Request('https://barberos.local/api/v1/customers', {
@@ -97,7 +97,7 @@ describe('customer route handlers', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      data: { ...customer, name: 'Joao Atualizado' },
+      data: { ...customer, name: 'João Atualizado' },
       requestId: 'request-1',
     });
     expect(customers.update).toHaveBeenCalledWith(context, body);

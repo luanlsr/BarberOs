@@ -31,7 +31,7 @@ describe('Product picker data loading layer', () => {
       available: true,
       favorite: true,
       unitPriceLabel: 'R$ 45,00',
-      stockLabel: '18 disponiveis',
+      stockLabel: '18 disponíveis',
       stockTone: 'success',
     });
   });
@@ -43,13 +43,13 @@ describe('Product picker data loading layer', () => {
       model.products.find((product) => product.productId === 'dev-product-inactive'),
     ).toMatchObject({
       available: false,
-      disabledReason: 'Produto inativo no catalogo.',
+      disabledReason: 'Produto inativo no catálogo.',
     });
     expect(
       model.products.find((product) => product.productId === 'dev-product-branch-unavailable'),
     ).toMatchObject({
       available: false,
-      disabledReason: 'Produto indisponivel nesta unidade.',
+      disabledReason: 'Produto indisponível nesta unidade.',
       stockLabel: 'Sem saldo nesta unidade',
     });
   });
