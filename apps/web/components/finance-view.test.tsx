@@ -22,6 +22,11 @@ describe('FinanceView', () => {
     expect(html).toContain('Despesas');
     expect(html).toContain('Resultado');
     expect(html).toContain('Comissões abertas');
+    expect(html).toContain('Planos vs Avulso');
+    expect(html).toContain('Cortes, clientes e receita');
+    expect(html).toContain('Clientes com plano');
+    expect(html).toContain('Clientes avulsos');
+    expect(html).toContain('Plano está mais vantajoso');
   });
 
   test('renders tablet structural regions for cash flow and payouts', () => {
@@ -89,5 +94,20 @@ describe('FinanceView', () => {
     expect(html).toContain('Financeiro indisponível');
     expect(html).not.toContain('R$');
     expect(html).not.toContain('Fluxo de caixa');
+  });
+  test('renders consolidated branch and category dashboards', () => {
+    const html = renderToStaticMarkup(
+      <FinanceView
+        model={getDevelopmentFinanceViewModel(developmentSession, { branchId: 'all' })}
+      />,
+    );
+
+    expect(html).toContain('Todas as unidades');
+    expect(html).toContain('Saúde por unidade');
+    expect(html).toContain('Unidade Centro');
+    expect(html).toContain('Unidade Norte');
+    expect(html).toContain('Entradas e saídas');
+    expect(html).toContain('Marketing');
+    expect(html).toContain('Origem');
   });
 });

@@ -60,6 +60,23 @@ describe('Finance data loading layer', () => {
       openAccrualCount: 1,
       payoutCount: 1,
     });
+    expect(model.planAnalysis.plan).toMatchObject({
+      haircutCount: 6,
+      customerCount: 4,
+      revenueAmountCents: 32_000,
+      revenuePerCustomerAmountCents: 8_000,
+    });
+    expect(model.planAnalysis.walkIn).toMatchObject({
+      haircutCount: 2,
+      customerCount: 2,
+      revenueAmountCents: 15_500,
+      revenuePerCustomerAmountCents: 7_750,
+    });
+    expect(model.planAnalysis).toMatchObject({
+      planUtilizationPercent: 75,
+      recommendationTitle: 'Plano está mais vantajoso',
+      revenueDeltaLabel: '+R$ 2,50 por cliente vs. avulso',
+    });
     expect(action(model, 'finance.refresh').enabled).toBe(true);
     expect(action(model, 'finance.create-expense').enabled).toBe(true);
     expect(action(model, 'finance.manage-commissions').enabled).toBe(true);
@@ -144,5 +161,51 @@ describe('Finance data loading layer', () => {
     expect(action(model, 'finance.refresh').reason).toBe(
       'Sem permissão para visualizar financeiro.',
     );
+  });
+  test('builds a consolidated finance model across authorized branches', () => {
+    const model = getDevelopmentFinanceViewModel(developmentSession, { branchId: 'all' });
+
+    expect(model.state).toBe('ready');
+    expect(model.scope).toBe('tenant');
+    expect(model.branchName).toBe('Todas as unidades');
+    expect(model.branchOptions.map((option) => option.label)).toEqual([
+      'Todas as unidades',
+      'Unidade Centro',
+      'Unidade Norte',
+    ]);
+    expect(model.summary).toMatchObject({
+      branchId: undefined,
+      revenueAmountCents: 29_300,
+      expenseAmountCents: 80_600,
+      resultAmountCents: -51_300,
+      cashInAmountCents: 29_300,
+      cashOutAmountCents: 84_100,
+      entriesCount: 9,
+    });
+    expect(model.branchBreakdown.map((branch) => branch.branchName)).toEqual([
+      'Unidade Centro',
+      'Unidade Norte',
+    ]);
+    expect(model.categoryBreakdown.map((category) => category.name)).toEqual(
+      expect.arrayContaining(['Serviços', 'Produtos', 'Aluguel', 'Marketing']),
+    );
+    expect(model.originBreakdown.map((origin) => origin.label)).toEqual(
+      expect.arrayContaining([
+        'Despesas operacionais',
+        'Serviços',
+        'Salários e repasses',
+        'Produtos',
+      ]),
+    );
+    expect(model.planAnalysis.plan).toMatchObject({
+      haircutCount: 8,
+      customerCount: 6,
+      revenueAmountCents: 48_000,
+    });
+    expect(model.planAnalysis.walkIn).toMatchObject({
+      haircutCount: 3,
+      customerCount: 3,
+      revenueAmountCents: 26_500,
+    });
   });
 });

@@ -1,14 +1,19 @@
 import * as React from 'react';
+import Link from 'next/link';
 import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
   BadgePercent,
   Banknote,
+  BarChart3,
+  Building2,
   LockKeyhole,
   Plus,
   ReceiptText,
   RefreshCcw,
+  Scissors,
+  Users,
   WalletCards,
 } from 'lucide-react';
 import { StatusBadge } from '@barberos/ui';
@@ -38,6 +43,7 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
       </header>
 
       <FinanceSectionTabs active="summary" />
+      <FinanceScopeSwitcher model={model} />
 
       <section
         className="finance-period-panel"
@@ -79,10 +85,14 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
       <div className="finance-workspace" aria-label="Resumo financeiro responsivo">
         <main className="finance-primary" aria-label="Fluxo de caixa e despesas">
           <CashFlowSummary model={model} />
+          <PlanVsWalkInAnalysis model={model} />
+          <FinanceCategoryBreakdown model={model} />
+          <FinanceOriginBreakdown model={model} />
           <RecentExpenses expenses={model.expenses} />
         </main>
 
         <aside className="finance-side" aria-label="Comissões e repasses">
+          <FinanceBranchHealth model={model} />
           <CommissionSummary model={model} />
           <PayoutSummary model={model} />
         </aside>
@@ -91,25 +101,70 @@ export function FinanceView({ model }: Readonly<{ model: FinanceViewModel }>) {
   );
 }
 
+function FinanceScopeSwitcher({ model }: Readonly<{ model: FinanceViewModel }>) {
+  return (
+    <section className="finance-scope-panel" aria-label="Filtro de unidade financeira">
+      <div>
+        <p className="eyebrow">Visão</p>
+        <strong>{model.branchScopeLabel}</strong>
+      </div>
+      <div className="finance-scope-options">
+        {model.branchOptions.map((option) => (
+          <Link
+            aria-current={option.active ? 'page' : undefined}
+            className="finance-scope-option"
+            href={option.href}
+            key={option.id}
+          >
+            {option.id === 'all' ? (
+              <BarChart3 size={15} aria-hidden="true" />
+            ) : (
+              <Building2 size={15} aria-hidden="true" />
+            )}
+            {option.label}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 function FinanceActions({ actions }: Readonly<{ actions: readonly FinanceActionModel[] }>) {
   return (
     <div className="finance-heading-actions" aria-label="Ações financeiras">
-      {actions.map((action) => (
-        <button
-          className={
-            action.id === 'finance.create-expense'
-              ? 'button button-primary'
-              : 'button button-secondary'
-          }
-          disabled={!action.enabled}
-          key={action.id}
-          title={action.reason}
-          type="button"
-        >
-          {iconForAction(action.id)}
-          {action.label}
-        </button>
-      ))}
+      {actions.map((action) => {
+        const className =
+          action.id === 'finance.create-expense'
+            ? 'button button-primary'
+            : 'button button-secondary';
+        if (action.enabled && action.id === 'finance.create-expense') {
+          return (
+            <Link className={className} href="/financeiro/despesas?modal=create" key={action.id}>
+              {iconForAction(action.id)}
+              {action.label}
+            </Link>
+          );
+        }
+        if (action.enabled && action.id === 'finance.refresh') {
+          return (
+            <Link className={className} href="/financeiro" key={action.id}>
+              {iconForAction(action.id)}
+              {action.label}
+            </Link>
+          );
+        }
+        return (
+          <button
+            className={className}
+            disabled
+            key={action.id}
+            title={action.reason}
+            type="button"
+          >
+            {iconForAction(action.id)}
+            {action.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -165,6 +220,170 @@ function CashFlowSummary({ model }: Readonly<{ model: FinanceViewModel }>) {
   );
 }
 
+function PlanVsWalkInAnalysis({ model }: Readonly<{ model: FinanceViewModel }>) {
+  const channels = [model.planAnalysis.plan, model.planAnalysis.walkIn];
+  return (
+    <section className="finance-panel finance-plan-panel" aria-labelledby="finance-plan-title">
+      <div className="finance-panel-heading">
+        <div>
+          <p className="eyebrow">Planos vs Avulso</p>
+          <h2 id="finance-plan-title">Cortes, clientes e receita</h2>
+        </div>
+        <Scissors size={20} aria-hidden="true" />
+      </div>
+      <div className="finance-plan-grid">
+        {channels.map((channel) => (
+          <article className={'finance-plan-card finance-tone-' + channel.tone} key={channel.id}>
+            <div>
+              <span>{channel.label}</span>
+              <strong>{channel.revenueAmountLabel}</strong>
+              <small>{channel.sharePercent}% da receita analisada</small>
+            </div>
+            <dl>
+              <div>
+                <dt>Cortes</dt>
+                <dd>{channel.haircutCount}</dd>
+              </div>
+              <div>
+                <dt>Clientes</dt>
+                <dd>{channel.customerCount}</dd>
+              </div>
+              <div>
+                <dt>Receita/cliente</dt>
+                <dd>{channel.revenuePerCustomerAmountLabel}</dd>
+              </div>
+              <div>
+                <dt>Receita/corte</dt>
+                <dd>{channel.revenuePerHaircutAmountLabel}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+      <aside className="finance-plan-advice" aria-label="Análise profissional de planos">
+        <div>
+          <Users size={18} aria-hidden="true" />
+          <strong>{model.planAnalysis.recommendationTitle}</strong>
+        </div>
+        <p>{model.planAnalysis.recommendationText}</p>
+        <span>{model.planAnalysis.revenueDeltaLabel}</span>
+        <small>{model.planAnalysis.planUtilizationLabel}</small>
+      </aside>
+    </section>
+  );
+}
+
+function FinanceCategoryBreakdown({ model }: Readonly<{ model: FinanceViewModel }>) {
+  return (
+    <section className="finance-panel" aria-labelledby="finance-category-title">
+      <div className="finance-panel-heading">
+        <div>
+          <p className="eyebrow">Categorias</p>
+          <h2 id="finance-category-title">Entradas e saídas</h2>
+        </div>
+        <BarChart3 size={20} aria-hidden="true" />
+      </div>
+      {model.categoryBreakdown.length ? (
+        <div className="finance-breakdown-list">
+          {model.categoryBreakdown.map((item) => (
+            <article className="finance-breakdown-row" key={item.id}>
+              <div>
+                <span
+                  className="finance-color-dot"
+                  style={{ '--finance-color': item.color } as React.CSSProperties}
+                />
+                <strong>{item.name}</strong>
+                <small>
+                  {item.direction === 'IN' ? 'Entrada' : 'Saída'} · {item.percent}%
+                </small>
+              </div>
+              <div className="finance-breakdown-meter" aria-hidden="true">
+                <span style={{ width: Math.max(item.percent, 3) + '%', background: item.color }} />
+              </div>
+              <b>{item.amountLabel}</b>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="finance-muted">Sem categorias financeiras no período.</p>
+      )}
+    </section>
+  );
+}
+
+function FinanceOriginBreakdown({ model }: Readonly<{ model: FinanceViewModel }>) {
+  return (
+    <section className="finance-panel" aria-labelledby="finance-origin-title">
+      <div className="finance-panel-heading">
+        <div>
+          <p className="eyebrow">Origem</p>
+          <h2 id="finance-origin-title">De onde vem e para onde vai</h2>
+        </div>
+        <Banknote size={20} aria-hidden="true" />
+      </div>
+      {model.originBreakdown.length ? (
+        <div className="finance-origin-grid">
+          {model.originBreakdown.map((item) => (
+            <article className={'finance-origin-card finance-tone-' + item.tone} key={item.id}>
+              <span>{item.label}</span>
+              <strong>{item.amountLabel}</strong>
+              <small>
+                {item.direction === 'IN' ? 'Entrada' : 'Saída'} · {item.percent}% do movimento
+              </small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="finance-muted">Sem origem de movimentação no período.</p>
+      )}
+    </section>
+  );
+}
+
+function FinanceBranchHealth({ model }: Readonly<{ model: FinanceViewModel }>) {
+  return (
+    <section className="finance-panel" aria-labelledby="finance-branches-title">
+      <div className="finance-panel-heading">
+        <div>
+          <p className="eyebrow">Unidades</p>
+          <h2 id="finance-branches-title">Saúde por unidade</h2>
+        </div>
+        <Building2 size={20} aria-hidden="true" />
+      </div>
+      {model.branchBreakdown.length ? (
+        <div className="finance-branch-list">
+          {model.branchBreakdown.map((branch) => (
+            <article
+              className={'finance-branch-card finance-tone-' + branch.tone}
+              key={branch.branchId}
+            >
+              <div>
+                <strong>{branch.branchName}</strong>
+                <span>{branch.sharePercent}% das entradas</span>
+              </div>
+              <dl>
+                <div>
+                  <dt>Entradas</dt>
+                  <dd>{branch.revenueAmountLabel}</dd>
+                </div>
+                <div>
+                  <dt>Saídas</dt>
+                  <dd>{branch.expenseAmountLabel}</dd>
+                </div>
+                <div>
+                  <dt>Resultado</dt>
+                  <dd>{branch.resultAmountLabel}</dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="finance-muted">Sem unidades com movimento no período.</p>
+      )}
+    </section>
+  );
+}
 function CommissionSummary({ model }: Readonly<{ model: FinanceViewModel }>) {
   return (
     <section
