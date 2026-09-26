@@ -7,7 +7,7 @@ type EstoqueSearchParams = Promise<Record<string, string | string[] | undefined>
 
 export default async function EstoquePage({ searchParams }: { searchParams: EstoqueSearchParams }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const model = await getInventoryViewModel(session, {

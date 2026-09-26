@@ -502,11 +502,90 @@ insert into public.ai_usage (id, tenant_id, branch_id, period_start, metric, qua
   ('00000000-0000-0000-0000-000000009303', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000031', '2026-09-01', 'TOOL_CALLS', 214)
 on conflict (id) do update set quantity = excluded.quantity;
 
-insert into public.messaging_connections (id, tenant_id, branch_id, channel, provider, external_account_id, phone_number, status, metadata) values
-  ('00000000-0000-0000-0000-000000009401', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'WHATSAPP', 'WHATSAPP_CLOUD', 'seed-wa-modelo', '+5511999990001', 'ACTIVE', '{"source":"seed"}'::jsonb),
-  ('00000000-0000-0000-0000-000000009402', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000031', 'WHATSAPP', 'WHATSAPP_CLOUD', 'seed-wa-navalha', '+5511999990003', 'PENDING', '{"source":"seed"}'::jsonb)
-on conflict (id) do update set provider = excluded.provider, phone_number = excluded.phone_number, status = excluded.status, metadata = excluded.metadata;
+insert into public.permissions (code, description) values
+  ('messaging.read', 'Ler conversas, mensagens e status de mensageria.'),
+  ('messaging.manage', 'Gerenciar conexoes e preferencias de mensageria.'),
+  ('campaigns.read', 'Ler campanhas, audiencias e metricas.'),
+  ('campaigns.create', 'Criar e editar rascunhos de campanhas.'),
+  ('campaigns.approve', 'Aprovar campanhas antes do envio.'),
+  ('campaigns.send', 'Agendar, enviar ou cancelar disparos de campanhas.')
+on conflict (code) do update set description = excluded.description;
 
+insert into public.role_permissions (role_code, permission_code) values
+  ('OWNER', 'messaging.read'),
+  ('OWNER', 'messaging.manage'),
+  ('OWNER', 'campaigns.read'),
+  ('OWNER', 'campaigns.create'),
+  ('OWNER', 'campaigns.approve'),
+  ('OWNER', 'campaigns.send'),
+  ('MANAGER', 'messaging.read'),
+  ('MANAGER', 'messaging.manage'),
+  ('MANAGER', 'campaigns.read'),
+  ('MANAGER', 'campaigns.create'),
+  ('MANAGER', 'campaigns.approve'),
+  ('MANAGER', 'campaigns.send'),
+  ('RECEPTIONIST', 'messaging.read'),
+  ('RECEPTIONIST', 'campaigns.read'),
+  ('RECEPTIONIST', 'campaigns.create'),
+  ('PLATFORM_MASTER', 'messaging.read'),
+  ('PLATFORM_MASTER', 'messaging.manage'),
+  ('PLATFORM_MASTER', 'campaigns.read'),
+  ('PLATFORM_MASTER', 'campaigns.create'),
+  ('PLATFORM_MASTER', 'campaigns.approve'),
+  ('PLATFORM_MASTER', 'campaigns.send'),
+  ('PLATFORM_SUPPORT', 'messaging.read'),
+  ('PLATFORM_SUPPORT', 'campaigns.read')
+on conflict (role_code, permission_code) do nothing;
+
+insert into public.entitlements (code, description) values
+  ('messaging', 'Mensageria WhatsApp operacional'),
+  ('campaigns', 'Campanhas e reativacao de clientes')
+on conflict (code) do update set description = excluded.description;
+
+insert into public.tenant_entitlements (tenant_id, entitlement_code) values
+  ('00000000-0000-0000-0000-000000000001', 'messaging'),
+  ('00000000-0000-0000-0000-000000000001', 'campaigns'),
+  ('00000000-0000-0000-0000-000000000003', 'messaging'),
+  ('00000000-0000-0000-0000-000000000003', 'campaigns')
+on conflict (tenant_id, entitlement_code) do update set enabled = true;
+
+insert into public.messaging_connections (id, tenant_id, branch_id, provider, status, display_name, display_phone_number, provider_phone_number_id, credential_reference, webhook_secret_reference, allow_tenant_fallback, metadata, created_by, updated_by) values
+  ('00000000-0000-0000-0000-000000009401', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'LOCAL', 'ACTIVE', 'WhatsApp Local Centro', '+5511999990001', 'seed-local-phone-modelo', null, null, false, '{"source":"seed","demo":true,"secretPolicy":"no-real-provider-secrets"}'::jsonb, null, null),
+  ('00000000-0000-0000-0000-000000009402', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000031', 'LOCAL', 'ACTIVE', 'WhatsApp Local Navalha Centro', '+5511999990003', 'seed-local-phone-navalha', null, null, false, '{"source":"seed","demo":true,"secretPolicy":"no-real-provider-secrets"}'::jsonb, null, null)
+on conflict (id) do update set provider = excluded.provider, status = excluded.status, display_name = excluded.display_name, display_phone_number = excluded.display_phone_number, provider_phone_number_id = excluded.provider_phone_number_id, metadata = excluded.metadata, updated_at = now();
+
+insert into public.messaging_provider_events (id, tenant_id, branch_id, connection_id, provider, provider_event_id, event_kind, payload, signature_valid, idempotency_key, received_at, processed_at) values
+  ('00000000-0000-0000-0000-000000009411', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000009401', 'LOCAL', 'seed-provider-event-9411', 'INBOUND_MESSAGE', '{"text":"Quero remarcar meu horario"}'::jsonb, true, 'seed-provider-event-9411', '2026-09-22T10:00:00Z', '2026-09-22T10:00:05Z')
+on conflict (id) do update set payload = excluded.payload, processed_at = excluded.processed_at;
+
+insert into public.messaging_conversations (id, tenant_id, branch_id, connection_id, customer_id, contact_phone_hash, status, last_message_at) values
+  ('00000000-0000-0000-0000-000000009421', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000009401', '00000000-0000-0000-0000-000000000301', 'seed-hash-customer-301-phone', 'OPEN', '2026-09-22T10:00:00Z')
+on conflict (id) do update set status = excluded.status, last_message_at = excluded.last_message_at;
+
+insert into public.messaging_messages (id, tenant_id, branch_id, conversation_id, connection_id, customer_id, direction, channel, delivery_state, provider_message_id, body_preview, payload, received_at) values
+  ('00000000-0000-0000-0000-000000009431', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000009421', '00000000-0000-0000-0000-000000009401', '00000000-0000-0000-0000-000000000301', 'INBOUND', 'WHATSAPP', 'RECEIVED', 'seed-wamid-9431', 'Quero remarcar meu horario', '{"rawProviderEventId":"00000000-0000-0000-0000-000000009411"}'::jsonb, '2026-09-22T10:00:00Z')
+on conflict (id) do update set delivery_state = excluded.delivery_state, body_preview = excluded.body_preview, payload = excluded.payload;
+
+insert into public.messaging_consent_records (id, tenant_id, branch_id, customer_id, contact_phone_hash, purpose, state, source, reason, created_at) values
+  ('00000000-0000-0000-0000-000000009441', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000301', 'seed-hash-customer-301-phone', 'WHATSAPP_TRANSACTIONAL', 'OPTED_IN', 'OPERATOR', 'Consentimento inicial da seed local', '2026-09-22T09:55:00Z'),
+  ('00000000-0000-0000-0000-000000009442', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000301', 'seed-hash-customer-301-phone', 'WHATSAPP_MARKETING', 'OPTED_IN', 'OPERATOR', 'Aceite marketing seed local', '2026-09-22T09:55:00Z')
+on conflict (id) do nothing;
+
+insert into public.campaigns (id, tenant_id, branch_id, name, status, audience_criteria, content, created_by, updated_by) values
+  ('00000000-0000-0000-0000-000000009451', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'Reativacao clientes inativos', 'DRAFT', '{"branchIds":["00000000-0000-0000-0000-000000000011"],"customerStatus":["INACTIVE","AT_RISK"]}'::jsonb, '{"templateKey":"campaign.reactivation.local.v1","bodyPreview":"Sentimos sua falta por aqui."}'::jsonb, null, null)
+on conflict (id) do update set name = excluded.name, status = excluded.status, audience_criteria = excluded.audience_criteria, content = excluded.content;
+
+insert into public.campaign_runs (id, tenant_id, branch_id, campaign_id, status, audience_size, eligible_count, excluded_count, idempotency_key) values
+  ('00000000-0000-0000-0000-000000009461', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000009451', 'DRAFT', 1, 1, 0, 'seed-campaign-run-9461')
+on conflict (id) do update set status = excluded.status, audience_size = excluded.audience_size, eligible_count = excluded.eligible_count, excluded_count = excluded.excluded_count;
+
+insert into public.campaign_recipient_outcomes (id, tenant_id, branch_id, campaign_id, campaign_run_id, customer_id, contact_phone_hash, status, idempotency_key) values
+  ('00000000-0000-0000-0000-000000009471', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000009451', '00000000-0000-0000-0000-000000009461', '00000000-0000-0000-0000-000000000301', 'seed-hash-customer-301-phone', 'PENDING', 'seed-campaign-recipient-9471')
+on conflict (id) do update set status = excluded.status;
+
+insert into public.campaign_metric_rollups (tenant_id, branch_id, campaign_id, campaign_run_id, audience_size, sent_count, delivered_count, failed_count, skipped_count, blocked_by_consent_count, opt_out_count, reply_count) values
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000009451', '00000000-0000-0000-0000-000000009461', 1, 0, 0, 0, 0, 0, 0, 0)
+on conflict (tenant_id, campaign_run_id) do update set audience_size = excluded.audience_size, sent_count = excluded.sent_count, delivered_count = excluded.delivered_count, failed_count = excluded.failed_count, skipped_count = excluded.skipped_count, blocked_by_consent_count = excluded.blocked_by_consent_count, opt_out_count = excluded.opt_out_count, reply_count = excluded.reply_count;
 insert into public.platform_feature_flags (id, key, name, description, enabled, status, rollout_strategy, rollout_config) values
   ('00000000-0000-0000-0000-000000009501', 'ai.finance.insights', 'Insights financeiros por IA', 'Libera recomendações financeiras assistidas pela Barber AI.', true, 'BETA', 'TENANT_ALLOWLIST', '{"tenants":["00000000-0000-0000-0000-000000000001"]}'::jsonb),
   ('00000000-0000-0000-0000-000000009502', 'support.impersonation', 'Acesso temporário de suporte', 'Habilita sessões auditadas de suporte dentro do tenant.', false, 'INTERNAL', 'PLATFORM_ONLY', '{}'::jsonb),

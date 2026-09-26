@@ -5,11 +5,14 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   CheckCircle2,
+  ImageIcon,
   LockKeyhole,
   Pencil,
   Plus,
   RefreshCw,
+  Scissors,
   Search,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -46,6 +49,8 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
   const [confirming, setConfirming] = React.useState<OperationsDirectoryItem | null>(null);
   const [toast, setToast] = React.useState<ToastState>(null);
   const [busy, setBusy] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
   const [, setServerSynced] = React.useState(false);
 
   React.useEffect(() => {
@@ -94,6 +99,17 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
   const disabled =
     busy || !model.canCreate || model.state === 'disabled' || model.state === 'offline';
   const visibleItems = React.useMemo(() => filterItems(items, query), [items, query]);
+  const totalPages = Math.max(1, Math.ceil(visibleItems.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedItems = visibleItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [query, pageSize, model.area]);
+
+  React.useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
 
   function showToast(message: string, tone: ToastTone = 'success') {
     setToast({ id: Date.now(), message, tone });
@@ -204,15 +220,26 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
           {disabled ? <DirectoryWriteReason model={model} busy={busy} /> : null}
 
           {visibleItems.length ? (
-            <DirectoryTable
-              busy={busy}
-              canUpdate={model.canUpdate && model.state !== 'offline'}
-              items={visibleItems}
-              model={model}
-              onArchive={(item) => setConfirming(item)}
-              onDetails={(item) => setDetailsItem(item)}
-              onEdit={openEditDialog}
-            />
+            <>
+              <DirectoryTable
+                busy={busy}
+                canUpdate={model.canUpdate && model.state !== 'offline'}
+                items={paginatedItems}
+                model={model}
+                onArchive={(item) => setConfirming(item)}
+                onDetails={(item) => setDetailsItem(item)}
+                onEdit={openEditDialog}
+              />
+
+              <DirectoryPagination
+                page={currentPage}
+                pageSize={pageSize}
+                totalItems={visibleItems.length}
+                totalPages={totalPages}
+                onPage={setPage}
+                onPageSize={setPageSize}
+              />
+            </>
           ) : (
             <DirectoryEmptyState
               disabled={disabled}
@@ -245,7 +272,12 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
       ) : null}
 
       {detailsItem ? (
-        <DirectoryDetailsDialog item={detailsItem} onClose={() => setDetailsItem(null)} />
+        <DirectoryDetailsDialog
+          area={model.area}
+          item={detailsItem}
+          onClose={() => setDetailsItem(null)}
+          onEdit={model.canUpdate && model.state !== 'offline' ? openEditDialog : undefined}
+        />
       ) : null}
 
       <ToastRegion toast={toast} onDismiss={() => setToast(null)} />
@@ -299,11 +331,11 @@ function DirectoryTable({
       <div
         className="directory-table"
         role="table"
-        aria-label={`${model.title}: registros operacionais`}
+        aria-label={model.title + ': registros operacionais'}
       >
         <div className="directory-table-header" role="row">
           {columns.map((column) => (
-            <span key={column.key} role="columnheader">
+            <span key={column.key + ':' + column.label} role="columnheader">
               {column.label}
             </span>
           ))}
@@ -313,7 +345,11 @@ function DirectoryTable({
         {items.map((item) => (
           <div className="directory-table-row" role="row" key={item.id}>
             {columns.map((column) => (
-              <div className="directory-table-cell" role="cell" key={column.key}>
+              <div
+                className="directory-table-cell"
+                role="cell"
+                key={column.key + ':' + column.label}
+              >
                 <span>{column.label}</span>
                 {column.key === 'primary' ? (
                   <strong>{item.title}</strong>
@@ -333,7 +369,7 @@ function DirectoryTable({
                 className="icon-button"
                 type="button"
                 title="Ver detalhes"
-                aria-label={`Ver detalhes de ${item.title}`}
+                aria-label={'Ver detalhes de ' + item.title}
                 onClick={() => onDetails(item)}
               >
                 <Search size={16} aria-hidden="true" />
@@ -345,7 +381,7 @@ function DirectoryTable({
                     disabled={busy}
                     type="button"
                     title="Editar"
-                    aria-label={`Editar ${item.title}`}
+                    aria-label={'Editar ' + item.title}
                     onClick={() => onEdit(item)}
                   >
                     <Pencil size={16} aria-hidden="true" />
@@ -355,7 +391,7 @@ function DirectoryTable({
                     disabled={busy}
                     type="button"
                     title="Arquivar"
-                    aria-label={`Arquivar ${item.title}`}
+                    aria-label={'Arquivar ' + item.title}
                     onClick={() => onArchive(item)}
                   >
                     <Trash2 size={16} aria-hidden="true" />
@@ -369,52 +405,145 @@ function DirectoryTable({
     </div>
   );
 }
-
+function DirectoryPagination({
+  onPage,
+  onPageSize,
+  page,
+  pageSize,
+  totalItems,
+  totalPages,
+}: Readonly<{
+  onPage: (page: number) => void;
+  onPageSize: (pageSize: number) => void;
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}>) {
+  return (
+    <div className="directory-pagination" aria-label="Paginação da tabela">
+      <span>{totalItems} registros</span>
+      <label>
+        Exibir
+        <select value={pageSize} onChange={(event) => onPageSize(Number(event.target.value))}>
+          {[10, 15, 20, 50].map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div>
+        <button
+          className="button button-secondary"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+          type="button"
+        >
+          Anterior
+        </button>
+        <span>
+          {page} / {totalPages}
+        </span>
+        <button
+          className="button button-secondary"
+          disabled={page >= totalPages}
+          onClick={() => onPage(page + 1)}
+          type="button"
+        >
+          Próxima
+        </button>
+      </div>
+    </div>
+  );
+}
 function DirectoryDetailsDialog({
+  area,
   item,
   onClose,
-}: Readonly<{ item: OperationsDirectoryItem; onClose: () => void }>) {
+  onEdit,
+}: Readonly<{
+  area: OperationsDirectoryArea;
+  item: OperationsDirectoryItem;
+  onClose: () => void;
+  onEdit?: (item: OperationsDirectoryItem) => void;
+}>) {
   const titleId = React.useId();
+  const accentStyle = item.colorHex
+    ? ({ '--directory-accent': item.colorHex } as React.CSSProperties)
+    : undefined;
+  const VisualIcon = area === 'servicos' ? serviceIconForKey(item.iconKey) : ImageIcon;
 
   return (
-    <div className="app-dialog-backdrop" role="presentation">
+    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
       <section
         aria-labelledby={titleId}
         aria-modal="true"
         className="app-dialog directory-detail-dialog"
         role="dialog"
+        style={accentStyle}
+        onClick={(event) => event.stopPropagation()}
       >
-        <header className="app-dialog-header">
-          <div>
-            <p className="eyebrow">Detalhes</p>
-            <h2 id={titleId}>{item.title}</h2>
-            <p>{item.subtitle}</p>
+        <header className="app-dialog-header directory-detail-header">
+          <div className="directory-detail-hero">
+            <div className="directory-detail-media" aria-hidden="true">
+              {item.imageUrl ? <img src={item.imageUrl} alt="" /> : <VisualIcon size={30} />}
+            </div>
+            <div>
+              <p className="eyebrow">Detalhes</p>
+              <h2 id={titleId}>{item.title}</h2>
+              <p>{item.subtitle}</p>
+            </div>
           </div>
           <IconButton label="Fechar" onClick={onClose} type="button">
             <X size={18} aria-hidden="true" />
           </IconButton>
         </header>
+        <div className="directory-detail-status">
+          <StatusBadge variant={item.statusTone}>{item.statusLabel}</StatusBadge>
+          {area === 'servicos' && item.iconKey ? <span>Ícone: {item.iconKey}</span> : null}
+          {area === 'servicos' && item.colorHex ? <span>Cor: {item.colorHex}</span> : null}
+        </div>
         <dl className="directory-detail-list">
-          <div>
-            <dt>Status</dt>
-            <dd>
-              <StatusBadge variant={item.statusTone}>{item.statusLabel}</StatusBadge>
-            </dd>
-          </div>
           {item.metrics.map((metric) => (
             <div key={metric.label}>
               <dt>{metric.label}</dt>
               <dd>{metric.value}</dd>
             </div>
           ))}
-          <div>
-            <dt>Marcadores</dt>
-            <dd>{item.tags.length ? item.tags.join(' · ') : '-'}</dd>
-          </div>
         </dl>
+        <div className="directory-detail-tags">
+          {item.tags.length ? (
+            item.tags.map((tag) => <span key={tag}>{tag}</span>)
+          ) : (
+            <span>Sem marcadores</span>
+          )}
+        </div>
+        {onEdit ? (
+          <div className="app-dialog-actions">
+            <Button
+              onClick={() => {
+                onClose();
+                onEdit(item);
+              }}
+              type="button"
+            >
+              <Pencil size={15} aria-hidden="true" />
+              Editar
+            </Button>
+          </div>
+        ) : null}
       </section>
     </div>
   );
+}
+
+function serviceIconForKey(iconKey?: string) {
+  const normalized = iconKey?.toLowerCase() ?? '';
+  if (normalized.includes('spark') || normalized.includes('star')) return Sparkles;
+  if (normalized.includes('image') || normalized.includes('photo') || normalized.includes('foto'))
+    return ImageIcon;
+  return Scissors;
 }
 function DirectoryDialog({
   dialog,
@@ -449,13 +578,14 @@ function DirectoryDialog({
   }
 
   return (
-    <div className="app-dialog-backdrop" role="presentation">
+    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
       <section
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
         className="app-dialog directory-dialog"
         role="dialog"
+        onClick={(event) => event.stopPropagation()}
       >
         <header className="app-dialog-header">
           <div>
@@ -638,13 +768,14 @@ function ConfirmDialog({
   const descriptionId = React.useId();
 
   return (
-    <div className="app-dialog-backdrop" role="presentation">
+    <div className="app-dialog-backdrop" role="presentation" onClick={onCancel}>
       <section
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
         className="app-dialog app-confirm-dialog"
         role="dialog"
+        onClick={(event) => event.stopPropagation()}
       >
         <header className="app-dialog-header compact">
           <div>
@@ -725,6 +856,14 @@ function validateDirectoryDraft(
       errors[field.id] = 'Informe um email valido.';
     }
 
+    if (field.type === 'url' && !isValidUrl(value)) {
+      errors[field.id] = 'Informe uma URL valida.';
+    }
+
+    if (field.type === 'color' && !/^#[0-9a-fA-F]{6}$/.test(value)) {
+      errors[field.id] = 'Informe uma cor hexadecimal, exemplo #A45A36.';
+    }
+
     if (field.maxLength && value.length > field.maxLength) {
       errors[field.id] = `Use no maximo ${field.maxLength} caracteres.`;
     }
@@ -751,6 +890,16 @@ function validateDirectoryDraft(
 function isValidEmail(value: string) {
   if (value.length > 160) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidUrl(value: string) {
+  if (value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 async function fetchDirectoryRecords(model: OperationsDirectoryModel) {
@@ -812,6 +961,7 @@ function buildCommandPayload(
       phone: values.phone,
       email: values.email,
       source: values.source,
+      avatarUrl: values.avatarUrl,
     });
   }
   if (model.area === 'equipe') {
@@ -821,6 +971,7 @@ function buildCommandPayload(
       displayName: values.displayName,
       roleLabel: values.roleLabel || 'Profissional',
       phone: values.phone,
+      avatarUrl: values.avatarUrl,
     });
   }
   return compactPayload({
@@ -829,6 +980,9 @@ function buildCommandPayload(
     category: values.category,
     durationMinutes: toInteger(values.duration),
     priceCents: toMoneyCents(values.price),
+    imageUrl: values.imageUrl,
+    iconKey: values.iconKey,
+    colorHex: values.colorHex,
     enabledProfessionalIds: [],
   });
 }
@@ -869,6 +1023,14 @@ function apiRecordToItem(
         customer.preferredProfessionalId ? 'Profissional preferido' : 'Sem preferencia',
         customer.consents.whatsapp ? 'WhatsApp ok' : 'WhatsApp pendente',
       ],
+      imageUrl: customer.avatarUrl,
+      formValues: {
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email ?? '',
+        source: customer.source ?? '',
+        avatarUrl: customer.avatarUrl ?? '',
+      },
     };
   }
   if (area === 'equipe') {
@@ -885,6 +1047,14 @@ function apiRecordToItem(
         { label: 'Telefone', value: professional.phone ?? '-' },
       ],
       tags: [professional.email ?? 'Sem email', professional.status],
+      imageUrl: professional.avatarUrl,
+      formValues: {
+        displayName: professional.displayName,
+        roleLabel: professional.roleLabel,
+        phone: professional.phone ?? '',
+        avatarUrl: professional.avatarUrl ?? '',
+        branch: professional.branchIds.length ? 'Centro' : '',
+      },
     };
   }
   const service = record as Service;
@@ -905,6 +1075,18 @@ function apiRecordToItem(
         : 'Sem custo estimado',
       service.status,
     ],
+    imageUrl: service.imageUrl,
+    iconKey: service.iconKey,
+    colorHex: service.colorHex,
+    formValues: {
+      name: service.name,
+      category: service.category,
+      duration: String(service.durationMinutes),
+      price: String(service.priceCents / 100),
+      imageUrl: service.imageUrl ?? '',
+      iconKey: service.iconKey ?? '',
+      colorHex: service.colorHex ?? '',
+    },
   };
 }
 
@@ -914,6 +1096,10 @@ function defaultDraft(fields: readonly OperationsDirectoryField[]) {
 
 function draftFromItem(item: OperationsDirectoryItem, fields: readonly OperationsDirectoryField[]) {
   const draft = defaultDraft(fields);
+  if (item.formValues) {
+    for (const field of fields) draft[field.id] = item.formValues[field.id] ?? '';
+    return draft;
+  }
   for (const field of fields) draft[field.id] = fieldValueFromItem(field, item);
   return draft;
 }
@@ -921,8 +1107,8 @@ function draftFromItem(item: OperationsDirectoryItem, fields: readonly Operation
 function fieldValueFromItem(field: OperationsDirectoryField, item: OperationsDirectoryItem) {
   const metricValue = item.metrics.find((metric) => sameToken(metric.label, field.label))?.value;
   if (field.id === 'name' || field.id === 'displayName') return item.title;
-  if (field.id === 'phone' || field.id === 'roleLabel' || field.id === 'category')
-    return item.subtitle;
+  if (field.id === 'phone') return metricValue ?? item.subtitle;
+  if (field.id === 'roleLabel' || field.id === 'category') return item.subtitle;
   if (field.id === 'email') return item.tags.find((tag) => tag.includes('@')) ?? '';
   if (field.id === 'source' || field.id === 'branch') return field.options?.[0] ?? '';
   if (field.id === 'duration') return metricValue?.replace(/\D/g, '') ?? '';
@@ -961,6 +1147,10 @@ function itemFromDraft(
     statusTone: existing?.statusTone ?? 'success',
     metrics,
     tags: tags.length ? tags : ['Cadastro rápido'],
+    imageUrl: values.avatarUrl || values.imageUrl || existing?.imageUrl,
+    iconKey: values.iconKey || existing?.iconKey,
+    colorHex: values.colorHex || existing?.colorHex,
+    formValues: { ...values },
   };
 }
 

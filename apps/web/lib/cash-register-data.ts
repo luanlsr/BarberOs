@@ -346,11 +346,15 @@ export function getDevelopmentCashRegisterViewModel(
     };
   }
 
+  if (options.state === 'open') {
+    return toCashRegisterViewModel(base, developmentOpenSession, developmentPayments);
+  }
+
   if (options.state === 'closed') {
     return toCashRegisterViewModel(base, developmentClosedSession, developmentPayments);
   }
 
-  if (options.state === 'empty' || options.state === 'no-open-session') {
+  if (!options.state || options.state === 'empty' || options.state === 'no-open-session') {
     return {
       ...base,
       state: 'no-open-session',
@@ -360,7 +364,13 @@ export function getDevelopmentCashRegisterViewModel(
     };
   }
 
-  return toCashRegisterViewModel(base, developmentOpenSession, developmentPayments);
+  return {
+    ...base,
+    state: 'no-open-session',
+    description: 'Nenhum caixa aberto nesta unidade.',
+    methodTotals: paymentMethodTotals([]),
+    movements: [],
+  };
 }
 
 async function getPersistentCashRegisterViewModel(
@@ -426,7 +436,7 @@ function toCashRegisterViewModel(
       ? 'Caixa aberto com saldos, recebimentos e movimentos do dia.'
       : 'Caixa fechado com conferencia e diferenca registrada.',
     session: sessionModel,
-    methodTotals: paymentMethodTotals(payments),
+    methodTotals: paymentMethodTotals(paymentsForSession(payments, session)),
     movements: session.movements
       .slice()
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -454,7 +464,10 @@ function toSessionModel(session: CashRegisterSummary): CashRegisterSessionModel 
         ? undefined
         : formatCurrency(session.actualBalanceAmountCents),
     differenceAmountCents: session.differenceAmountCents,
-    differenceLabel: formatSignedCurrency(session.differenceAmountCents),
+    differenceLabel:
+      session.status === 'OPEN' && session.actualBalanceAmountCents === undefined
+        ? 'A conferir'
+        : formatSignedCurrency(session.differenceAmountCents),
     closingNotes: session.closingNotes,
   };
 }
@@ -474,6 +487,17 @@ function toMovementModel(movement: CashMovement): CashRegisterMovementModel {
     orderId: movement.orderId,
     paymentId: movement.paymentId,
   };
+}
+
+function paymentsForSession(payments: readonly Payment[], session: CashRegisterSummary) {
+  const openedAt = Date.parse(session.openedAt);
+  const closedAt = session.closedAt ? Date.parse(session.closedAt) : Number.POSITIVE_INFINITY;
+  return payments.filter((payment) => {
+    const receivedAt = Date.parse(payment.receivedAt);
+    return (
+      receivedAt >= openedAt && receivedAt <= closedAt && payment.branchId === session.branchId
+    );
+  });
 }
 
 function paymentMethodTotals(payments: readonly Payment[]) {

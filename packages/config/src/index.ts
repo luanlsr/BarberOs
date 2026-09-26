@@ -33,12 +33,33 @@ const serverEnvSchema = z
     ASAAS_API_KEY: optionalNonEmptyString,
     ASAAS_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
     ASAAS_WEBHOOK_TOKEN: optionalNonEmptyString,
+    WHATSAPP_PROVIDER: z.enum(['local', 'meta']).default('local'),
+    WHATSAPP_ACCESS_TOKEN: optionalNonEmptyString,
+    WHATSAPP_PHONE_NUMBER_ID: optionalNonEmptyString,
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: optionalNonEmptyString,
+    WHATSAPP_WEBHOOK_APP_SECRET: optionalNonEmptyString,
+    WHATSAPP_WEBHOOK_TOLERANCE_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
+    CAMPAIGN_DISPATCH_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
+    CAMPAIGN_DISPATCH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(120),
   })
   .transform((value) => ({
     ...value,
     SUPABASE_URL: value.SUPABASE_URL ?? value.NEXT_PUBLIC_SUPABASE_URL,
     SUPABASE_ANON_KEY: value.SUPABASE_ANON_KEY ?? value.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   }))
+  .refine(
+    (value) =>
+      value.WHATSAPP_PROVIDER !== 'meta' ||
+      (Boolean(value.WHATSAPP_ACCESS_TOKEN) &&
+        Boolean(value.WHATSAPP_PHONE_NUMBER_ID) &&
+        Boolean(value.WHATSAPP_WEBHOOK_VERIFY_TOKEN) &&
+        Boolean(value.WHATSAPP_WEBHOOK_APP_SECRET)),
+    {
+      message:
+        'Meta WhatsApp provider requires WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_WEBHOOK_VERIFY_TOKEN and WHATSAPP_WEBHOOK_APP_SECRET.',
+      path: ['WHATSAPP_PROVIDER'],
+    },
+  )
   .refine((value) => value.WORKER_RETRY_BASE_DELAY_MS <= value.WORKER_RETRY_MAX_DELAY_MS, {
     message: 'WORKER_RETRY_BASE_DELAY_MS must be less than or equal to WORKER_RETRY_MAX_DELAY_MS.',
     path: ['WORKER_RETRY_BASE_DELAY_MS'],

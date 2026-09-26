@@ -20,6 +20,7 @@ type CustomerRow = {
   notes?: string | null;
   source?: string | null;
   preferred_professional_id?: string | null;
+  avatar_url?: string | null;
   consent_whatsapp: boolean;
   consent_marketing: boolean;
   status: Customer['status'];
@@ -37,6 +38,7 @@ const customerSelect = `
   notes,
   source,
   preferred_professional_id,
+  avatar_url,
   consent_whatsapp,
   consent_marketing,
   status,
@@ -96,6 +98,7 @@ export class SupabaseCustomerRepository implements CustomerRepository {
         notes: command.notes,
         source: command.source,
         preferred_professional_id: command.preferredProfessionalId,
+        avatar_url: command.avatarUrl,
         consent_whatsapp: command.consents?.whatsapp ?? false,
         consent_marketing: command.consents?.marketing ?? false,
         status: 'NEW',
@@ -120,6 +123,7 @@ export class SupabaseCustomerRepository implements CustomerRepository {
     if (changes.source !== undefined) payload.source = changes.source;
     if (changes.preferredProfessionalId !== undefined)
       payload.preferred_professional_id = changes.preferredProfessionalId;
+    if (changes.avatarUrl !== undefined) payload.avatar_url = changes.avatarUrl;
     if (changes.status !== undefined) payload.status = changes.status;
     if (consents?.whatsapp !== undefined) payload.consent_whatsapp = consents.whatsapp;
     if (consents?.marketing !== undefined) payload.consent_marketing = consents.marketing;
@@ -166,6 +170,7 @@ function toCustomer(row: CustomerRow) {
     notes: row.notes ?? undefined,
     source: row.source ?? undefined,
     preferredProfessionalId: row.preferred_professional_id ?? undefined,
+    avatarUrl: row.avatar_url ?? undefined,
     consents: { whatsapp: row.consent_whatsapp, marketing: row.consent_marketing },
     status: row.status,
     archivedAt: row.archived_at ?? undefined,

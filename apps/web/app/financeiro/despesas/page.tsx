@@ -11,15 +11,16 @@ export default async function DespesasPage({
   searchParams: ExpensesSearchParams;
 }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const branchId = singleValue(params.branchId);
   const status = singleValue(params.status);
   const state = singleValue(params.state);
+  const modal = singleValue(params.modal);
   const model = await getExpensesViewModel(session, { branchId, status, state });
 
-  return <ExpenseView model={model} />;
+  return <ExpenseView initialModal={modal === 'create' ? 'create' : undefined} model={model} />;
 }
 
 function singleValue(value: string | string[] | undefined) {

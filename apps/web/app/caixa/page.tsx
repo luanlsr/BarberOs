@@ -11,7 +11,7 @@ export default async function CashRegisterPage({
   searchParams: CashRegisterSearchParams;
 }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const state = singleValue(params.state);

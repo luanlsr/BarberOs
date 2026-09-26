@@ -36,6 +36,7 @@ const entryRow: FinancialEntryRow = {
   source_type: 'EXPENSE',
   source_id: 'expense-1',
   category_id: 'category-1',
+  financial_category_id: 'financial-category-1',
   description: 'Energia da unidade',
   idempotency_key: 'expense-pay-key-1',
   reversed_entry_id: null,
@@ -48,6 +49,7 @@ const expenseRow: ExpenseRow = {
   tenant_id: 'tenant-1',
   branch_id: 'branch-1',
   category_id: 'category-1',
+  financial_category_id: 'financial-category-1',
   description: 'Energia da unidade',
   vendor_name: 'Energia SP',
   status: 'OPEN',
@@ -100,6 +102,7 @@ describe('SupabaseFinanceRepository mapping', () => {
       cashDate: '2026-09-08',
       sourceType: 'EXPENSE',
       sourceId: 'expense-1',
+      financialCategoryId: 'financial-category-1',
     });
   });
 
@@ -132,6 +135,7 @@ describe('SupabaseFinanceRepository mapping', () => {
       amountCents: 4_200,
       paymentMethod: 'PIX',
       financialEntryId: 'entry-1',
+      financialCategoryId: 'financial-category-1',
       paidBy: 'user-1',
     });
   });
@@ -459,6 +463,7 @@ describe('SupabaseFinanceRepository queries', () => {
     const created = await repository.createExpense(context, {
       branchId: 'branch-1',
       categoryId: 'category-1',
+      financialCategoryId: 'financial-category-1',
       description: 'Aluguel mensal',
       vendorName: 'Imobiliaria Centro',
       amountCents: 12_000,
@@ -479,6 +484,7 @@ describe('SupabaseFinanceRepository queries', () => {
       expect.objectContaining({
         tenant_id: 'tenant-1',
         branch_id: 'branch-1',
+        financial_category_id: 'financial-category-1',
         created_by: 'user-1',
         updated_by: 'user-1',
       }),

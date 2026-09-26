@@ -11,7 +11,7 @@ export default async function MinhaCarteiraPage({
   searchParams: WalletSearchParams;
 }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const branchId = singleValue(params.branchId);

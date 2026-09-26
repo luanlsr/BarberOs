@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { parseServerEnv } from '@barberos/config';
+import {
+  BARBEROS_SESSION_EXPIRES_AT_COOKIE,
+  BARBEROS_SESSION_ID_COOKIE,
+  expiredSessionCookieOptions,
+  readJwtSessionMetadata,
+  sessionCookieOptions,
+} from './lib/auth/jwt-session';
 
 const PUBLIC_FILE_PATTERN = /\.(?:ico|png|jpg|jpeg|svg|webp|avif|gif|webmanifest|txt|xml)$/i;
 
@@ -22,6 +29,13 @@ function isPublicPath(pathname: string) {
   );
 }
 
+function redirectToPublicHome(request: NextRequest) {
+  const response = NextResponse.redirect(new URL('/', request.url));
+  response.cookies.set(BARBEROS_SESSION_ID_COOKIE, '', expiredSessionCookieOptions());
+  response.cookies.set(BARBEROS_SESSION_EXPIRES_AT_COOKIE, '', expiredSessionCookieOptions());
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const publicPath = isPublicPath(request.nextUrl.pathname);
 
@@ -31,7 +45,7 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     if (publicPath) return NextResponse.next();
     console.error('[BarberOS auth] Invalid Supabase environment:', error);
-    return NextResponse.redirect(new URL('/login', request.url));
+    return redirectToPublicHome(request);
   }
 
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return NextResponse.next();
@@ -48,9 +62,22 @@ export async function middleware(request: NextRequest) {
     },
   });
   const {
+    data: { session },
+  } = await client.auth.getSession();
+  const {
     data: { user },
   } = await client.auth.getUser();
-  if (!user && !publicPath) return NextResponse.redirect(new URL('/login', request.url));
+  const metadata = readJwtSessionMetadata(session?.access_token);
+
+  if ((!user || !metadata) && !publicPath) return redirectToPublicHome(request);
+
+  if (user && metadata) {
+    const options = sessionCookieOptions(metadata.maxAgeSeconds);
+    request.cookies.set(BARBEROS_SESSION_ID_COOKIE, metadata.sessionId);
+    request.cookies.set(BARBEROS_SESSION_EXPIRES_AT_COOKIE, metadata.sessionExpiresAt);
+    response.cookies.set(BARBEROS_SESSION_ID_COOKIE, metadata.sessionId, options);
+    response.cookies.set(BARBEROS_SESSION_EXPIRES_AT_COOKIE, metadata.sessionExpiresAt, options);
+  }
   return response;
 }
 

@@ -4,14 +4,16 @@ Este arquivo organiza os proximos passos depois do PRD para transformar o Barber
 
 ## Estado atual
 
-Ultimo change concluido e arquivado: inventory-products (47 de 47 tarefas; archive OpenSpec em 2026-09-18).
+Ultimo change concluido: worker-outbox-notifications (38 de 38 tarefas; validado com npm run validate em 2026-09-23).
 
-Change ativo planejado: worker-outbox-notifications (a criar; proximo da sequencia macro).
+Ultimo change arquivado: inventory-products (47 de 47 tarefas; archive OpenSpec em 2026-09-18).
 
-Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas.
-Progresso estimado do PRD: 63%.
+Change em planejamento: whatsapp-messaging-campaigns (proposal, specs, design e tasks criados; validado com npx openspec validate whatsapp-messaging-campaigns --strict em 2026-09-23; 0 de 56 tarefas implementadas).
 
-O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in e telas iniciais de Clientes, Equipe e Servicos com estados operacionais.
+Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas; worker-outbox-notifications concluido com 38 de 38 tarefas; whatsapp-messaging-campaigns planejado com 0 de 56 tarefas implementadas.
+Progresso estimado do PRD: 70%.
+
+O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in, telas iniciais de Clientes, Equipe e Servicos com estados operacionais, pagamentos, caixa, financeiro, comissoes, estoque, catalogo, transactional outbox, worker persistente, jobs, retries, dead-letter, notificacoes provider-agnostic e visibilidade operacional de falhas assincronas.
 
 ## Sequencia macro
 

@@ -611,7 +611,7 @@ function recurrenceLabelFor(recurrenceKey?: string) {
   const [frequency, intervalValue, untilToken] = recurrenceKey.split(':');
   const interval = Number(intervalValue || 1);
   const suffix = untilToken?.startsWith('until=')
-    ? ` ate ${formatDateOnly(untilToken.replace('until=', ''))}`
+    ? ` até ${formatDateOnly(untilToken.replace('until=', ''))}`
     : '';
 
   if (frequency === 'WEEKLY')

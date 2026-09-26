@@ -11,7 +11,7 @@ export default async function ComandasPage({
   searchParams: ComandasSearchParams;
 }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const orderId = singleValue(params.orderId);

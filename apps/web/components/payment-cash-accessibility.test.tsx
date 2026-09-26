@@ -48,18 +48,23 @@ describe('payment and cash accessibility affordances', () => {
       />,
     );
 
-    expect(openHtml).toContain('Informe troco inicial e observacao em um modal seguro.');
+    expect(openHtml).toContain(
+      'Use o botão Abrir caixa no topo para informar troco inicial e observacao em um modal seguro.',
+    );
     expect(openHtml).not.toContain('aria-label="Troco inicial do caixa"');
     expect(openHtml).not.toContain('aria-label="Observacao da abertura"');
     expect(openHtml).toContain('Abrir caixa');
 
     const readOnlyHtml = renderToStaticMarkup(
       <CashRegisterView
-        model={getDevelopmentCashRegisterViewModel({
-          ...developmentSession,
-          permissions: ['finance.read'],
-          entitlements: ['finance'],
-        })}
+        model={getDevelopmentCashRegisterViewModel(
+          {
+            ...developmentSession,
+            permissions: ['finance.read'],
+            entitlements: ['finance'],
+          },
+          { state: 'open' },
+        )}
       />,
     );
 

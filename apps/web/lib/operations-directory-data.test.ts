@@ -16,7 +16,13 @@ describe('operations directory data', () => {
     expect(model.canCreate).toBe(true);
     expect(model.canUpdate).toBe(true);
     expect(model.items.map((item) => item.title)).toContain('Marcos Vinicius');
-    expect(model.fields.map((field) => field.id)).toEqual(['name', 'phone', 'email', 'source']);
+    expect(model.fields.map((field) => field.id)).toEqual([
+      'name',
+      'phone',
+      'avatarUrl',
+      'email',
+      'source',
+    ]);
   });
 
   test('builds service directory with explicit empty state', () => {

@@ -8,7 +8,9 @@ import { CashRegisterView } from './cash-register-view';
 describe('CashRegisterView', () => {
   test('renders the open cash register workspace with tablet and desktop structural regions', () => {
     const html = renderToStaticMarkup(
-      <CashRegisterView model={getDevelopmentCashRegisterViewModel(developmentSession)} />,
+      <CashRegisterView
+        model={getDevelopmentCashRegisterViewModel(developmentSession, { state: 'open' })}
+      />,
     );
 
     expect(html).toContain('cash-register-workspace');
@@ -33,7 +35,9 @@ describe('CashRegisterView', () => {
     );
 
     expect(html).toContain('Abertura do caixa');
-    expect(html).toContain('Informe troco inicial e observacao em um modal seguro.');
+    expect(html).toContain(
+      'Use o botão Abrir caixa no topo para informar troco inicial e observacao em um modal seguro.',
+    );
     expect(html).toContain('Abrir caixa');
     expect(html).toContain('Sem recebimentos registrados nesta sessao.');
     expect(html).toContain('Nenhum movimento registrado.');

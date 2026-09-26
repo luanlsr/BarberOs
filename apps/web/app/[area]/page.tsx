@@ -25,7 +25,7 @@ export default async function AreaPage({
 }) {
   const { area } = await params;
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   if (isOperationsDirectoryArea(area)) {
     const query = await searchParams;

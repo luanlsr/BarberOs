@@ -22,11 +22,11 @@ import {
 } from '../domain';
 
 const financialEntrySelect =
-  'id, tenant_id, branch_id, direction, type, status, amount_cents, signed_amount_cents, competence_date, cash_date, source_type, source_id, category_id, description, idempotency_key, reversed_entry_id, created_by, created_at';
+  'id, tenant_id, branch_id, direction, type, status, amount_cents, signed_amount_cents, competence_date, cash_date, source_type, source_id, category_id, financial_category_id, description, idempotency_key, reversed_entry_id, created_by, created_at';
 const expenseCategorySelect =
   'id, tenant_id, branch_id, name, description, status, created_by, created_at, updated_at';
 const expenseSelect =
-  'id, tenant_id, branch_id, category_id, description, vendor_name, status, amount_cents, competence_date, due_date, cash_date, payment_method, recurrence_key, document_metadata, financial_entry_id, idempotency_key, payment_idempotency_key, created_by, updated_by, paid_by, paid_at, cancelled_by, cancelled_at, created_at, updated_at';
+  'id, tenant_id, branch_id, category_id, financial_category_id, description, vendor_name, status, amount_cents, competence_date, due_date, cash_date, payment_method, recurrence_key, document_metadata, financial_entry_id, idempotency_key, payment_idempotency_key, created_by, updated_by, paid_by, paid_at, cancelled_by, cancelled_at, created_at, updated_at';
 
 export type FinancialEntryRow = {
   id: string;
@@ -42,6 +42,7 @@ export type FinancialEntryRow = {
   source_type: FinancialEntry['sourceType'];
   source_id: string;
   category_id?: string | null;
+  financial_category_id?: string | null;
   description?: string | null;
   idempotency_key?: string | null;
   reversed_entry_id?: string | null;
@@ -66,6 +67,7 @@ export type ExpenseRow = {
   tenant_id: string;
   branch_id: string;
   category_id?: string | null;
+  financial_category_id?: string | null;
   description: string;
   vendor_name?: string | null;
   status: Expense['status'];
@@ -249,6 +251,7 @@ export class SupabaseFinanceRepository implements FinanceRepository {
         tenant_id: context.tenantId,
         branch_id: command.branchId,
         category_id: command.categoryId ?? null,
+        financial_category_id: command.financialCategoryId ?? command.categoryId ?? null,
         description: command.description,
         vendor_name: command.vendorName ?? null,
         status: 'OPEN',
@@ -276,6 +279,8 @@ export class SupabaseFinanceRepository implements FinanceRepository {
 
     if (command.branchId !== undefined) payload.branch_id = command.branchId;
     if (command.categoryId !== undefined) payload.category_id = command.categoryId;
+    if (command.financialCategoryId !== undefined)
+      payload.financial_category_id = command.financialCategoryId;
     if (command.description !== undefined) payload.description = command.description;
     if (command.vendorName !== undefined) payload.vendor_name = command.vendorName;
     if (command.amountCents !== undefined) payload.amount_cents = command.amountCents;
@@ -400,6 +405,7 @@ export function toFinancialEntry(row: FinancialEntryRow) {
     sourceType: row.source_type,
     sourceId: row.source_id,
     categoryId: row.category_id ?? undefined,
+    financialCategoryId: row.financial_category_id ?? undefined,
     description: row.description ?? undefined,
     idempotencyKey: row.idempotency_key ?? undefined,
     reversedEntryId: row.reversed_entry_id ?? undefined,
@@ -428,6 +434,7 @@ export function toExpense(row: ExpenseRow) {
     tenantId: row.tenant_id,
     branchId: row.branch_id,
     categoryId: row.category_id ?? undefined,
+    financialCategoryId: row.financial_category_id ?? undefined,
     description: row.description,
     vendorName: row.vendor_name ?? undefined,
     status: row.status,

@@ -7,7 +7,7 @@ type AgendaSearchParams = Promise<Record<string, string | string[] | undefined>>
 
 export default async function AgendaPage({ searchParams }: { searchParams: AgendaSearchParams }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
   if (
     !session.permissions.includes('appointments.read') ||
     !(session.entitlements ?? []).includes('core.operations')
@@ -22,7 +22,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Agend
   const mode = singleValue(params.mode);
   const view = singleValue(params.view);
   const time = singleValue(params.time);
-  const agenda = getAgendaViewModel(session, {
+  const agenda = await getAgendaViewModel(session, {
     date,
     professionalId,
     appointmentId,

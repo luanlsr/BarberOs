@@ -265,12 +265,25 @@ function MobileCreateAction({ actions }: Readonly<{ actions: PrimaryActionItem[]
 
 function UserControl({ isOnline }: Readonly<{ isOnline: boolean }>) {
   const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
   const session = useSessionContext();
   const { cycleTheme } = useTheme();
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open]);
+
   if (!session) return null;
 
   return (
-    <div className="topbar-user-menu">
+    <div className="topbar-user-menu" ref={menuRef}>
       <button
         aria-expanded={open}
         aria-label="Abrir menu do usuário"

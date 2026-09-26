@@ -130,16 +130,7 @@ describe('filterNavigation', () => {
         ['audit.read', 'worker.failures.read', 'settings.read'],
         ['worker.operations'],
       ),
-    ).toEqual([
-      '/master',
-      '/operacoes/worker',
-      '/configuracoes',
-      '/configuracoes/barbearia-filiais',
-      '/configuracoes/seguranca',
-      '/configuracoes/integracoes',
-      '/configuracoes/plano-cobranca',
-      '/configuracoes/preferencias',
-    ]);
+    ).toEqual(['/master', '/operacoes/worker', '/configuracoes']);
 
     expect(
       navFor(
@@ -173,12 +164,6 @@ describe('filterNavigation', () => {
       '/caixa',
       '/operacoes/worker',
       '/configuracoes',
-      '/configuracoes/barbearia-filiais',
-      '/configuracoes/usuarios-permissoes',
-      '/configuracoes/seguranca',
-      '/configuracoes/integracoes',
-      '/configuracoes/plano-cobranca',
-      '/configuracoes/preferencias',
     ]);
 
     expect(

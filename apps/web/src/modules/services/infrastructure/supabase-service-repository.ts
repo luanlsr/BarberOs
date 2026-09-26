@@ -22,6 +22,9 @@ type ServiceRow = {
   duration_minutes: number;
   price_cents: number;
   estimated_cost_cents?: number | null;
+  image_url?: string | null;
+  icon_key?: string | null;
+  color_hex?: string | null;
   status: Service['status'];
   archived_at?: string | null;
   service_professionals?: Array<{ professional_id: string }> | null;
@@ -36,6 +39,9 @@ const serviceSelect = `
   duration_minutes,
   price_cents,
   estimated_cost_cents,
+  image_url,
+  icon_key,
+  color_hex,
   status,
   archived_at,
   service_professionals(professional_id)
@@ -98,6 +104,9 @@ export class SupabaseServiceRepository implements ServiceRepository {
         duration_minutes: payload.durationMinutes,
         price_cents: payload.priceCents,
         estimated_cost_cents: payload.estimatedCostCents,
+        image_url: payload.imageUrl,
+        icon_key: payload.iconKey,
+        color_hex: payload.colorHex,
         status: 'ACTIVE',
       })
       .select(serviceSelect)
@@ -119,6 +128,9 @@ export class SupabaseServiceRepository implements ServiceRepository {
     if (changes.priceCents !== undefined) payload.price_cents = changes.priceCents;
     if (changes.estimatedCostCents !== undefined)
       payload.estimated_cost_cents = changes.estimatedCostCents;
+    if (changes.imageUrl !== undefined) payload.image_url = changes.imageUrl;
+    if (changes.iconKey !== undefined) payload.icon_key = changes.iconKey;
+    if (changes.colorHex !== undefined) payload.color_hex = changes.colorHex;
     if (changes.status !== undefined) payload.status = changes.status;
 
     const { error } = await this.client
@@ -195,6 +207,9 @@ function toService(row: ServiceRow) {
     durationMinutes: row.duration_minutes,
     priceCents: row.price_cents,
     estimatedCostCents: row.estimated_cost_cents ?? undefined,
+    imageUrl: row.image_url ?? undefined,
+    iconKey: row.icon_key ?? undefined,
+    colorHex: row.color_hex ?? undefined,
     status: row.status,
     enabledProfessionalIds: (row.service_professionals ?? []).map(
       (professional) => professional.professional_id,

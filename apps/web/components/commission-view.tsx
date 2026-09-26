@@ -652,13 +652,14 @@ function AppModal({
   const titleId = React.useId();
   const descriptionId = React.useId();
   return (
-    <div className="app-dialog-backdrop" role="presentation">
+    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
       <section
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
         className="app-dialog"
         role="dialog"
+        onClick={(event) => event.stopPropagation()}
       >
         <header className="app-dialog-header">
           <div>

@@ -1,143 +1,178 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { AlertTriangle, CalendarPlus, CheckCircle2, UserPlus } from 'lucide-react';
 import { Button } from '@barberos/ui';
 import type { AgendaNewAppointmentModel, AgendaOccupiedSlot } from '../lib/agenda-data';
-import { PhoneInput, isValidBrazilMobilePhone } from './form-controls';
+import { PhoneInput, RelatedSelect, isValidBrazilMobilePhone } from './form-controls';
 
 type CustomerMode = 'existing' | 'quick';
 type SubmitState =
   | { type: 'idle' }
-  | { type: 'success'; message: string; createdSlot?: AgendaOccupiedSlot }
+  | { type: 'success'; message: string }
   | { type: 'error'; code: string; message: string; requestId: string };
 
+type ApiResponse<T> = {
+  data?: T;
+  error?: { code?: string; message?: string; requestId?: string };
+  requestId?: string;
+};
+
+type CreatedCustomer = {
+  id: string;
+  name: string;
+};
+
 export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppointmentModel }>) {
+  const router = useRouter();
   const [customerMode, setCustomerMode] = React.useState<CustomerMode>('existing');
   const [customerId, setCustomerId] = React.useState(model.customers[0]?.id ?? '');
   const [quickCustomerName, setQuickCustomerName] = React.useState('');
   const [quickCustomerPhone, setQuickCustomerPhone] = React.useState('');
-  const [serviceId, setServiceId] = React.useState(model.services[0]?.id ?? '');
+  const initialServiceId = model.services[0]?.id ?? '';
+  const [servicePickerId, setServicePickerId] = React.useState(initialServiceId);
+  const [selectedServiceIds, setSelectedServiceIds] = React.useState<string[]>(
+    initialServiceId ? [initialServiceId] : [],
+  );
   const [professionalId, setProfessionalId] = React.useState(model.defaultProfessionalId);
   const [dateIso, setDateIso] = React.useState(model.dateIso);
   const [timeLabel, setTimeLabel] = React.useState(model.defaultTimeLabel);
-  const [createdSlots, setCreatedSlots] = React.useState<AgendaOccupiedSlot[]>([]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitState, setSubmitState] = React.useState<SubmitState>({ type: 'idle' });
 
   const selectedCustomer = model.customers.find((customer) => customer.id === customerId);
-  const selectedService = model.services.find((service) => service.id === serviceId);
+  const selectedServices = selectedServiceIds
+    .map((id) => model.services.find((service) => service.id === id))
+    .filter((service): service is (typeof model.services)[number] => Boolean(service));
+  const totalDurationMinutes = selectedServices.reduce(
+    (total, service) => total + service.durationMinutes,
+    0,
+  );
   const selectedProfessional = model.professionals.find(
     (professional) => professional.id === professionalId,
   );
-  const occupiedSlots = React.useMemo(
-    () => [...model.occupiedSlots, ...createdSlots],
-    [model.occupiedSlots, createdSlots],
-  );
-  const conflict = findConflict(model, occupiedSlots, professionalId, dateIso, timeLabel);
+  const conflict = findConflict(model, model.occupiedSlots, professionalId, dateIso, timeLabel);
+  const customerOptions = model.customers.map((customer) => ({
+    id: customer.id,
+    label: customer.name,
+    description: customer.phone,
+  }));
+  const serviceOptions = model.services.map((service) => ({
+    id: service.id,
+    label: service.name,
+    description: service.durationMinutes + ' min',
+  }));
+  const professionalOptions = model.professionals.map((professional) => ({
+    id: professional.id,
+    label: professional.name,
+  }));
 
   if (!model.isOpen) return null;
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!model.canCreateAppointment) {
-      setSubmitState({
-        type: 'error',
-        code: 'CORE_PERMISSION_DENIED',
-        message: 'Seu perfil não pode criar agendamentos nesta unidade.',
-        requestId: 'local-permission-denied',
-      });
+    const validationError = validateSubmission();
+    if (validationError) {
+      setSubmitState(validationError);
       return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitState({ type: 'idle' });
+
+    try {
+      const resolvedCustomer =
+        customerMode === 'quick'
+          ? await createCustomer({
+              branchId: model.branchId,
+              name: quickCustomerName.trim(),
+              phone: quickCustomerPhone,
+            })
+          : selectedCustomer;
+
+      if (!resolvedCustomer) {
+        throw toLocalError('CORE_VALIDATION_ERROR', 'Selecione um cliente cadastrado.');
+      }
+
+      await postJson('/api/v1/appointments', {
+        branchId: model.branchId,
+        customerId: resolvedCustomer.id,
+        professionalId,
+        startsAt: `${dateIso}T${timeLabel}:00-03:00`,
+        services: selectedServiceIds.map((serviceId) => ({ serviceId })),
+        status: 'CONFIRMED',
+        source: 'MANUAL',
+      });
+
+      setSubmitState({
+        type: 'success',
+        message: `Agendamento criado para ${resolvedCustomer.name} com ${selectedProfessional?.name ?? 'profissional'} as ${timeLabel}.`,
+      });
+      router.refresh();
+    } catch (error) {
+      setSubmitState(normalizeSubmitError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function validateSubmission(): SubmitState | null {
+    if (!model.canCreateAppointment) {
+      return toLocalError(
+        'CORE_PERMISSION_DENIED',
+        'Seu perfil não pode criar agendamentos nesta unidade.',
+      );
+    }
+
+    if (customerMode === 'existing' && !selectedCustomer) {
+      return toLocalError('CORE_VALIDATION_ERROR', 'Selecione um cliente cadastrado.');
     }
 
     if (customerMode === 'quick' && !model.canCreateCustomer) {
-      setSubmitState({
-        type: 'error',
-        code: 'CORE_PERMISSION_DENIED',
-        message: 'Seu perfil não pode criar clientes rapidamente.',
-        requestId: 'local-customer-permission-denied',
-      });
-      return;
+      return toLocalError(
+        'CORE_PERMISSION_DENIED',
+        'Seu perfil não pode criar clientes rapidamente.',
+      );
     }
 
     if (customerMode === 'quick' && (!quickCustomerName.trim() || !quickCustomerPhone.trim())) {
-      setSubmitState({
-        type: 'error',
-        code: 'CORE_VALIDATION_ERROR',
-        message: 'Informe nome e telefone para criar o cliente rápido.',
-        requestId: 'local-validation-error',
-      });
-      return;
+      return toLocalError(
+        'CORE_VALIDATION_ERROR',
+        'Informe nome e telefone para criar o cliente rápido.',
+      );
     }
 
     if (customerMode === 'quick' && quickCustomerName.trim().length < 3) {
-      setSubmitState({
-        type: 'error',
-        code: 'CORE_VALIDATION_ERROR',
-        message: 'Informe o nome completo do cliente com pelo menos 3 caracteres.',
-        requestId: 'local-validation-error',
-      });
-      return;
+      return toLocalError(
+        'CORE_VALIDATION_ERROR',
+        'Informe o nome completo do cliente com pelo menos 3 caracteres.',
+      );
     }
 
     if (customerMode === 'quick' && !isValidBrazilMobilePhone(quickCustomerPhone)) {
-      setSubmitState({
-        type: 'error',
-        code: 'CORE_VALIDATION_ERROR',
-        message: 'Informe um celular valido com DDD, no formato (11) 99999-9999.',
-        requestId: 'local-phone-validation-error',
-      });
-      return;
+      return toLocalError(
+        'CORE_VALIDATION_ERROR',
+        'Informe um celular valido com DDD, no formato (11) 99999-9999.',
+      );
     }
 
-    if (!selectedService || !selectedProfessional) {
-      setSubmitState({
-        type: 'error',
-        code: 'CORE_VALIDATION_ERROR',
-        message: 'Selecione serviço, profissional e horário.',
-        requestId: 'local-selection-error',
-      });
-      return;
+    if (!selectedServiceIds.length || !selectedProfessional) {
+      return toLocalError(
+        'CORE_VALIDATION_ERROR',
+        'Selecione ao menos um serviço, profissional e horário.',
+      );
     }
 
     if (conflict) {
-      setSubmitState({
-        type: 'error',
-        code: 'APPOINTMENT_CONFLICT',
-        message: `Horario ocupado por ${conflict.customerName}. Escolha outro horário ou profissional.`,
-        requestId: `local-conflict-${professionalId}-${timeLabel}`,
-      });
-      return;
+      return toLocalError(
+        'APPOINTMENT_CONFLICT',
+        `Horario ocupado por ${conflict.customerName}. Escolha outro horário ou profissional.`,
+      );
     }
 
-    const customerName =
-      customerMode === 'quick' ? quickCustomerName.trim() : selectedCustomer?.name;
-    const createdSlot = {
-      professionalId,
-      timeLabel,
-      customerName: customerName ?? 'cliente',
-    };
-    setCreatedSlots((current) => [...current, createdSlot]);
-    setSubmitState({
-      type: 'success',
-      message: `Agendamento criado para ${customerName ?? 'cliente'} com ${selectedProfessional.name} as ${timeLabel}.`,
-      createdSlot,
-    });
-  }
-
-  function handleCancelCreatedAppointment(slot: AgendaOccupiedSlot) {
-    setCreatedSlots((current) =>
-      current.filter(
-        (item) =>
-          item.professionalId !== slot.professionalId ||
-          item.timeLabel !== slot.timeLabel ||
-          item.customerName !== slot.customerName,
-      ),
-    );
-    setSubmitState({
-      type: 'success',
-      message: `Agendamento cancelado. Horario ${slot.timeLabel} liberado.`,
-    });
+    return null;
   }
 
   return (
@@ -179,13 +214,15 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         {customerMode === 'existing' ? (
           <label>
             <span>Cliente</span>
-            <select value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
-              {model.customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name} - {customer.phone}
-                </option>
-              ))}
-            </select>
+            <RelatedSelect
+              emptyLabel="Nenhum cliente cadastrado"
+              onChange={setCustomerId}
+              options={customerOptions}
+              placeholder="Selecione um cliente"
+              required
+              searchPlaceholder="Buscar cliente"
+              value={customerId}
+            />
           </label>
         ) : (
           <div className="new-appointment-inline-fields">
@@ -212,28 +249,65 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         )}
 
         <div className="new-appointment-inline-fields">
-          <label>
-            <span>Serviço</span>
-            <select value={serviceId} onChange={(event) => setServiceId(event.target.value)}>
-              {model.services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name} - {service.durationMinutes} min
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="new-appointment-services-field">
+            <label>
+              <span>Serviços</span>
+              <RelatedSelect
+                emptyLabel="Nenhum serviço cadastrado"
+                onChange={setServicePickerId}
+                options={serviceOptions}
+                placeholder="Selecione um serviço"
+                required={!selectedServiceIds.length}
+                searchPlaceholder="Buscar serviço"
+                value={servicePickerId}
+              />
+            </label>
+            <Button
+              disabled={!servicePickerId || selectedServiceIds.includes(servicePickerId)}
+              onClick={() => {
+                if (!servicePickerId || selectedServiceIds.includes(servicePickerId)) return;
+                setSelectedServiceIds((current) => [...current, servicePickerId]);
+              }}
+              type="button"
+              variant="secondary"
+            >
+              Adicionar serviço
+            </Button>
+            <div className="new-appointment-service-list" aria-label="Serviços selecionados">
+              {selectedServices.length ? (
+                selectedServices.map((service) => (
+                  <span key={service.id}>
+                    {service.name} · {service.durationMinutes} min
+                    <button
+                      aria-label={'Remover ' + service.name}
+                      onClick={() =>
+                        setSelectedServiceIds((current) =>
+                          current.filter((serviceId) => serviceId !== service.id),
+                        )
+                      }
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              ) : (
+                <span>Nenhum serviço selecionado</span>
+              )}
+            </div>
+            <p className="new-appointment-duration">Duração total: {totalDurationMinutes} min</p>
+          </div>
           <label>
             <span>Profissional</span>
-            <select
+            <RelatedSelect
+              emptyLabel="Nenhum profissional cadastrado"
+              onChange={setProfessionalId}
+              options={professionalOptions}
+              placeholder="Selecione um profissional"
+              required
+              searchPlaceholder="Buscar profissional"
               value={professionalId}
-              onChange={(event) => setProfessionalId(event.target.value)}
-            >
-              {model.professionals.map((professional) => (
-                <option key={professional.id} value={professional.id}>
-                  {professional.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
         </div>
 
@@ -252,7 +326,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
               {model.timeOptions.map((time) => {
                 const occupied = findConflict(
                   model,
-                  occupiedSlots,
+                  model.occupiedSlots,
                   professionalId,
                   dateIso,
                   time.value,
@@ -271,7 +345,11 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         {conflict ? (
           <div className="new-appointment-feedback warning" role="alert">
             <AlertTriangle size={16} aria-hidden="true" />
-            <span>Horario ocupado por {conflict.customerName}.</span>
+            <span>
+              {conflict.kind === 'block'
+                ? conflict.customerName
+                : `Horario ocupado por ${conflict.customerName}.`}
+            </span>
           </div>
         ) : null}
 
@@ -279,18 +357,6 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
           <div className="new-appointment-feedback success" role="status">
             <CheckCircle2 size={16} aria-hidden="true" />
             <span>{submitState.message}</span>
-            {submitState.createdSlot ? (
-              <Button
-                onClick={() => {
-                  if (submitState.createdSlot)
-                    handleCancelCreatedAppointment(submitState.createdSlot);
-                }}
-                type="button"
-                variant="secondary"
-              >
-                Cancelar agendamento
-              </Button>
-            ) : null}
           </div>
         ) : null}
 
@@ -306,13 +372,73 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             <UserPlus size={15} aria-hidden="true" />
             Cliente rápido {model.canCreateCustomer ? 'habilitado' : 'bloqueado'}
           </span>
-          <Button disabled={!model.canCreateAppointment} type="submit">
-            Criar agendamento
+          <Button disabled={!model.canCreateAppointment || isSubmitting} type="submit">
+            {isSubmitting ? 'Criando...' : 'Criar agendamento'}
           </Button>
         </div>
       </form>
     </section>
   );
+}
+
+async function createCustomer(input: {
+  branchId: string;
+  name: string;
+  phone: string;
+}): Promise<CreatedCustomer> {
+  const customer = await postJson<CreatedCustomer>('/api/v1/customers', {
+    branchId: input.branchId,
+    name: input.name,
+    phone: input.phone,
+    source: 'AGENDA',
+    consents: { whatsapp: true, marketing: false },
+  });
+  return customer;
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => ({}))) as ApiResponse<T>;
+
+  if (!response.ok || !payload.data) {
+    throw {
+      code: payload.error?.code ?? 'CORE_VALIDATION_ERROR',
+      message: payload.error?.message ?? 'Não foi possível concluir a operação.',
+      requestId: payload.error?.requestId ?? payload.requestId ?? 'request-unavailable',
+    };
+  }
+
+  return payload.data;
+}
+
+function normalizeSubmitError(error: unknown): SubmitState {
+  if (error && typeof error === 'object') {
+    const record = error as { code?: unknown; message?: unknown; requestId?: unknown };
+    return {
+      type: 'error',
+      code: typeof record.code === 'string' ? record.code : 'CORE_VALIDATION_ERROR',
+      message:
+        typeof record.message === 'string'
+          ? record.message
+          : 'Não foi possível criar o agendamento.',
+      requestId: typeof record.requestId === 'string' ? record.requestId : 'request-unavailable',
+    };
+  }
+
+  return toLocalError('CORE_VALIDATION_ERROR', 'Não foi possível criar o agendamento.');
+}
+
+function toLocalError(code: string, message: string): SubmitState {
+  return {
+    type: 'error',
+    code,
+    message,
+    requestId: 'local-validation-error',
+  };
 }
 
 function findConflict(

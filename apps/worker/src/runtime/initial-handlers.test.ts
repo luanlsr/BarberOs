@@ -283,9 +283,11 @@ describe('initial worker handlers', () => {
       'APPOINTMENT_REMINDER',
       'EXPIRED_RECORD_CLEANUP',
       'FINANCE_RECALCULATION',
+      'MESSAGING_WEBHOOK_PROCESSING',
       'NOTIFICATION_DELIVERY',
       'POST_SERVICE_FOLLOW_UP',
       'STOCK_ALERT',
+      'WHATSAPP_DELIVERY',
     ]);
   });
 });

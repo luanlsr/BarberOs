@@ -46,13 +46,26 @@ export type Permission =
   | 'inventory.write'
   | 'worker.failures.read'
   | 'notifications.status.read'
+  | 'messaging.read'
+  | 'messaging.manage'
+  | 'campaigns.read'
+  | 'campaigns.create'
+  | 'campaigns.approve'
+  | 'campaigns.send'
   | 'settings.read'
   | 'memberships.read'
   | 'memberships.manage'
   | 'audit.read';
 
 export type Entitlement =
-  'core.operations' | 'finance' | 'inventory' | 'worker.operations' | 'notifications' | 'ai';
+  | 'core.operations'
+  | 'finance'
+  | 'inventory'
+  | 'worker.operations'
+  | 'notifications'
+  | 'messaging'
+  | 'campaigns'
+  | 'ai';
 export type AuthState = 'authenticated' | 'unauthenticated' | 'expired';
 
 export type WorkspaceContext = {
@@ -66,6 +79,8 @@ export type SessionContext = {
   authState: AuthState;
   userId: string;
   email?: string;
+  sessionId?: string;
+  sessionExpiresAt?: string;
   tenantId: string;
   membershipId: string;
   role: Role;
@@ -133,6 +148,12 @@ export const permissionSchema = z.enum([
   'inventory.write',
   'worker.failures.read',
   'notifications.status.read',
+  'messaging.read',
+  'messaging.manage',
+  'campaigns.read',
+  'campaigns.create',
+  'campaigns.approve',
+  'campaigns.send',
   'settings.read',
   'memberships.read',
   'memberships.manage',
@@ -145,10 +166,14 @@ export const entitlementSchema = z.enum([
   'inventory',
   'worker.operations',
   'notifications',
+  'messaging',
+  'campaigns',
   'ai',
 ]);
 export const nonEmptyIdSchema = z.string().trim().min(1);
 export const optionalTextSchema = z.string().trim().max(2000).optional();
+export const optionalUrlSchema = z.string().trim().url().max(2048).optional();
+export const colorHexSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 export const moneyCentsSchema = z.number().int().min(0);
 export const positiveMoneyCentsSchema = z.number().int().min(1);
 export const signedMoneyCentsSchema = z.number().int();
@@ -365,6 +390,9 @@ export const outboxEventTypeSchema = z.enum([
   'FINANCE_RECALCULATION_REQUESTED',
   'STOCK_LOW_DETECTED',
   'NOTIFICATION_DELIVERY_REQUESTED',
+  'MESSAGING_PROVIDER_EVENT_RECEIVED',
+  'MESSAGING_DELIVERY_REQUESTED',
+  'CAMPAIGN_DISPATCH_REQUESTED',
 ]);
 export type OutboxEventType = z.infer<typeof outboxEventTypeSchema>;
 
@@ -379,6 +407,12 @@ export const outboxSourceTypeSchema = z.enum([
   'PRODUCT',
   'STOCK_MOVEMENT',
   'NOTIFICATION_INTENT',
+  'MESSAGING_CONNECTION',
+  'MESSAGING_CONVERSATION',
+  'MESSAGING_MESSAGE',
+  'MESSAGING_PROVIDER_EVENT',
+  'CAMPAIGN',
+  'CAMPAIGN_RUN',
   'SYSTEM',
 ]);
 export type OutboxSourceType = z.infer<typeof outboxSourceTypeSchema>;
@@ -391,6 +425,9 @@ export const workerJobTypeSchema = z.enum([
   'STOCK_ALERT',
   'EXPIRED_RECORD_CLEANUP',
   'NOTIFICATION_DELIVERY',
+  'MESSAGING_WEBHOOK_PROCESSING',
+  'WHATSAPP_DELIVERY',
+  'CAMPAIGN_DISPATCH',
 ]);
 export type WorkerJobType = z.infer<typeof workerJobTypeSchema>;
 
@@ -430,6 +467,17 @@ export const workerErrorCodeSchema = z.enum([
   'OUTBOX_IDEMPOTENCY_CONFLICT',
   'NOTIFICATION_VALIDATION_ERROR',
   'NOTIFICATION_DELIVERY_FAILED',
+  'MESSAGING_VALIDATION_ERROR',
+  'MESSAGING_PERMISSION_DENIED',
+  'MESSAGING_BRANCH_SCOPE_DENIED',
+  'MESSAGING_PROVIDER_EVENT_REPLAY',
+  'MESSAGING_WEBHOOK_SIGNATURE_INVALID',
+  'MESSAGING_CONSENT_BLOCKED',
+  'CAMPAIGN_VALIDATION_ERROR',
+  'CAMPAIGN_PERMISSION_DENIED',
+  'CAMPAIGN_BRANCH_SCOPE_DENIED',
+  'CAMPAIGN_INVALID_STATUS',
+  'CAMPAIGN_IDEMPOTENCY_CONFLICT',
 ]);
 export type WorkerErrorCode = z.infer<typeof workerErrorCodeSchema>;
 
@@ -448,7 +496,12 @@ export type NotificationIntentStatus = z.infer<typeof notificationIntentStatusSc
 
 export const notificationDeliveryAttemptStatusSchema = z.enum([
   'PENDING',
+  'QUEUED',
   'SENT',
+  'DELIVERED',
+  'READ',
+  'SKIPPED',
+  'BLOCKED_BY_CONSENT',
   'RETRY_SCHEDULED',
   'FAILED',
   'DEAD_LETTERED',
@@ -464,6 +517,70 @@ export const notificationRecipientTypeSchema = z.enum([
   'TENANT_OPERATOR',
 ]);
 export type NotificationRecipientType = z.infer<typeof notificationRecipientTypeSchema>;
+export const messagingProviderSchema = z.enum(['LOCAL', 'META_WHATSAPP_CLOUD']);
+export type MessagingProvider = z.infer<typeof messagingProviderSchema>;
+
+export const messagingConnectionStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'DISCONNECTED']);
+export type MessagingConnectionStatus = z.infer<typeof messagingConnectionStatusSchema>;
+
+export const messagingEventKindSchema = z.enum([
+  'INBOUND_MESSAGE',
+  'OUTBOUND_STATUS',
+  'TEMPLATE_STATUS',
+  'OPT_OUT',
+  'UNKNOWN',
+]);
+export type MessagingEventKind = z.infer<typeof messagingEventKindSchema>;
+
+export const conversationStatusSchema = z.enum(['OPEN', 'RESOLVED', 'ARCHIVED']);
+export type ConversationStatus = z.infer<typeof conversationStatusSchema>;
+
+export const messageDirectionSchema = z.enum(['INBOUND', 'OUTBOUND']);
+export type MessageDirection = z.infer<typeof messageDirectionSchema>;
+
+export const messageDeliveryStateSchema = z.enum([
+  'RECEIVED',
+  'QUEUED',
+  'SENT',
+  'DELIVERED',
+  'READ',
+  'FAILED',
+  'SKIPPED',
+  'BLOCKED_BY_CONSENT',
+]);
+export type MessageDeliveryState = z.infer<typeof messageDeliveryStateSchema>;
+
+export const consentPurposeSchema = z.enum(['WHATSAPP_TRANSACTIONAL', 'WHATSAPP_MARKETING']);
+export type ConsentPurpose = z.infer<typeof consentPurposeSchema>;
+
+export const consentStateSchema = z.enum(['OPTED_IN', 'OPTED_OUT', 'UNKNOWN']);
+export type ConsentState = z.infer<typeof consentStateSchema>;
+
+export const consentSourceSchema = z.enum(['CUSTOMER_MESSAGE', 'OPERATOR', 'IMPORT', 'SYSTEM']);
+export type ConsentSource = z.infer<typeof consentSourceSchema>;
+
+export const campaignStatusSchema = z.enum([
+  'DRAFT',
+  'READY_FOR_REVIEW',
+  'APPROVED',
+  'SCHEDULED',
+  'SENDING',
+  'SENT',
+  'PARTIALLY_FAILED',
+  'CANCELLED',
+]);
+export type CampaignStatus = z.infer<typeof campaignStatusSchema>;
+
+export const campaignRecipientOutcomeStatusSchema = z.enum([
+  'PENDING',
+  'QUEUED',
+  'SENT',
+  'DELIVERED',
+  'FAILED',
+  'SKIPPED',
+  'BLOCKED_BY_CONSENT',
+]);
+export type CampaignRecipientOutcomeStatus = z.infer<typeof campaignRecipientOutcomeStatusSchema>;
 
 export const coreOperationsErrorCodeSchema = z.enum([
   'CORE_VALIDATION_ERROR',
@@ -552,6 +669,17 @@ export const coreOperationsErrorCodeSchema = z.enum([
   'OUTBOX_IDEMPOTENCY_CONFLICT',
   'NOTIFICATION_VALIDATION_ERROR',
   'NOTIFICATION_DELIVERY_FAILED',
+  'MESSAGING_VALIDATION_ERROR',
+  'MESSAGING_PERMISSION_DENIED',
+  'MESSAGING_BRANCH_SCOPE_DENIED',
+  'MESSAGING_PROVIDER_EVENT_REPLAY',
+  'MESSAGING_WEBHOOK_SIGNATURE_INVALID',
+  'MESSAGING_CONSENT_BLOCKED',
+  'CAMPAIGN_VALIDATION_ERROR',
+  'CAMPAIGN_PERMISSION_DENIED',
+  'CAMPAIGN_BRANCH_SCOPE_DENIED',
+  'CAMPAIGN_INVALID_STATUS',
+  'CAMPAIGN_IDEMPOTENCY_CONFLICT',
 ]);
 export type CoreOperationsErrorCode = z.infer<typeof coreOperationsErrorCodeSchema>;
 
@@ -676,6 +804,164 @@ export const notificationDeliveryAttemptSchema = z.object({
   createdAt: isoDateTimeSchema,
 });
 export type NotificationDeliveryAttempt = z.infer<typeof notificationDeliveryAttemptSchema>;
+const providerMetadataSchema = z.record(z.string(), z.unknown()).default({});
+
+export const messagingConnectionSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  provider: messagingProviderSchema,
+  status: messagingConnectionStatusSchema,
+  displayName: z.string().trim().min(1).max(120),
+  displayPhoneNumber: z.string().trim().min(6).max(40),
+  providerPhoneNumberId: z.string().trim().min(1).max(160).optional(),
+  credentialReference: z.string().trim().min(1).max(200).optional(),
+  webhookSecretReference: z.string().trim().min(1).max(200).optional(),
+  allowTenantFallback: z.boolean().default(false),
+  metadata: providerMetadataSchema,
+  createdBy: nonEmptyIdSchema,
+  updatedBy: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type MessagingConnection = z.infer<typeof messagingConnectionSchema>;
+
+export const rawMessagingProviderEventSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  connectionId: nonEmptyIdSchema,
+  provider: messagingProviderSchema,
+  providerEventId: z.string().trim().min(1).max(200),
+  eventKind: messagingEventKindSchema,
+  receivedAt: isoDateTimeSchema,
+  processedAt: isoDateTimeSchema.optional(),
+  idempotencyKey: idempotencyKeySchema,
+  payload: providerMetadataSchema,
+  signatureValid: z.boolean(),
+});
+export type RawMessagingProviderEvent = z.infer<typeof rawMessagingProviderEventSchema>;
+
+export const messagingConversationSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  connectionId: nonEmptyIdSchema,
+  customerId: nonEmptyIdSchema.optional(),
+  contactPhoneHash: z.string().trim().min(8).max(160),
+  status: conversationStatusSchema,
+  lastMessageAt: isoDateTimeSchema.optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type MessagingConversation = z.infer<typeof messagingConversationSchema>;
+
+export const messagingMessageSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  conversationId: nonEmptyIdSchema,
+  connectionId: nonEmptyIdSchema,
+  customerId: nonEmptyIdSchema.optional(),
+  direction: messageDirectionSchema,
+  channel: z.literal('WHATSAPP'),
+  deliveryState: messageDeliveryStateSchema,
+  providerMessageId: z.string().trim().min(1).max(200).optional(),
+  notificationIntentId: nonEmptyIdSchema.optional(),
+  campaignRunId: nonEmptyIdSchema.optional(),
+  bodyPreview: z.string().trim().max(500).optional(),
+  payload: providerMetadataSchema,
+  sentAt: isoDateTimeSchema.optional(),
+  receivedAt: isoDateTimeSchema.optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type MessagingMessage = z.infer<typeof messagingMessageSchema>;
+
+export const messagingConsentRecordSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  customerId: nonEmptyIdSchema.optional(),
+  contactPhoneHash: z.string().trim().min(8).max(160),
+  purpose: consentPurposeSchema,
+  state: consentStateSchema,
+  source: consentSourceSchema,
+  actorId: nonEmptyIdSchema.optional(),
+  providerMessageId: z.string().trim().min(1).max(200).optional(),
+  reason: z.string().trim().max(500).optional(),
+  createdAt: isoDateTimeSchema,
+});
+export type MessagingConsentRecord = z.infer<typeof messagingConsentRecordSchema>;
+
+export const campaignContentSchema = z.object({
+  templateKey: z.string().trim().min(2).max(120),
+  bodyPreview: z.string().trim().min(1).max(500),
+  variables: z.record(z.string(), z.string().trim().max(160)).default({}),
+});
+export type CampaignContent = z.infer<typeof campaignContentSchema>;
+
+export const campaignAudienceCriteriaSchema = z.object({
+  branchIds: z.array(nonEmptyIdSchema).min(1),
+  customerStatus: z.array(customerStatusSchema).optional(),
+  lastVisitBefore: z.string().date().optional(),
+  includeCustomersWithoutVisit: z.boolean().default(false),
+});
+export type CampaignAudienceCriteria = z.infer<typeof campaignAudienceCriteriaSchema>;
+
+export const campaignSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  name: z.string().trim().min(2).max(160),
+  status: campaignStatusSchema,
+  audienceCriteria: campaignAudienceCriteriaSchema,
+  content: campaignContentSchema,
+  scheduledFor: isoDateTimeSchema.optional(),
+  approvedBy: nonEmptyIdSchema.optional(),
+  approvedAt: isoDateTimeSchema.optional(),
+  createdBy: nonEmptyIdSchema,
+  updatedBy: nonEmptyIdSchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type Campaign = z.infer<typeof campaignSchema>;
+
+export const campaignRunSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  campaignId: nonEmptyIdSchema,
+  status: campaignStatusSchema,
+  audienceSize: z.number().int().min(0),
+  eligibleCount: z.number().int().min(0),
+  excludedCount: z.number().int().min(0),
+  scheduledFor: isoDateTimeSchema.optional(),
+  startedAt: isoDateTimeSchema.optional(),
+  completedAt: isoDateTimeSchema.optional(),
+  idempotencyKey: idempotencyKeySchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type CampaignRun = z.infer<typeof campaignRunSchema>;
+
+export const campaignRecipientOutcomeSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  campaignId: nonEmptyIdSchema,
+  campaignRunId: nonEmptyIdSchema,
+  customerId: nonEmptyIdSchema.optional(),
+  contactPhoneHash: z.string().trim().min(8).max(160),
+  status: campaignRecipientOutcomeStatusSchema,
+  notificationIntentId: nonEmptyIdSchema.optional(),
+  providerMessageId: z.string().trim().min(1).max(200).optional(),
+  exclusionReason: z.string().trim().max(200).optional(),
+  idempotencyKey: idempotencyKeySchema,
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type CampaignRecipientOutcome = z.infer<typeof campaignRecipientOutcomeSchema>;
 
 export const createOutboxEventCommandSchema = z.object({
   tenantId: nonEmptyIdSchema,
@@ -738,6 +1024,96 @@ export const recordNotificationDeliveryAttemptCommandSchema = z.object({
 export type RecordNotificationDeliveryAttemptCommand = z.input<
   typeof recordNotificationDeliveryAttemptCommandSchema
 >;
+export const whatsappDeliveryPayloadSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  connectionId: nonEmptyIdSchema,
+  notificationIntentId: nonEmptyIdSchema.optional(),
+  campaignRunId: nonEmptyIdSchema.optional(),
+  campaignRecipientOutcomeId: nonEmptyIdSchema.optional(),
+  recipientPhoneHash: z.string().trim().min(8).max(160),
+  templateKey: z.string().trim().min(2).max(120),
+  variables: z.record(z.string(), z.string().trim().max(160)).default({}),
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+});
+export type WhatsAppDeliveryPayload = z.infer<typeof whatsappDeliveryPayloadSchema>;
+
+export const whatsappWebhookEventPayloadSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  connectionId: nonEmptyIdSchema,
+  rawProviderEventId: nonEmptyIdSchema,
+  providerEventId: z.string().trim().min(1).max(200),
+  eventKind: messagingEventKindSchema,
+  receivedAt: isoDateTimeSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+});
+export type WhatsAppWebhookEventPayload = z.infer<typeof whatsappWebhookEventPayloadSchema>;
+
+export const providerStatusEventPayloadSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  connectionId: nonEmptyIdSchema,
+  providerMessageId: z.string().trim().min(1).max(200),
+  deliveryState: messageDeliveryStateSchema,
+  providerEventId: z.string().trim().min(1).max(200),
+  occurredAt: isoDateTimeSchema,
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+});
+export type ProviderStatusEventPayload = z.infer<typeof providerStatusEventPayloadSchema>;
+
+export const campaignDispatchPayloadSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  campaignId: nonEmptyIdSchema,
+  campaignRunId: nonEmptyIdSchema,
+  scheduledFor: isoDateTimeSchema.optional(),
+  idempotencyKey: idempotencyKeySchema,
+  correlationId: nonEmptyIdSchema,
+});
+export type CampaignDispatchPayload = z.infer<typeof campaignDispatchPayloadSchema>;
+
+export const createMessagingConnectionCommandSchema = z.object({
+  branchId: nonEmptyIdSchema.optional(),
+  provider: messagingProviderSchema,
+  displayName: z.string().trim().min(1).max(120),
+  displayPhoneNumber: z.string().trim().min(6).max(40),
+  providerPhoneNumberId: z.string().trim().min(1).max(160).optional(),
+  credentialReference: z.string().trim().min(1).max(200).optional(),
+  webhookSecretReference: z.string().trim().min(1).max(200).optional(),
+  allowTenantFallback: z.boolean().default(false),
+});
+export type CreateMessagingConnectionCommand = z.input<
+  typeof createMessagingConnectionCommandSchema
+>;
+
+export const updateMessagingConsentCommandSchema = z.object({
+  customerId: nonEmptyIdSchema.optional(),
+  contactPhoneHash: z.string().trim().min(8).max(160),
+  purpose: consentPurposeSchema,
+  state: consentStateSchema,
+  source: consentSourceSchema,
+  reason: z.string().trim().max(500).optional(),
+});
+export type UpdateMessagingConsentCommand = z.input<typeof updateMessagingConsentCommandSchema>;
+
+export const createCampaignCommandSchema = z.object({
+  branchId: nonEmptyIdSchema.optional(),
+  name: z.string().trim().min(2).max(160),
+  audienceCriteria: campaignAudienceCriteriaSchema,
+  content: campaignContentSchema,
+});
+export type CreateCampaignCommand = z.input<typeof createCampaignCommandSchema>;
+
+export const scheduleCampaignCommandSchema = z.object({
+  campaignId: nonEmptyIdSchema,
+  scheduledFor: isoDateTimeSchema,
+  idempotencyKey: idempotencyKeySchema,
+});
+export type ScheduleCampaignCommand = z.input<typeof scheduleCampaignCommandSchema>;
 
 export const professionalSchema = z.object({
   id: nonEmptyIdSchema,
@@ -747,7 +1123,7 @@ export const professionalSchema = z.object({
   email: z.string().trim().email().optional(),
   phone: z.string().trim().min(8).max(32).optional(),
   roleLabel: z.string().trim().min(2).max(80).default('Profissional'),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: optionalUrlSchema,
   status: directoryStatusSchema,
   archivedAt: isoDateTimeSchema.optional(),
 });
@@ -762,6 +1138,9 @@ export const serviceSchema = z.object({
   durationMinutes: durationMinutesSchema,
   priceCents: moneyCentsSchema,
   estimatedCostCents: moneyCentsSchema.optional(),
+  imageUrl: optionalUrlSchema,
+  iconKey: z.string().trim().min(1).max(40).optional(),
+  colorHex: colorHexSchema.optional(),
   status: directoryStatusSchema,
   enabledProfessionalIds: z.array(nonEmptyIdSchema).default([]),
   archivedAt: isoDateTimeSchema.optional(),
@@ -785,6 +1164,7 @@ export const customerSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   source: z.string().trim().min(2).max(80).optional(),
   preferredProfessionalId: nonEmptyIdSchema.optional(),
+  avatarUrl: optionalUrlSchema,
   consents: customerConsentSchema.default({ whatsapp: false, marketing: false }),
   status: customerStatusSchema,
   archivedAt: isoDateTimeSchema.optional(),
@@ -1261,6 +1641,32 @@ export const financialEntrySourceTypeSchema = z.enum([
 ]);
 export type FinancialEntrySourceType = z.infer<typeof financialEntrySourceTypeSchema>;
 
+export const financialCategoryDirectionSchema = z.enum(['IN', 'OUT', 'BOTH']);
+export type FinancialCategoryDirection = z.infer<typeof financialCategoryDirectionSchema>;
+
+export const financialCategorySchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  branchId: nonEmptyIdSchema.optional(),
+  direction: financialCategoryDirectionSchema,
+  code: z.string().trim().min(2).max(80),
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(500).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .default('#64748b'),
+  icon: z.string().trim().min(2).max(80).default('wallet'),
+  status: directoryStatusSchema.default('ACTIVE'),
+  systemDefault: z.boolean().default(false),
+  displayOrder: z.number().int().min(0).default(100),
+  createdBy: nonEmptyIdSchema.optional(),
+  updatedBy: nonEmptyIdSchema.optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type FinancialCategory = z.infer<typeof financialCategorySchema>;
+
 export const financialEntrySchema = z
   .object({
     id: nonEmptyIdSchema,
@@ -1276,6 +1682,7 @@ export const financialEntrySchema = z
     sourceType: financialEntrySourceTypeSchema,
     sourceId: nonEmptyIdSchema,
     categoryId: nonEmptyIdSchema.optional(),
+    financialCategoryId: nonEmptyIdSchema.optional(),
     description: z.string().trim().min(2).max(300).optional(),
     idempotencyKey: idempotencyKeySchema.optional(),
     reversedEntryId: nonEmptyIdSchema.optional(),
@@ -1316,6 +1723,7 @@ export const expenseSchema = z
     tenantId: nonEmptyIdSchema,
     branchId: nonEmptyIdSchema,
     categoryId: nonEmptyIdSchema.optional(),
+    financialCategoryId: nonEmptyIdSchema.optional(),
     description: z.string().trim().min(2).max(300),
     vendorName: z.string().trim().min(2).max(160).optional(),
     status: expenseStatusSchema,
@@ -1611,7 +2019,7 @@ export const createProfessionalCommandSchema = z.object({
   email: z.string().trim().email().optional(),
   phone: z.string().trim().min(8).max(32).optional(),
   roleLabel: z.string().trim().min(2).max(80).default('Profissional'),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: optionalUrlSchema,
 });
 export type CreateProfessionalCommand = z.input<typeof createProfessionalCommandSchema>;
 
@@ -1628,6 +2036,9 @@ export const createServiceCommandSchema = z.object({
   durationMinutes: durationMinutesSchema,
   priceCents: moneyCentsSchema,
   estimatedCostCents: moneyCentsSchema.optional(),
+  imageUrl: optionalUrlSchema,
+  iconKey: z.string().trim().min(1).max(40).optional(),
+  colorHex: colorHexSchema.optional(),
   enabledProfessionalIds: z.array(nonEmptyIdSchema).default([]),
 });
 export type CreateServiceCommand = z.input<typeof createServiceCommandSchema>;
@@ -1647,6 +2058,7 @@ export const createCustomerCommandSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   source: z.string().trim().min(2).max(80).optional(),
   preferredProfessionalId: nonEmptyIdSchema.optional(),
+  avatarUrl: optionalUrlSchema,
   consents: customerConsentSchema.default({ whatsapp: false, marketing: false }),
 });
 export type CreateCustomerCommand = z.input<typeof createCustomerCommandSchema>;
@@ -2064,6 +2476,7 @@ export type ExpenseRecurrence = z.infer<typeof expenseRecurrenceSchema>;
 const createExpenseCommandBaseSchema = z.object({
   branchId: nonEmptyIdSchema,
   categoryId: nonEmptyIdSchema.optional(),
+  financialCategoryId: nonEmptyIdSchema.optional(),
   description: z.string().trim().min(2).max(300),
   vendorName: z.string().trim().min(2).max(160).optional(),
   amountCents: positiveMoneyCentsSchema,

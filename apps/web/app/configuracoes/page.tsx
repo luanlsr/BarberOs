@@ -28,7 +28,7 @@ const sectionIcons = {
 
 export default async function ConfiguracoesPage() {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
   if (!session.permissions.includes('settings.read')) redirect('/forbidden');
 
   const visibleSections = settingsSections.filter((section) =>

@@ -11,7 +11,7 @@ export default async function ProdutosPage({
   searchParams: ProdutosSearchParams;
 }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const model = await getProductsViewModel(session, {

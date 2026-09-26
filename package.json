@@ -29,6 +29,7 @@
     "validate:finance": "node scripts/validate-finance-migration.mjs",
     "validate:inventory": "node scripts/validate-inventory-migration.mjs",
     "validate:worker": "node scripts/validate-worker-migration.mjs",
+    "validate:messaging": "node scripts/validate-messaging-migration.mjs",
     "validate:product-domain": "node scripts/validate-product-domain-migration.mjs",
     "auth:create-dev-user": "node scripts/create-supabase-dev-user.mjs",
     "auth:create-local-users": "node scripts/create-supabase-dev-user.mjs",

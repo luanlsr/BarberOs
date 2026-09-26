@@ -11,6 +11,11 @@ import {
 } from '@barberos/auth';
 import type { Role, SessionContext } from '@barberos/contracts';
 import { developmentSession } from '../dev-session';
+import {
+  BARBEROS_SESSION_EXPIRES_AT_COOKIE,
+  BARBEROS_SESSION_ID_COOKIE,
+  readJwtSessionMetadata,
+} from './jwt-session';
 import { roleEntitlements, rolePermissions } from './role-catalog';
 
 type MembershipRow = {
@@ -102,10 +107,23 @@ async function getSessionContextInternal({
   if (!supabase)
     return allowDevelopmentFallback && isDevelopmentAuthEnabled() ? developmentSession : null;
   const {
+    data: { session: authSession },
+  } = await supabase.auth.getSession();
+  const jwtMetadata = readJwtSessionMetadata(authSession?.access_token);
+  if (!jwtMetadata) return null;
+  const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const branchCookie = (await cookies()).get('barberos-branch-id')?.value;
+  const cookieStore = await cookies();
+  const sessionIdCookie = cookieStore.get(BARBEROS_SESSION_ID_COOKIE)?.value;
+  const sessionExpiresAtCookie = cookieStore.get(BARBEROS_SESSION_EXPIRES_AT_COOKIE)?.value;
+  if (
+    sessionIdCookie !== jwtMetadata.sessionId ||
+    sessionExpiresAtCookie !== jwtMetadata.sessionExpiresAt
+  )
+    return null;
+  const branchCookie = cookieStore.get('barberos-branch-id')?.value;
   const { data } = await supabase
     .from('memberships')
     .select(

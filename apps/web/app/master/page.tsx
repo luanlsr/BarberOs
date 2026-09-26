@@ -5,7 +5,7 @@ import { getMasterAdminData } from '../../lib/master-admin-data';
 
 export default async function MasterAdminPage() {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
   if (session.role !== 'PLATFORM_MASTER') redirect('/forbidden');
   const data = await getMasterAdminData();
 

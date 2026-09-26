@@ -64,6 +64,35 @@ describe('OutboxDispatcher', () => {
       }),
     ]);
   });
+
+  it('dispatches messaging and campaign events into dedicated worker jobs', () => {
+    const delivery = makeEvent({
+      eventType: 'MESSAGING_DELIVERY_REQUESTED',
+      sourceType: 'MESSAGING_MESSAGE',
+    });
+    const webhook = makeEvent({
+      eventType: 'MESSAGING_PROVIDER_EVENT_RECEIVED',
+      sourceType: 'MESSAGING_PROVIDER_EVENT',
+    });
+    const campaign = makeEvent({
+      eventType: 'CAMPAIGN_DISPATCH_REQUESTED',
+      sourceType: 'CAMPAIGN_RUN',
+    });
+
+    expect(createWorkerJobsForOutboxEvent(delivery, '2026-09-19T12:00:00.000Z')).toEqual([
+      expect.objectContaining({ type: 'WHATSAPP_DELIVERY', priority: 85, maxAttempts: 8 }),
+    ]);
+    expect(createWorkerJobsForOutboxEvent(webhook, '2026-09-19T12:00:00.000Z')).toEqual([
+      expect.objectContaining({
+        type: 'MESSAGING_WEBHOOK_PROCESSING',
+        priority: 85,
+        maxAttempts: 8,
+      }),
+    ]);
+    expect(createWorkerJobsForOutboxEvent(campaign, '2026-09-19T12:00:00.000Z')).toEqual([
+      expect.objectContaining({ type: 'CAMPAIGN_DISPATCH', priority: 70, maxAttempts: 10 }),
+    ]);
+  });
 });
 
 class InMemoryOutboxDispatchStore implements OutboxDispatchStore {

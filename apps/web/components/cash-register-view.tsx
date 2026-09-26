@@ -20,9 +20,30 @@ import type {
 } from '../lib/cash-register-data';
 
 type CashModalState = 'open' | 'withdraw' | 'cash-in' | 'close' | null;
+type CashFeedback =
+  | { type: 'success'; message: string }
+  | { type: 'error'; message: string; requestId: string }
+  | null;
 
 export function CashRegisterView({ model }: Readonly<{ model: CashRegisterViewModel }>) {
   const [modal, setModal] = React.useState<CashModalState>(null);
+  const [feedback, setFeedback] = React.useState<CashFeedback>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  async function submitCashAction(action: CashAction) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await persistCashAction(action);
+      setFeedback({ type: 'success', message: successMessageFor(action.type) });
+      setModal(null);
+      window.location.reload();
+    } catch (error) {
+      setFeedback(normalizeCashError(error));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (model.state === 'permission-denied') return <CashRegisterPermissionDenied model={model} />;
   if (model.state === 'error') return <CashRegisterErrorState model={model} />;
@@ -37,18 +58,40 @@ export function CashRegisterView({ model }: Readonly<{ model: CashRegisterViewMo
             {model.branchName} · {model.description}
           </p>
         </div>
-        {model.session ? (
-          <StatusBadge variant={model.session.statusTone === 'success' ? 'success' : 'neutral'}>
-            {model.session.statusLabel}
-          </StatusBadge>
-        ) : null}
+        <div className="cash-register-heading-actions" aria-label="Ações do caixa">
+          {model.session ? (
+            <StatusBadge variant={model.session.statusTone === 'success' ? 'success' : 'neutral'}>
+              {model.session.statusLabel}
+            </StatusBadge>
+          ) : null}
+          {model.state === 'no-open-session' ? (
+            <button
+              className="button button-primary"
+              disabled={!model.canOpen}
+              type="button"
+              onClick={() => setModal('open')}
+            >
+              <Banknote size={16} aria-hidden="true" />
+              Abrir caixa
+            </button>
+          ) : null}
+          {model.state === 'open' && model.session ? (
+            <button
+              className="button button-primary"
+              disabled={!model.canClose}
+              type="button"
+              onClick={() => setModal('close')}
+            >
+              <ClipboardList size={16} aria-hidden="true" />
+              Fechar caixa
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="cash-register-workspace" aria-label="Operação de caixa responsiva">
         <main className="cash-register-primary" aria-label="Ações principais do caixa">
-          {model.state === 'no-open-session' ? (
-            <OpenCashRegisterPanel model={model} onOpen={() => setModal('open')} />
-          ) : null}
+          {model.state === 'no-open-session' ? <OpenCashRegisterPanel model={model} /> : null}
           {model.session ? <CashRegisterSessionSummary session={model.session} /> : null}
           {model.state === 'open' ? (
             <CashMovementPanels
@@ -65,21 +108,25 @@ export function CashRegisterView({ model }: Readonly<{ model: CashRegisterViewMo
         <aside className="cash-register-side" aria-label="Resumo e movimentos do caixa">
           <PaymentMethodTotals model={model} />
           <CashMovementList movements={model.movements} />
-          {model.state === 'open' && model.session ? (
-            <CloseCashRegisterPanel model={model} onCloseCash={() => setModal('close')} />
-          ) : null}
         </aside>
       </div>
 
-      <CashRegisterModal modal={modal} model={model} onClose={() => setModal(null)} />
+      {feedback ? (
+        <CashFeedbackBanner feedback={feedback} onDismiss={() => setFeedback(null)} />
+      ) : null}
+
+      <CashRegisterModal
+        busy={busy}
+        modal={modal}
+        model={model}
+        onClose={() => setModal(null)}
+        onSubmit={submitCashAction}
+      />
     </div>
   );
 }
 
-function OpenCashRegisterPanel({
-  model,
-  onOpen,
-}: Readonly<{ model: CashRegisterViewModel; onOpen: () => void }>) {
+function OpenCashRegisterPanel({ model }: Readonly<{ model: CashRegisterViewModel }>) {
   return (
     <section className="cash-register-panel" aria-labelledby="cash-open-title">
       <div className="cash-register-panel-heading">
@@ -89,16 +136,12 @@ function OpenCashRegisterPanel({
         </div>
         <PlusCircle size={20} aria-hidden="true" />
       </div>
-      <p className="cash-register-muted">Informe troco inicial e observacao em um modal seguro.</p>
-      <button
-        className="button button-primary"
-        disabled={!model.canOpen}
-        type="button"
-        onClick={onOpen}
-      >
-        <Banknote size={16} aria-hidden="true" />
-        Abrir caixa
-      </button>
+      <p className="cash-register-muted">
+        Use o botão Abrir caixa no topo para informar troco inicial e observacao em um modal seguro.
+      </p>
+      {!model.canOpen ? (
+        <p className="cash-register-muted">Seu perfil não tem permissão para abrir este caixa.</p>
+      ) : null}
     </section>
   );
 }
@@ -319,10 +362,18 @@ function CashMovementList({
 }
 
 function CashRegisterModal({
+  busy,
   modal,
   model,
   onClose,
-}: Readonly<{ modal: CashModalState; model: CashRegisterViewModel; onClose: () => void }>) {
+  onSubmit,
+}: Readonly<{
+  busy: boolean;
+  modal: CashModalState;
+  model: CashRegisterViewModel;
+  onClose: () => void;
+  onSubmit: (action: CashAction) => void;
+}>) {
   if (!modal) return null;
   if (modal === 'open') {
     return (
@@ -332,7 +383,7 @@ function CashRegisterModal({
         title="Abrir caixa"
         onClose={onClose}
       >
-        <CashOpenForm disabled={!model.canOpen} />
+        <CashOpenForm busy={busy} disabled={!model.canOpen} model={model} onSubmit={onSubmit} />
       </AppModal>
     );
   }
@@ -344,7 +395,12 @@ function CashRegisterModal({
         title="Fechar caixa"
         onClose={onClose}
       >
-        <CashCloseForm disabled={!model.canClose} session={model.session} />
+        <CashCloseForm
+          busy={busy}
+          disabled={!model.canClose}
+          session={model.session}
+          onSubmit={onSubmit}
+        />
       </AppModal>
     );
   }
@@ -360,8 +416,11 @@ function CashRegisterModal({
       onClose={onClose}
     >
       <CashMovementForm
+        busy={busy}
         disabled={modal === 'withdraw' ? !model.canWithdraw : !model.canCashIn}
+        model={model}
         type={modal}
+        onSubmit={onSubmit}
       />
     </AppModal>
   );
@@ -383,13 +442,14 @@ function AppModal({
   const titleId = React.useId();
   const descriptionId = React.useId();
   return (
-    <div className="app-dialog-backdrop" role="presentation">
+    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
       <section
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
         className="app-dialog"
         role="dialog"
+        onClick={(event) => event.stopPropagation()}
       >
         <header className="app-dialog-header">
           <div>
@@ -407,23 +467,82 @@ function AppModal({
   );
 }
 
-function CashOpenForm({ disabled }: Readonly<{ disabled: boolean }>) {
+type CashAction =
+  | { type: 'open'; branchId: string; openingBalanceAmountCents: number; notes?: string }
+  | {
+      type: 'movement';
+      branchId: string;
+      movementType: 'WITHDRAWAL' | 'CASH_IN';
+      amountCents: number;
+      reason: string;
+    }
+  | {
+      type: 'close';
+      sessionId: string;
+      actualBalanceAmountCents: number;
+      expectedBalanceAmountCents: number;
+      differenceReason?: string;
+    };
+
+function CashOpenForm({
+  busy,
+  disabled,
+  model,
+  onSubmit,
+}: Readonly<{
+  busy: boolean;
+  disabled: boolean;
+  model: CashRegisterViewModel;
+  onSubmit: (action: CashAction) => void;
+}>) {
+  const [openingBalance, setOpeningBalance] = React.useState('0,00');
+  const [notes, setNotes] = React.useState('');
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSubmit({
+      type: 'open',
+      branchId: model.branchId,
+      openingBalanceAmountCents: moneyToCents(openingBalance),
+      notes: notes.trim() || undefined,
+    });
+  }
+
   return (
-    <form className="cash-register-form">
-      <fieldset disabled={disabled}>
+    <form className="cash-register-form" onSubmit={submit}>
+      <fieldset disabled={disabled || busy}>
         <label>
           Troco inicial
-          <input inputMode="decimal" placeholder="0,00" aria-label="Troco inicial do caixa" />
+          <input
+            inputMode="decimal"
+            placeholder="0,00"
+            value={openingBalance}
+            onChange={(event) => setOpeningBalance(event.target.value)}
+            aria-label="Troco inicial do caixa"
+          />
         </label>
         <label>
           Observacao
-          <textarea rows={3} placeholder="Opcional" aria-label="Observacao da abertura" />
+          <textarea
+            rows={3}
+            maxLength={500}
+            placeholder="Opcional"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            aria-label="Observacao da abertura"
+          />
         </label>
       </fieldset>
+      <div className="cash-register-modal-summary">
+        <span>Unidade</span>
+        <strong>{model.branchName}</strong>
+        <span>Saldo inicial</span>
+        <strong>{formatCurrency(moneyToCents(openingBalance))}</strong>
+      </div>
       <div className="app-dialog-actions">
-        <Button disabled={disabled} type="button">
+        <Button disabled={disabled || busy} type="submit">
           <Banknote size={16} aria-hidden="true" />
-          Confirmar abertura
+          {busy ? 'Abrindo...' : 'Confirmar abertura'}
         </Button>
       </div>
     </form>
@@ -431,30 +550,70 @@ function CashOpenForm({ disabled }: Readonly<{ disabled: boolean }>) {
 }
 
 function CashMovementForm({
+  busy,
   disabled,
+  model,
+  onSubmit,
   type,
-}: Readonly<{ disabled: boolean; type: 'withdraw' | 'cash-in' }>) {
+}: Readonly<{
+  busy: boolean;
+  disabled: boolean;
+  model: CashRegisterViewModel;
+  onSubmit: (action: CashAction) => void;
+  type: 'withdraw' | 'cash-in';
+}>) {
+  const [amount, setAmount] = React.useState('');
+  const [reason, setReason] = React.useState('');
   const label = type === 'withdraw' ? 'Sangria' : 'Reforco';
+  const amountCents = moneyToCents(amount);
+  const canSubmit = !disabled && !busy && amountCents > 0 && reason.trim().length >= 3;
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit) return;
+    onSubmit({
+      type: 'movement',
+      branchId: model.branchId,
+      movementType: type === 'withdraw' ? 'WITHDRAWAL' : 'CASH_IN',
+      amountCents,
+      reason: reason.trim(),
+    });
+  }
+
   return (
-    <form className="cash-register-form">
-      <fieldset disabled={disabled}>
+    <form className="cash-register-form" onSubmit={submit}>
+      <fieldset disabled={disabled || busy}>
         <label>
           Valor
-          <input inputMode="decimal" placeholder="0,00" aria-label={'Valor de ' + label} />
+          <input
+            inputMode="decimal"
+            placeholder="0,00"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            aria-label={'Valor de ' + label}
+          />
         </label>
         <label>
           Motivo
           <input
             maxLength={500}
             placeholder="Motivo obrigatorio"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
             aria-label={'Motivo de ' + label}
           />
         </label>
       </fieldset>
+      <div className="cash-register-modal-summary">
+        <span>Caixa</span>
+        <strong>{model.session?.expectedBalanceLabel ?? 'Sem caixa aberto'}</strong>
+        <span>{label}</span>
+        <strong>{formatCurrency(amountCents)}</strong>
+      </div>
       <div className="app-dialog-actions">
         <Button
-          disabled={disabled}
-          type="button"
+          disabled={!canSubmit}
+          type="submit"
           variant={type === 'withdraw' ? 'secondary' : 'primary'}
         >
           {type === 'withdraw' ? (
@@ -462,7 +621,7 @@ function CashMovementForm({
           ) : (
             <PlusCircle size={16} aria-hidden="true" />
           )}
-          Confirmar {label.toLowerCase()}
+          {busy ? 'Registrando...' : 'Confirmar ' + label.toLowerCase()}
         </Button>
       </div>
     </form>
@@ -470,13 +629,47 @@ function CashMovementForm({
 }
 
 function CashCloseForm({
+  busy,
   disabled,
+  onSubmit,
   session,
-}: Readonly<{ disabled: boolean; session?: CashRegisterSessionModel }>) {
+}: Readonly<{
+  busy: boolean;
+  disabled: boolean;
+  onSubmit: (action: CashAction) => void;
+  session?: CashRegisterSessionModel;
+}>) {
+  const [actualBalance, setActualBalance] = React.useState(
+    session ? centsToInput(session.expectedBalanceAmountCents) : '',
+  );
+  const [differenceReason, setDifferenceReason] = React.useState('');
+  const actualBalanceAmountCents = moneyToCents(actualBalance);
+  const expectedBalanceAmountCents = session?.expectedBalanceAmountCents ?? 0;
+  const differenceAmountCents = actualBalanceAmountCents - expectedBalanceAmountCents;
+  const hasDifference = differenceAmountCents !== 0;
+  const canSubmit =
+    Boolean(session) &&
+    !disabled &&
+    !busy &&
+    actualBalanceAmountCents >= 0 &&
+    (!hasDifference || differenceReason.trim().length >= 3);
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || !canSubmit) return;
+    onSubmit({
+      type: 'close',
+      sessionId: session.id,
+      actualBalanceAmountCents,
+      expectedBalanceAmountCents,
+      differenceReason: differenceReason.trim() || undefined,
+    });
+  }
+
   return (
-    <form className="cash-register-form">
+    <form className="cash-register-form" onSubmit={submit}>
       {session ? (
-        <dl className="cash-register-kpis">
+        <dl className="cash-register-close-grid">
           <div>
             <dt>Esperado</dt>
             <dd>{session.expectedBalanceLabel}</dd>
@@ -485,14 +678,20 @@ function CashCloseForm({
             <dt>Abertura</dt>
             <dd>{session.openingBalanceLabel}</dd>
           </div>
+          <div className={hasDifference ? 'warning' : 'success'}>
+            <dt>Diferença</dt>
+            <dd>{formatSignedCurrency(differenceAmountCents)}</dd>
+          </div>
         </dl>
       ) : null}
-      <fieldset disabled={disabled}>
+      <fieldset disabled={disabled || busy || !session}>
         <label>
           Valor conferido
           <input
             inputMode="decimal"
             placeholder="0,00"
+            value={actualBalance}
+            onChange={(event) => setActualBalance(event.target.value)}
             aria-label="Valor conferido no fechamento"
           />
         </label>
@@ -500,19 +699,143 @@ function CashCloseForm({
           Observacao de divergencia
           <textarea
             rows={3}
+            maxLength={500}
             placeholder="Obrigatoria se houver diferenca"
+            value={differenceReason}
+            onChange={(event) => setDifferenceReason(event.target.value)}
             aria-label="Motivo da divergencia"
           />
         </label>
       </fieldset>
+      {hasDifference && differenceReason.trim().length < 3 ? (
+        <p className="cash-register-form-warning" role="alert">
+          Informe o motivo da divergência para fechar o caixa.
+        </p>
+      ) : null}
       <div className="app-dialog-actions">
-        <Button disabled={disabled} type="button">
+        <Button disabled={!canSubmit} type="submit">
           <ClipboardList size={16} aria-hidden="true" />
-          Confirmar fechamento
+          {busy ? 'Fechando...' : 'Confirmar fechamento'}
         </Button>
       </div>
     </form>
   );
+}
+
+function CashFeedbackBanner({
+  feedback,
+  onDismiss,
+}: Readonly<{ feedback: Exclude<CashFeedback, null>; onDismiss: () => void }>) {
+  return (
+    <div
+      className={'cash-register-feedback ' + feedback.type}
+      role={feedback.type === 'error' ? 'alert' : 'status'}
+    >
+      <AlertTriangle size={16} aria-hidden="true" />
+      <span>{feedback.message}</span>
+      {feedback.type === 'error' ? <small>{feedback.requestId}</small> : null}
+      <button type="button" onClick={onDismiss} aria-label="Fechar aviso">
+        <X size={14} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+async function persistCashAction(action: CashAction) {
+  const idempotencyKey = randomToken();
+  if (action.type === 'open') {
+    await postCashJson('/api/v1/cash-register', {
+      branchId: action.branchId,
+      openingBalanceAmountCents: action.openingBalanceAmountCents,
+      notes: action.notes,
+      idempotencyKey,
+    });
+    return;
+  }
+  if (action.type === 'movement') {
+    await postCashJson('/api/v1/cash-movements', {
+      branchId: action.branchId,
+      type: action.movementType,
+      amountCents: action.amountCents,
+      reason: action.reason,
+      idempotencyKey,
+    });
+    return;
+  }
+  await postCashJson('/api/v1/cash-register/' + encodeURIComponent(action.sessionId) + '/close', {
+    sessionId: action.sessionId,
+    actualBalanceAmountCents: action.actualBalanceAmountCents,
+    expectedBalanceAmountCents: action.expectedBalanceAmountCents,
+    differenceReason: action.differenceReason,
+    idempotencyKey,
+  });
+}
+
+async function postCashJson(url: string, body: Record<string, unknown>) {
+  const requestId = randomToken();
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-request-id': requestId },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    error?: { message?: string; requestId?: string };
+    requestId?: string;
+  } | null;
+  if (!response.ok) {
+    throw {
+      message: payload?.error?.message ?? 'Não foi possível concluir a operação de caixa.',
+      requestId: payload?.error?.requestId ?? payload?.requestId ?? requestId,
+    };
+  }
+}
+
+function normalizeCashError(error: unknown): Exclude<CashFeedback, null> {
+  if (error && typeof error === 'object') {
+    const record = error as { message?: unknown; requestId?: unknown };
+    return {
+      type: 'error',
+      message:
+        typeof record.message === 'string'
+          ? record.message
+          : 'Não foi possível concluir a operação de caixa.',
+      requestId: typeof record.requestId === 'string' ? record.requestId : 'request-unavailable',
+    };
+  }
+  return {
+    type: 'error',
+    message: 'Não foi possível concluir a operação de caixa.',
+    requestId: 'request-unavailable',
+  };
+}
+
+function successMessageFor(type: CashAction['type']) {
+  if (type === 'open') return 'Caixa aberto com sucesso.';
+  if (type === 'movement') return 'Movimento registrado com sucesso.';
+  return 'Caixa fechado com sucesso.';
+}
+
+function moneyToCents(value: string) {
+  const normalized = value.trim().replace(/\./g, '').replace(',', '.');
+  const amount = Number(normalized || '0');
+  return Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100)) : 0;
+}
+
+function centsToInput(cents: number) {
+  return (cents / 100).toFixed(2).replace('.', ',');
+}
+
+function formatCurrency(cents: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+}
+
+function formatSignedCurrency(cents: number) {
+  const prefix = cents > 0 ? '+' : cents < 0 ? '-' : '';
+  return prefix + formatCurrency(Math.abs(cents));
+}
+
+function randomToken() {
+  return globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
 }
 
 function CashRegisterPermissionDenied({ model }: Readonly<{ model: CashRegisterViewModel }>) {

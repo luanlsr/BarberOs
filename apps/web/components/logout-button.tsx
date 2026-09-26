@@ -6,7 +6,7 @@ import { IconButton } from '@barberos/ui';
 export function LogoutButton() {
   async function logout() {
     await fetch('/api/auth/sign-out', { method: 'POST' });
-    window.location.assign('/login');
+    window.location.assign('/');
   }
   return (
     <IconButton label="Sair" onClick={logout}>

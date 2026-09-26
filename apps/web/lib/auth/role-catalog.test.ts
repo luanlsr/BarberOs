@@ -28,6 +28,8 @@ describe('BarberOS role catalog', () => {
     expect(rolePermissions.RECEPTIONIST).not.toContain('finance.write');
     expect(rolePermissions.RECEPTIONIST).not.toContain('memberships.manage');
     expect(rolePermissions.RECEPTIONIST).not.toContain('commission.manage');
+    expect(rolePermissions.RECEPTIONIST).not.toContain('campaigns.approve');
+    expect(rolePermissions.RECEPTIONIST).not.toContain('campaigns.send');
   });
 
   it('gives barbers their own operational and wallet access without tenant administration', () => {
@@ -45,6 +47,8 @@ describe('BarberOS role catalog', () => {
     expect(rolePermissions.PROFESSIONAL).not.toContain('payments.receive');
     expect(rolePermissions.PROFESSIONAL).not.toContain('inventory.write');
     expect(rolePermissions.PROFESSIONAL).not.toContain('memberships.manage');
+    expect(rolePermissions.PROFESSIONAL).not.toContain('messaging.read');
+    expect(rolePermissions.PROFESSIONAL).not.toContain('campaigns.read');
   });
 
   it('keeps owner and platform master as elevated roles', () => {

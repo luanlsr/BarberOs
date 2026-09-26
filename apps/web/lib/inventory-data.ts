@@ -514,6 +514,7 @@ function actionsFor(
 ): readonly InventoryActionModel[] {
   const stateReason = unavailableReasonForState(state);
   const hasBalance = balances.length > 0;
+  const canRecordEntryInState = state === 'ready' || state === 'empty';
   return [
     {
       id: 'inventory.refresh',
@@ -524,8 +525,12 @@ function actionsFor(
     {
       id: 'inventory.record-entry',
       label: 'Entrada',
-      enabled: base.canWrite && state === 'ready',
-      reason: actionReason(base.canWrite, stateReason, 'Sem permissão para registrar entrada.'),
+      enabled: base.canWrite && canRecordEntryInState,
+      reason: actionReason(
+        base.canWrite,
+        canRecordEntryInState ? undefined : stateReason,
+        'Sem permissão para registrar entrada.',
+      ),
     },
     {
       id: 'inventory.record-loss',

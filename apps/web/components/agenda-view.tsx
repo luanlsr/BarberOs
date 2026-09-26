@@ -9,9 +9,22 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { AlertTriangle, CalendarPlus, Clock3, Users, WifiOff, X } from 'lucide-react';
 import { Button } from '@barberos/ui';
+import {
+  buildOperationalTimeOptions,
+  getStoreOperationsSettingsStorageKey,
+  toFullCalendarSlotMaxTime,
+  toFullCalendarSlotTime,
+  type StoreOperationsSettings,
+} from '../lib/store-operations-settings';
 import { AppointmentDetailSurface } from './appointment-detail-surface';
+import { RelatedSelect } from './form-controls';
 import { NewAppointmentFlow } from './new-appointment-flow';
-import type { AgendaAppointment, AgendaCalendarView, AgendaViewModel } from '../lib/agenda-data';
+import type {
+  AgendaAppointment,
+  AgendaCalendarView,
+  AgendaScheduleBlock,
+  AgendaViewModel,
+} from '../lib/agenda-data';
 
 type FullCalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
 
@@ -31,10 +44,70 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
   const router = useRouter();
   const calendarRef = React.useRef(null);
   const [calendarView, setCalendarView] = React.useState<AgendaCalendarView>(agenda.calendarView);
+  const [filterProfessionalId, setFilterProfessionalId] = React.useState(
+    agenda.selectedProfessionalId,
+  );
+  const [setupNotice, setSetupNotice] = React.useState(false);
+  const [clientSettings, setClientSettings] = React.useState<StoreOperationsSettings | null>(null);
   const selectedDetail = agenda.selectedAppointmentDetail;
+  const hasProfessionals = agenda.professionals.length > 0;
+  const professionalFilterOptions = [
+    { id: 'all', label: 'Todos' },
+    ...agenda.professionals.map((professional) => ({
+      id: professional.id,
+      label: professional.name,
+    })),
+  ];
+
+  React.useEffect(() => {
+    function readSettings() {
+      const stored = window.localStorage.getItem(
+        getStoreOperationsSettingsStorageKey(agenda.branchId),
+      );
+      if (!stored) {
+        setClientSettings(null);
+        return;
+      }
+
+      try {
+        setClientSettings(JSON.parse(stored) as StoreOperationsSettings);
+      } catch {
+        setClientSettings(null);
+      }
+    }
+
+    readSettings();
+    window.addEventListener('barberos:store-operations-settings-changed', readSettings);
+    return () =>
+      window.removeEventListener('barberos:store-operations-settings-changed', readSettings);
+  }, [agenda.branchId]);
+
+  const effectiveOpeningHours = React.useMemo(
+    () => (clientSettings ? toAgendaOpeningHoursFromClient(clientSettings) : agenda.openingHours),
+    [agenda.openingHours, clientSettings],
+  );
+  const effectiveScheduleBlocks = React.useMemo(
+    () =>
+      clientSettings
+        ? toAgendaScheduleBlocks(clientSettings, agenda.dateIso, agenda.professionals)
+        : agenda.scheduleBlocks,
+    [agenda.dateIso, agenda.professionals, agenda.scheduleBlocks, clientSettings],
+  );
+  const effectiveNewAppointment = React.useMemo(() => {
+    if (!clientSettings) return agenda.newAppointment;
+
+    return {
+      ...agenda.newAppointment,
+      timeOptions: buildOperationalTimeOptions(clientSettings.openingHours),
+      occupiedSlots: [
+        ...agenda.newAppointment.occupiedSlots.filter((slot) => slot.kind !== 'block'),
+        ...toBlockedOccupiedSlots(effectiveScheduleBlocks, agenda.professionals),
+      ],
+    };
+  }, [agenda.newAppointment, agenda.professionals, clientSettings, effectiveScheduleBlocks]);
   const events = React.useMemo(
-    () => buildCalendarEvents(agenda.appointments),
-    [agenda.appointments],
+    () => buildCalendarEvents(agenda.appointments, effectiveScheduleBlocks),
+    [agenda.appointments, effectiveScheduleBlocks],
   );
 
   function navigateTo(params: Record<string, string | undefined>) {
@@ -51,10 +124,18 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
   }
 
   function handleDateClick(arg: { date: Date }) {
+    if (!hasProfessionals) {
+      setSetupNotice(true);
+      return;
+    }
     navigateTo({ mode: 'new', date: toDateIso(arg.date), time: toTimeLabel(arg.date) });
   }
 
   function handleSelect(arg: { start: Date }) {
+    if (!hasProfessionals) {
+      setSetupNotice(true);
+      return;
+    }
     navigateTo({ mode: 'new', date: toDateIso(arg.start), time: toTimeLabel(arg.start) });
   }
 
@@ -100,7 +181,7 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
               Mes
             </button>
           </div>
-          {agenda.canCreateAppointment ? (
+          {agenda.canCreateAppointment && hasProfessionals ? (
             <Link
               className="button button-primary"
               href={agendaHref(agenda, { mode: 'new', view: calendarView })}
@@ -108,10 +189,35 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
               <CalendarPlus size={16} aria-hidden="true" />
               Novo agendamento
             </Link>
+          ) : agenda.canCreateAppointment ? (
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={() => setSetupNotice(true)}
+            >
+              <CalendarPlus size={16} aria-hidden="true" />
+              Novo agendamento
+            </button>
           ) : null}
         </div>
       </div>
 
+      {setupNotice || (agenda.newAppointment.isOpen && !hasProfessionals) ? (
+        <section className="agenda-setup-alert" role="alert">
+          <AlertTriangle size={20} aria-hidden="true" />
+          <div>
+            <strong>Cadastre um profissional antes de abrir a agenda.</strong>
+            <p>
+              A agenda precisa de pelo menos um profissional para reservar horários. O cliente pode
+              ser criado na hora do agendamento.
+            </p>
+          </div>
+          <Link className="button button-secondary" href="/equipe?mode=new">
+            <Users size={16} aria-hidden="true" />
+            Criar profissional
+          </Link>
+        </section>
+      ) : null}
       <form className="agenda-filterbar" method="get" aria-label="Filtros da agenda">
         <input type="hidden" name="view" value={calendarView} />
         <label>
@@ -120,14 +226,16 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
         </label>
         <label>
           <span>Profissional</span>
-          <select name="professionalId" defaultValue={agenda.selectedProfessionalId}>
-            <option value="all">Todos</option>
-            {agenda.professionals.map((professional) => (
-              <option key={professional.id} value={professional.id}>
-                {professional.name}
-              </option>
-            ))}
-          </select>
+          <RelatedSelect
+            emptyLabel="Nenhum profissional cadastrado"
+            name="professionalId"
+            onChange={setFilterProfessionalId}
+            options={professionalFilterOptions}
+            placeholder="Todos"
+            required
+            searchPlaceholder="Buscar profissional"
+            value={filterProfessionalId}
+          />
         </label>
         <Button variant="secondary" type="submit">
           Aplicar
@@ -171,13 +279,13 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
             initialView={fullCalendarViews[agenda.calendarView]}
             initialDate={agenda.dateIso}
             events={events as never}
-            selectable={agenda.canCreateAppointment}
+            selectable={agenda.canCreateAppointment && hasProfessionals}
             selectMirror
             nowIndicator
             allDaySlot={false}
-            slotMinTime="08:00:00"
-            slotMaxTime="19:00:00"
-            slotDuration="00:30:00"
+            slotMinTime={effectiveOpeningHours.slotMinTime}
+            slotMaxTime={effectiveOpeningHours.slotMaxTime}
+            slotDuration={effectiveOpeningHours.slotDuration}
             locale="pt-br"
             height="auto"
             headerToolbar={false}
@@ -201,9 +309,9 @@ export function AgendaView({ agenda }: Readonly<{ agenda: AgendaViewModel }>) {
         )}
       </section>
 
-      {agenda.newAppointment.isOpen ? (
+      {agenda.newAppointment.isOpen && hasProfessionals ? (
         <AgendaModal title="Novo agendamento" onCloseHref={agendaBaseHref(agenda, calendarView)}>
-          <NewAppointmentFlow model={agenda.newAppointment} />
+          <NewAppointmentFlow model={effectiveNewAppointment} />
         </AgendaModal>
       ) : null}
 
@@ -224,13 +332,19 @@ function AgendaModal({
   onCloseHref,
   title,
 }: Readonly<{ children: React.ReactNode; onCloseHref: string; title: string }>) {
+  const router = useRouter();
   return (
-    <div className="app-dialog-backdrop" role="presentation">
+    <div
+      className="app-dialog-backdrop"
+      role="presentation"
+      onClick={() => router.push(onCloseHref)}
+    >
       <section
         aria-label={title}
         aria-modal="true"
         className="app-dialog agenda-dialog"
         role="dialog"
+        onClick={(event) => event.stopPropagation()}
       >
         <div className="agenda-dialog-close">
           <Link className="icon-button" href={onCloseHref} aria-label="Fechar" title="Fechar">
@@ -243,8 +357,60 @@ function AgendaModal({
   );
 }
 
-function buildCalendarEvents(appointments: readonly AgendaAppointment[]) {
-  return appointments.map((appointment) => ({
+function toAgendaOpeningHoursFromClient(settings: StoreOperationsSettings) {
+  return {
+    startTime: settings.openingHours.startTime,
+    endTime: settings.openingHours.endTime,
+    slotMinTime: toFullCalendarSlotTime(settings.openingHours.startTime),
+    slotMaxTime: toFullCalendarSlotMaxTime(settings.openingHours),
+    slotDuration: `00:${String(settings.openingHours.slotMinutes).padStart(2, '0')}:00`,
+  };
+}
+
+function toAgendaScheduleBlocks(
+  settings: StoreOperationsSettings,
+  dateIso: string,
+  professionals: AgendaViewModel['professionals'],
+): AgendaScheduleBlock[] {
+  return settings.blocks
+    .filter((block) => block.dateIso === dateIso)
+    .map((block) => ({
+      id: block.id,
+      professionalId: block.professionalId,
+      professionalName: block.professionalId
+        ? (professionals.find((professional) => professional.id === block.professionalId)?.name ??
+          'Profissional')
+        : 'Todos os profissionais',
+      startsAt: `${dateIso}T${block.startTime}:00-03:00`,
+      endsAt: `${dateIso}T${block.endTime}:00-03:00`,
+      startLabel: block.startTime,
+      endLabel: block.endTime,
+      reason: block.reason,
+    }));
+}
+
+function toBlockedOccupiedSlots(
+  scheduleBlocks: readonly AgendaScheduleBlock[],
+  professionals: AgendaViewModel['professionals'],
+) {
+  return scheduleBlocks.flatMap((block) => {
+    const professionalsForBlock = block.professionalId
+      ? professionals.filter((professional) => professional.id === block.professionalId)
+      : professionals;
+
+    return professionalsForBlock.map((professional) => ({
+      professionalId: professional.id,
+      timeLabel: block.startLabel,
+      customerName: `bloqueio: ${block.reason}`,
+      kind: 'block' as const,
+    }));
+  });
+}
+function buildCalendarEvents(
+  appointments: readonly AgendaAppointment[],
+  scheduleBlocks: readonly AgendaScheduleBlock[],
+) {
+  const appointmentEvents = appointments.map((appointment) => ({
     id: appointment.id,
     title: appointment.customerName,
     start: appointment.startsAt,
@@ -254,12 +420,38 @@ function buildCalendarEvents(appointments: readonly AgendaAppointment[]) {
       appointment,
     },
   }));
+  const blockEvents = scheduleBlocks.map((block) => ({
+    id: block.id,
+    title: block.reason,
+    start: block.startsAt,
+    end: block.endsAt,
+    classNames: ['agenda-calendar-event', 'agenda-calendar-event-block'],
+    extendedProps: {
+      block,
+    },
+  }));
+  return [...appointmentEvents, ...blockEvents];
 }
 
 function renderEventContent(arg: {
-  event: { title: string; extendedProps: { appointment?: AgendaAppointment } };
+  event: {
+    title: string;
+    extendedProps: { appointment?: AgendaAppointment; block?: AgendaScheduleBlock };
+  };
 }) {
   const appointment = arg.event.extendedProps.appointment as AgendaAppointment | undefined;
+  const block = arg.event.extendedProps.block as AgendaScheduleBlock | undefined;
+  if (block) {
+    return (
+      <div className="agenda-calendar-event-content">
+        <strong>Bloqueado</strong>
+        <span>{block.reason}</span>
+        <small>
+          {block.startLabel} · {block.professionalName}
+        </small>
+      </div>
+    );
+  }
   if (!appointment) return <span>{arg.event.title}</span>;
   return (
     <div className="agenda-calendar-event-content">
@@ -271,7 +463,6 @@ function renderEventContent(arg: {
     </div>
   );
 }
-
 function agendaHref(
   agenda: AgendaViewModel,
   overrides: Partial<Record<'appointmentId' | 'date' | 'mode' | 'time' | 'view', string>> = {},

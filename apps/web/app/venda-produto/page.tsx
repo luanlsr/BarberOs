@@ -11,7 +11,7 @@ export default async function VendaProdutoPage({
   searchParams: VendaProdutoSearchParams;
 }) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const model = await getComandaViewModel(session, {

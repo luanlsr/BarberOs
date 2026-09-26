@@ -94,13 +94,25 @@ const deliveryTransitionTargets: Record<
   NotificationDeliveryAttemptStatus,
   readonly NotificationDeliveryAttemptStatus[]
 > = {
-  PENDING: ['SENT', 'RETRY_SCHEDULED', 'FAILED', 'DEAD_LETTERED'],
-  SENT: [],
-  RETRY_SCHEDULED: ['SENT', 'FAILED', 'DEAD_LETTERED'],
+  PENDING: [
+    'QUEUED',
+    'SENT',
+    'SKIPPED',
+    'BLOCKED_BY_CONSENT',
+    'RETRY_SCHEDULED',
+    'FAILED',
+    'DEAD_LETTERED',
+  ],
+  QUEUED: ['SENT', 'DELIVERED', 'READ', 'RETRY_SCHEDULED', 'FAILED', 'DEAD_LETTERED'],
+  SENT: ['DELIVERED', 'READ'],
+  DELIVERED: ['READ'],
+  READ: [],
+  SKIPPED: [],
+  BLOCKED_BY_CONSENT: [],
+  RETRY_SCHEDULED: ['QUEUED', 'SENT', 'FAILED', 'DEAD_LETTERED'],
   FAILED: ['RETRY_SCHEDULED', 'DEAD_LETTERED'],
   DEAD_LETTERED: [],
 };
-
 export function createNotificationIntentIdempotencyKey(input: NotificationIntentIdentityInput) {
   return [
     input.sourceType.toLowerCase(),

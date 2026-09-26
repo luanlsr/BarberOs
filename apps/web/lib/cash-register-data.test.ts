@@ -9,7 +9,7 @@ function sessionWith(overrides: Partial<SessionContext>): SessionContext {
 
 describe('Cash register data loading layer', () => {
   test('builds an open cash register model with expected cash, method totals and movements', () => {
-    const model = getDevelopmentCashRegisterViewModel(developmentSession);
+    const model = getDevelopmentCashRegisterViewModel(developmentSession, { state: 'open' });
 
     expect(model.state).toBe('open');
     expect(model.canRead).toBe(true);
@@ -25,7 +25,7 @@ describe('Cash register data loading layer', () => {
       expectedBalanceAmountCents: 23_500,
       expectedBalanceLabel: 'R$\u00a0235,00',
       differenceAmountCents: 0,
-      differenceLabel: 'R$\u00a00,00',
+      differenceLabel: 'A conferir',
     });
     expect(model.methodTotals).toEqual([
       {
@@ -70,10 +70,8 @@ describe('Cash register data loading layer', () => {
     });
   });
 
-  test('returns no-open-session state when the branch has no active cash session', () => {
-    const model = getDevelopmentCashRegisterViewModel(developmentSession, {
-      state: 'no-open-session',
-    });
+  test('starts closed when the branch has no active cash session', () => {
+    const model = getDevelopmentCashRegisterViewModel(developmentSession);
 
     expect(model.state).toBe('no-open-session');
     expect(model.session).toBeUndefined();
@@ -130,12 +128,12 @@ describe('Cash register data loading layer', () => {
       sessionWith({ permissions: ['finance.read'], entitlements: ['finance'] }),
     );
 
-    expect(model.state).toBe('open');
+    expect(model.state).toBe('no-open-session');
     expect(model.canRead).toBe(true);
     expect(model.canOpen).toBe(false);
     expect(model.canWithdraw).toBe(false);
     expect(model.canCashIn).toBe(false);
     expect(model.canClose).toBe(false);
-    expect(model.session?.status).toBe('OPEN');
+    expect(model.session).toBeUndefined();
   });
 });

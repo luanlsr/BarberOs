@@ -9,7 +9,7 @@ export default async function WorkerOperationsPage({
   searchParams,
 }: Readonly<{ searchParams: WorkerOperationsSearchParams }>) {
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
 
   const params = await searchParams;
   const model = await getWorkerOperationsViewModel(session, {

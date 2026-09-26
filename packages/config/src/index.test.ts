@@ -63,6 +63,39 @@ describe('environment contracts', () => {
     expect(() => parseServerEnv({ ASAAS_ENVIRONMENT: 'staging' })).toThrow();
   });
 
+  it('provides safe WhatsApp and campaign defaults for local development', () => {
+    expect(parseServerEnv({})).toMatchObject({
+      WHATSAPP_PROVIDER: 'local',
+      WHATSAPP_WEBHOOK_TOLERANCE_SECONDS: 300,
+      CAMPAIGN_DISPATCH_BATCH_SIZE: 50,
+      CAMPAIGN_DISPATCH_RATE_LIMIT_PER_MINUTE: 120,
+    });
+  });
+
+  it('requires server-only WhatsApp secrets for the Meta provider', () => {
+    expect(() => parseServerEnv({ WHATSAPP_PROVIDER: 'meta' })).toThrow('Meta WhatsApp provider');
+    expect(
+      parseServerEnv({
+        WHATSAPP_PROVIDER: 'meta',
+        WHATSAPP_ACCESS_TOKEN: 'server-only-token',
+        WHATSAPP_PHONE_NUMBER_ID: 'phone-number-id',
+        WHATSAPP_WEBHOOK_VERIFY_TOKEN: 'verify-token',
+        WHATSAPP_WEBHOOK_APP_SECRET: 'app-secret',
+      }),
+    ).toMatchObject({
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_ACCESS_TOKEN: 'server-only-token',
+      WHATSAPP_PHONE_NUMBER_ID: 'phone-number-id',
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: 'verify-token',
+      WHATSAPP_WEBHOOK_APP_SECRET: 'app-secret',
+    });
+  });
+
+  it('rejects unsafe WhatsApp and campaign operational settings', () => {
+    expect(() => parseServerEnv({ WHATSAPP_WEBHOOK_TOLERANCE_SECONDS: '10' })).toThrow();
+    expect(() => parseServerEnv({ CAMPAIGN_DISPATCH_BATCH_SIZE: '0' })).toThrow();
+    expect(() => parseServerEnv({ CAMPAIGN_DISPATCH_RATE_LIMIT_PER_MINUTE: '0' })).toThrow();
+  });
   it('provides safe worker and Redis defaults for local development', () => {
     expect(parseServerEnv({})).toMatchObject({
       NODE_ENV: 'development',

@@ -12,6 +12,12 @@ import {
   LocalNoopNotificationProvider,
   type NotificationProviderAdapter,
 } from './notification-delivery-handler';
+import {
+  handleWhatsAppDelivery,
+  handleWhatsAppWebhookProcessing,
+  type WhatsAppProviderAdapter,
+  type WhatsAppWebhookProcessingPorts,
+} from './whatsapp-messaging-handlers';
 
 export type WorkerJobHandlerResult =
   | {
@@ -81,6 +87,8 @@ export type InitialWorkerHandlerPorts = {
     recordDeliveryAttempt?(command: RecordNotificationDeliveryAttemptCommand): Promise<unknown>;
   };
   notificationProvider?: NotificationProviderAdapter;
+  whatsappProvider?: WhatsAppProviderAdapter;
+  messaging?: WhatsAppWebhookProcessingPorts['messaging'];
 };
 
 export type InitialWorkerJobHandler = (job: WorkerJob) => Promise<WorkerJobHandlerResult>;
@@ -98,6 +106,8 @@ export function createInitialWorkerHandlers(
     STOCK_ALERT: (job) => handleStockAlert(job, ports),
     EXPIRED_RECORD_CLEANUP: (job) => handleExpiredRecordCleanup(job, ports, clock()),
     NOTIFICATION_DELIVERY: (job) => handleNotificationDeliveryJob(job, ports, clock()),
+    WHATSAPP_DELIVERY: (job) => handleWhatsAppDeliveryJob(job, ports, clock()),
+    MESSAGING_WEBHOOK_PROCESSING: (job) => handleMessagingWebhookProcessingJob(job, ports, clock()),
   };
 }
 
@@ -244,6 +254,33 @@ function handleNotificationDeliveryJob(
     now: () => now,
   });
 }
+function handleWhatsAppDeliveryJob(job: WorkerJob, ports: InitialWorkerHandlerPorts, now: Date) {
+  if (!ports.whatsappProvider) {
+    return Promise.resolve(skipped('whatsapp_provider_not_configured'));
+  }
+  return handleWhatsAppDelivery(job, {
+    provider: ports.whatsappProvider,
+    notifications: ports.notifications?.recordDeliveryAttempt
+      ? { recordDeliveryAttempt: ports.notifications.recordDeliveryAttempt }
+      : undefined,
+    now: () => now,
+  });
+}
+
+function handleMessagingWebhookProcessingJob(
+  job: WorkerJob,
+  ports: InitialWorkerHandlerPorts,
+  now: Date,
+) {
+  if (!ports.messaging) {
+    return Promise.resolve(skipped('messaging_port_not_configured'));
+  }
+  return handleWhatsAppWebhookProcessing(job, {
+    messaging: ports.messaging,
+    now: () => now,
+  });
+}
+
 function getSourceId(job: WorkerJob, expectedType: OutboxSourceType) {
   if (job.sourceType !== expectedType) return undefined;
   return job.sourceId;

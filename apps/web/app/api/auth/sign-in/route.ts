@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/auth/server';
+import {
+  BARBEROS_SESSION_EXPIRES_AT_COOKIE,
+  BARBEROS_SESSION_ID_COOKIE,
+  readJwtSessionMetadata,
+  sessionCookieOptions,
+} from '../../../../lib/auth/jwt-session';
 
 export async function POST(request: Request) {
   let client: Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -36,7 +42,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
 
-  const { error } = await client.auth.signInWithPassword({
+  const { data, error } = await client.auth.signInWithPassword({
     email: body.email,
     password: body.password,
   });
@@ -50,5 +56,24 @@ export async function POST(request: Request) {
       { status: 401 },
     );
   }
-  return NextResponse.json({ ok: true });
+
+  const metadata = readJwtSessionMetadata(data.session?.access_token);
+  if (!metadata)
+    return NextResponse.json(
+      {
+        code: 'INVALID_SESSION_TOKEN',
+        message: 'Sessão criada sem token válido. Tente entrar novamente.',
+      },
+      { status: 401 },
+    );
+
+  const response = NextResponse.json({
+    ok: true,
+    sessionId: metadata.sessionId,
+    sessionExpiresAt: metadata.sessionExpiresAt,
+  });
+  const options = sessionCookieOptions(metadata.maxAgeSeconds);
+  response.cookies.set(BARBEROS_SESSION_ID_COOKIE, metadata.sessionId, options);
+  response.cookies.set(BARBEROS_SESSION_EXPIRES_AT_COOKIE, metadata.sessionExpiresAt, options);
+  return response;
 }

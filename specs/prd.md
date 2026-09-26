@@ -4937,3 +4937,844 @@ Uma recepcionista deverá conseguir operar a agenda e o caixa rapidamente em um 
 Um proprietário deverá conseguir analisar toda a empresa confortavelmente em um notebook ou monitor grande.
 
 Tudo usando a mesma aplicação PWA e o mesmo domínio de negócio.
+
+---
+
+# Adendo ao PRD — Worker, Outbox, Jobs e Notificações
+
+## 1. Objetivo
+
+O produto deverá tratar efeitos colaterais críticos de forma confiável, rastreável e recuperável.
+
+Nem toda ação importante deve depender de processamento síncrono na interface.
+
+Exemplos:
+
+- lembrete de agendamento;
+- confirmação por WhatsApp;
+- follow-up pós-atendimento;
+- baixa de estoque derivada de venda;
+- lançamento financeiro derivado de pagamento;
+- cálculo de comissão;
+- campanha para clientes;
+- alerta de estoque baixo;
+- resumo diário inteligente;
+- recálculos de CRM;
+- webhooks externos.
+
+O usuário deve sentir que a operação é rápida, mas o sistema deve preservar consistência e auditoria nos bastidores.
+
+---
+
+## 2. Princípio de produto
+
+O BarberOS não deve perder uma ação importante porque uma integração externa, job ou rede falhou temporariamente.
+
+Quando uma operação principal for concluída, o sistema deve registrar o fato de forma durável e processar efeitos secundários com retry.
+
+```text
+Pagamento confirmado
+↓
+Comanda fechada
+↓
+Outbox registra eventos
+↓
+Worker processa estoque, financeiro, comissão e mensagens
+```
+
+Se o WhatsApp estiver fora do ar, o pagamento continua correto.
+
+Se o cálculo de comissão falhar temporariamente, ele deve poder ser reprocessado sem duplicidade.
+
+---
+
+## 3. Transactional Outbox
+
+Toda operação de negócio que gerar efeito colateral crítico deverá gravar um evento de outbox na mesma transação da mudança principal.
+
+Exemplos:
+
+```text
+appointment.created
+appointment.cancelled
+appointment.checked_in
+
+order.created
+order.paid
+order.cancelled
+
+payment.received
+payment.refunded
+
+stock.low_detected
+stock.movement_created
+
+commission.accrual_pending
+customer.status_changed
+
+campaign.requested
+message.send_requested
+```
+
+A outbox será a ponte entre a ação síncrona e o processamento assíncrono.
+
+---
+
+## 4. Eventos que exigem outbox no P0/P1
+
+Obrigatório desde as próximas fases:
+
+- criação de agendamento;
+- cancelamento de agendamento;
+- check-in;
+- pagamento recebido;
+- estorno;
+- comanda paga;
+- movimentação de estoque derivada de venda;
+- comissão a calcular;
+- mensagem transacional a enviar;
+- webhook externo recebido.
+
+Obrigatório em fase de comunicação/crescimento:
+
+- campanha criada;
+- campanha aprovada;
+- campanha enviada;
+- cliente entrou em risco;
+- cliente ficou inativo;
+- lembrete de retorno sugerido;
+- alerta de estoque baixo;
+- resumo diário.
+
+---
+
+## 5. Jobs iniciais
+
+### appointment.reminder
+
+Envia lembrete antes do horário agendado.
+
+Configurações futuras por tenant:
+
+```text
+24h antes
+2h antes
+30min antes
+```
+
+No MVP, um padrão simples poderá ser usado.
+
+### appointment.confirmation
+
+Solicita confirmação quando a política do tenant exigir.
+
+Resultado esperado:
+
+```text
+cliente confirma
+↓
+appointment CONFIRMED
+```
+
+ou:
+
+```text
+cliente não responde
+↓
+mantém status atual
+↓
+alerta recepção quando necessário
+```
+
+### post_service.follow_up
+
+Após atendimento concluído, poderá enviar agradecimento, pedido de avaliação ou sugestão de retorno.
+
+Depende de consentimento e configuração.
+
+### finance.recalculate_summary
+
+Atualiza projeções e agregados financeiros quando houver pagamentos, estornos, despesas ou ajustes.
+
+### commission.calculate
+
+Calcula accruals de comissão com snapshot da regra vigente.
+
+Deve ser idempotente.
+
+### inventory.low_stock_check
+
+Detecta produtos abaixo do mínimo configurado e gera alerta.
+
+### crm.recalculate_status
+
+Atualiza status comportamental dos clientes:
+
+```text
+ACTIVE
+COOLING
+AT_RISK
+INACTIVE
+LOST
+```
+
+### campaign.dispatch
+
+Envia mensagens de campanha aprovadas.
+
+Nunca deve enviar marketing sem consentimento válido.
+
+### ai.daily_insights
+
+Gera sugestões operacionais como:
+
+- horários vagos;
+- clientes em risco;
+- queda de margem;
+- estoque baixo;
+- contas vencendo.
+
+Inicialmente deve sugerir ações, não executar automaticamente ações de alto impacto.
+
+---
+
+## 6. Notificações transacionais
+
+Notificações transacionais são mensagens diretamente relacionadas a uma operação esperada pelo cliente.
+
+Exemplos:
+
+- confirmação de agendamento;
+- lembrete de horário;
+- cancelamento;
+- reagendamento;
+- confirmação de pagamento;
+- aviso de lista de espera.
+
+Essas mensagens têm prioridade maior que campanhas.
+
+O sistema deverá diferenciá-las de comunicações comerciais.
+
+---
+
+## 7. Notificações comerciais
+
+Notificações comerciais incluem:
+
+- campanhas;
+- reativação;
+- promoções;
+- aniversário;
+- retorno sugerido;
+- divulgação de pacote;
+- divulgação de assinatura.
+
+Regras:
+
+- respeitar opt-in/opt-out;
+- permitir pré-visualização;
+- registrar audiência;
+- registrar conteúdo enviado;
+- registrar status de entrega quando disponível;
+- impedir envio duplicado por retry.
+
+---
+
+## 8. Canais de notificação
+
+Canais previstos:
+
+```text
+in_app
+whatsapp
+email
+push
+```
+
+Prioridade inicial:
+
+1. in-app;
+2. WhatsApp;
+3. push PWA;
+4. e-mail.
+
+O produto não deverá depender de todos os canais para entregar valor inicial.
+
+---
+
+## 9. Preferências de notificação
+
+Cada tenant poderá configurar padrões.
+
+Exemplos:
+
+```text
+Enviar lembrete 2h antes
+Enviar confirmação 24h antes
+Enviar pós-atendimento no mesmo dia
+Alertar recepção sobre no-show provável
+Alertar dono sobre fechamento de caixa divergente
+```
+
+Usuários internos poderão ter preferências próprias para alertas in-app.
+
+Clientes finais deverão ter consentimentos rastreáveis para comunicações comerciais.
+
+---
+
+## 10. Central de notificações in-app
+
+O sistema deverá possuir uma central de notificações para usuários internos.
+
+Tipos iniciais:
+
+```text
+operational
+financial
+inventory
+crm
+ai
+system
+```
+
+Exemplos:
+
+```text
+Cliente respondeu à confirmação.
+
+Estoque baixo: Pomada XYZ.
+
+Caixa fechou com divergência de R$10.
+
+17 clientes estão em risco de não retornar.
+
+Falha ao enviar campanha para 8 clientes.
+```
+
+---
+
+## 11. Prioridade de alertas
+
+Alertas deverão ter prioridade.
+
+```text
+INFO
+ACTION_REQUIRED
+WARNING
+CRITICAL
+```
+
+Exemplos:
+
+### INFO
+
+```text
+Resumo diário disponível.
+```
+
+### ACTION_REQUIRED
+
+```text
+Cliente pediu reagendamento pelo WhatsApp.
+```
+
+### WARNING
+
+```text
+Produto abaixo do estoque mínimo.
+```
+
+### CRITICAL
+
+```text
+Falha ao processar pagamento confirmado.
+```
+
+Alertas críticos devem ser visíveis para perfis autorizados.
+
+---
+
+## 12. Experiência do usuário durante processamento assíncrono
+
+Quando a operação principal estiver concluída, a UI deve responder rapidamente.
+
+Exemplo:
+
+```text
+✓ Pagamento concluído
+```
+
+Se efeitos secundários ainda estiverem processando:
+
+```text
+Atualizando estoque e comissão...
+```
+
+Quando fizer sentido, a UI poderá mostrar:
+
+```text
+✓ Estoque atualizado
+✓ Comissão calculada
+✓ Financeiro atualizado
+```
+
+Mas o usuário não deve ficar bloqueado por tarefas que não sejam necessárias para concluir o fluxo operacional.
+
+---
+
+## 13. Quando bloquear o usuário
+
+Algumas operações não podem ser tratadas apenas como efeito posterior.
+
+Exemplos:
+
+- confirmar pagamento;
+- evitar double booking;
+- aplicar autorização;
+- validar caixa aberto;
+- validar estoque quando política exigir bloqueio de venda sem estoque;
+- confirmar ação sensível da IA.
+
+Essas validações permanecem síncronas.
+
+---
+
+## 14. Falhas recuperáveis
+
+Falhas de jobs devem ser recuperáveis.
+
+Exemplos:
+
+```text
+WhatsApp indisponível
+↓
+retry
+↓
+sucesso
+```
+
+ou:
+
+```text
+provider rejeitou mensagem
+↓
+marcar como falha final
+↓
+notificar responsável quando necessário
+```
+
+Falha silenciosa não é aceitável para efeitos críticos.
+
+---
+
+## 15. Idempotência
+
+Jobs devem ser idempotentes.
+
+Se o mesmo evento for processado duas vezes, o resultado final deve ser único.
+
+Exemplos:
+
+- não enviar dois lembretes iguais;
+- não criar comissão duplicada;
+- não baixar estoque duas vezes;
+- não registrar dois lançamentos financeiros para o mesmo pagamento;
+- não disparar campanha duplicada para o mesmo cliente.
+
+---
+
+## 16. Estados de job
+
+Estados conceituais:
+
+```text
+PENDING
+PROCESSING
+SUCCEEDED
+FAILED_RETRYABLE
+FAILED_FINAL
+CANCELLED
+```
+
+Eventos da outbox também deverão possuir estado rastreável.
+
+---
+
+## 17. Retentativas
+
+Retentativas deverão considerar:
+
+- tipo do job;
+- risco de duplicidade;
+- custo externo;
+- limite de rate;
+- prioridade;
+- tenant;
+- canal.
+
+Exemplo conceitual:
+
+```text
+1 min
+5 min
+30 min
+2 h
+```
+
+Campanhas grandes deverão respeitar rate limit e fila.
+
+---
+
+## 18. Dead letter
+
+Após esgotar tentativas, o job deverá ir para um estado de falha final ou dead letter.
+
+Deverá ser possível:
+
+- consultar erro;
+- ver tenant afetado;
+- ver entidade relacionada;
+- reprocessar manualmente quando seguro;
+- ignorar com justificativa quando aplicável.
+
+---
+
+## 19. Dashboard operacional de jobs
+
+Para perfis autorizados, especialmente Master Admin e suporte, o produto deverá oferecer visão de:
+
+- jobs pendentes;
+- jobs falhados;
+- jobs em retry;
+- outbox atrasada;
+- mensagens não enviadas;
+- campanhas com falha;
+- webhooks com erro;
+- tempo médio de processamento.
+
+No tenant, a visão deve ser simplificada.
+
+Exemplo:
+
+```text
+8 mensagens não foram enviadas.
+[Ver detalhes]
+```
+
+No Master Admin, a visão pode ser técnica e operacional.
+
+---
+
+## 20. Permissões
+
+Permissões possíveis:
+
+```text
+notifications.read
+notifications.manage
+
+jobs.read
+jobs.retry
+jobs.cancel
+
+campaigns.approve
+campaigns.send
+
+platform.jobs.read
+platform.jobs.retry
+platform.incidents.manage
+```
+
+Usuários comuns não devem acessar detalhes técnicos internos.
+
+---
+
+## 21. Auditoria
+
+Eventos importantes devem gerar trilha auditável.
+
+Exemplos:
+
+```text
+outbox.event_created
+job.started
+job.succeeded
+job.failed
+job.retried
+job.cancelled
+
+notification.created
+notification.sent
+notification.failed
+
+campaign.approved
+campaign.sent
+campaign.cancelled
+```
+
+Reprocessamentos manuais devem registrar:
+
+- quem solicitou;
+- quando;
+- motivo;
+- job/evento afetado;
+- resultado.
+
+---
+
+## 22. Privacidade e LGPD
+
+Jobs e logs não devem expor dados pessoais além do necessário.
+
+Preferir payloads com IDs e buscar dados atuais no momento do processamento.
+
+Exemplo recomendado:
+
+```json
+{
+  "appointmentId": "..."
+}
+```
+
+Evitar payloads com mensagem completa, telefone, nome e histórico quando isso não for necessário.
+
+Mensagens enviadas para clientes podem exigir retenção para auditoria e suporte, mas devem respeitar política de dados do produto.
+
+---
+
+## 23. Relação com WhatsApp
+
+WhatsApp será um dos principais consumidores da camada assíncrona.
+
+Fluxo conceitual:
+
+```text
+appointment.created
+↓
+outbox
+↓
+worker
+↓
+message.send_requested
+↓
+WhatsApp provider
+↓
+message status
+↓
+audit/event
+```
+
+Inbound webhooks também devem ser processados com idempotência.
+
+```text
+webhook received
+↓
+signature validation
+↓
+persist raw event
+↓
+ack quickly
+↓
+worker interprets
+```
+
+---
+
+## 24. Relação com Barber AI
+
+Insights proativos da IA deverão ser disparados a partir de jobs ou eventos.
+
+Exemplos:
+
+```text
+crm.recalculate_status
+↓
+17 clientes em risco
+↓
+ai.insight_suggested
+↓
+Owner recebe card
+```
+
+A IA não deve executar campanhas automaticamente sem política explícita e confirmação quando exigida.
+
+---
+
+## 25. Relação com financeiro
+
+Pagamentos e estornos podem gerar eventos para:
+
+- lançamentos financeiros;
+- comissão;
+- caixa;
+- relatórios;
+- alertas.
+
+Requisito:
+
+```text
+Pagamento confirmado não pode depender de todos os agregados estarem atualizados na mesma request.
+```
+
+Mas o sistema precisa chegar a consistência final e indicar falhas relevantes.
+
+---
+
+## 26. Relação com estoque
+
+Vendas de produtos deverão gerar baixa de estoque.
+
+Se a baixa for assíncrona, deve haver proteção contra duplicidade.
+
+Se o tenant configurar bloqueio de venda sem estoque, a validação de disponibilidade deverá ocorrer antes de finalizar a venda.
+
+---
+
+## 27. Relação com campanhas
+
+Campanhas deverão passar por fases:
+
+```text
+DRAFT
+READY_FOR_REVIEW
+APPROVED
+SCHEDULED
+SENDING
+SENT
+PARTIALLY_FAILED
+CANCELLED
+```
+
+O envio em massa será sempre assíncrono.
+
+O usuário deverá conseguir ver:
+
+- audiência planejada;
+- audiência enviada;
+- falhas;
+- opt-outs;
+- respostas;
+- agendamentos gerados.
+
+---
+
+## 28. Critérios de aceite P0
+
+Para a primeira entrega da camada assíncrona:
+
+- operações principais gravam eventos de outbox quando geram side effects críticos;
+- worker processa eventos pendentes;
+- jobs possuem estados rastreáveis;
+- retries não duplicam efeitos;
+- pagamento não duplica financeiro, estoque ou comissão;
+- envio de mensagem transacional é idempotente;
+- falhas ficam visíveis em log/monitoramento;
+- usuário não fica bloqueado por tarefas secundárias;
+- tenant isolation é preservado em jobs;
+- jobs respeitam permissões e contexto necessário;
+- existe teste de reprocessamento para pelo menos um fluxo crítico.
+
+---
+
+## 29. Critérios de aceite P1
+
+Para evolução após P0:
+
+- central de notificações in-app;
+- preferências básicas de notificação;
+- dashboard simples de falhas operacionais;
+- dead letter consultável;
+- reprocessamento manual autorizado;
+- métricas de sucesso/falha por job;
+- campanhas com envio assíncrono;
+- status de entrega de mensagens;
+- alertas de estoque baixo;
+- CRM status recalculado por job.
+
+---
+
+## 30. Fora do escopo inicial
+
+Não é necessário no primeiro recorte:
+
+- motor avançado de workflow visual;
+- automações customizadas complexas por tenant;
+- múltiplos provedores simultâneos de fila;
+- segmentação comportamental por ML;
+- orquestração multi-canal sofisticada;
+- SLA público por tenant;
+- painel técnico completo para usuários finais.
+
+---
+
+## 31. Riscos
+
+### Duplicidade
+
+O maior risco é processar duas vezes uma mesma consequência.
+
+Mitigação:
+
+- idempotency keys;
+- constraints;
+- source_type/source_id;
+- status rastreável;
+- testes de retry.
+
+### Falha silenciosa
+
+Mensagens, comissões ou baixas de estoque podem falhar sem ninguém perceber.
+
+Mitigação:
+
+- dead letter;
+- alertas;
+- dashboard operacional;
+- logs estruturados.
+
+### Excesso de complexidade
+
+Um motor de jobs sofisticado demais pode atrasar a entrega.
+
+Mitigação:
+
+- começar com poucos jobs críticos;
+- contratos simples;
+- estados claros;
+- evolução incremental.
+
+### Vazamento entre tenants
+
+Jobs rodam fora da request HTTP tradicional e podem esquecer escopo.
+
+Mitigação:
+
+- todo job carrega ou resolve tenant_id;
+- repositories tenant-scoped;
+- testes obrigatórios de tenant isolation em worker.
+
+---
+
+## 32. Resultado esperado
+
+Com essa camada, o BarberOS passa a operar como produto confiável, não apenas como CRUD.
+
+O usuário poderá concluir rapidamente fluxos essenciais, enquanto o sistema processa com segurança as consequências:
+
+```text
+Agenda
+↓
+Check-in
+↓
+Comanda
+↓
+Pagamento
+↓
+Outbox
+↓
+Worker
+↓
+Notificações, estoque, financeiro, comissão, CRM e IA
+```
+
+Essa fundação será essencial para WhatsApp, campanhas, Barber AI proativa, billing, observabilidade e operação real em produção.

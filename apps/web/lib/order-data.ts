@@ -520,27 +520,6 @@ export function getDevelopmentComandaViewModel(
     };
   }
 
-  if (!options.orderId) {
-    const preview = toComandaDetailModel(
-      session,
-      developmentOrder,
-      {
-        customerName: devPeople.customers.get(developmentOrder.customerId ?? '')?.name,
-        customerPhone: devPeople.customers.get(developmentOrder.customerId ?? '')?.phone,
-        professionalName: devPeople.professionals.get(developmentOrder.professionalId ?? ''),
-      },
-      [],
-      true,
-    );
-    return {
-      ...base,
-      state: 'ready',
-      selectedOrderId: undefined,
-      openOrders: [toComandaSummaryModel(preview)],
-      description: 'Selecione uma Comanda para expandir os detalhes do atendimento.',
-    };
-  }
-
   const payments = developmentPaymentsFor(options.state);
   const orderStatus = options.state === 'paid' ? 'PAID' : developmentOrder.status;
   const order = toComandaDetailModel(

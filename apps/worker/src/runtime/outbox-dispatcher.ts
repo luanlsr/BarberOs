@@ -88,18 +88,28 @@ function getJobTypesForEvent(event: OutboxEvent): WorkerJobType[] {
       return ['STOCK_ALERT'];
     case 'NOTIFICATION_DELIVERY_REQUESTED':
       return ['NOTIFICATION_DELIVERY'];
+    case 'MESSAGING_DELIVERY_REQUESTED':
+      return ['WHATSAPP_DELIVERY'];
+    case 'MESSAGING_PROVIDER_EVENT_RECEIVED':
+      return ['MESSAGING_WEBHOOK_PROCESSING'];
+    case 'CAMPAIGN_DISPATCH_REQUESTED':
+      return ['CAMPAIGN_DISPATCH'];
     case 'ORDER_OPENED':
       return [];
   }
 }
 
 function getJobPriority(type: WorkerJobType) {
+  if (type === 'WHATSAPP_DELIVERY' || type === 'MESSAGING_WEBHOOK_PROCESSING') return 85;
+  if (type === 'CAMPAIGN_DISPATCH') return 70;
   if (type === 'NOTIFICATION_DELIVERY' || type === 'APPOINTMENT_REMINDER') return 80;
   if (type === 'STOCK_ALERT') return 60;
   return 50;
 }
 
 function getJobMaxAttempts(type: WorkerJobType) {
+  if (type === 'WHATSAPP_DELIVERY' || type === 'MESSAGING_WEBHOOK_PROCESSING') return 8;
+  if (type === 'CAMPAIGN_DISPATCH') return 10;
   if (type === 'NOTIFICATION_DELIVERY' || type === 'APPOINTMENT_REMINDER') return 8;
   return 5;
 }

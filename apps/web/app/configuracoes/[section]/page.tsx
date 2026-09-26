@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
+import { BusinessHoursSettingsPanel } from '../../../components/business-hours-settings-panel';
 import { getSessionContext } from '../../../lib/auth/server';
+import { getStoreOperationsSettings } from '../../../lib/store-operations-settings';
 import {
   canAccessSettingsSection,
   getSettingsSection,
@@ -37,14 +39,11 @@ export default async function SettingsSectionPage({
   if (!section) notFound();
 
   const session = await getSessionContext();
-  if (!session) redirect('/login');
+  if (!session) redirect('/');
   if (!session.permissions.includes('settings.read')) redirect('/forbidden');
   if (!canAccessSettingsSection(section, session)) redirect('/forbidden');
 
   const Icon = sectionIcons[section.icon];
-  const visibleSections = settingsSections.filter((candidate) =>
-    canAccessSettingsSection(candidate, session),
-  );
 
   return (
     <div className="settings-page settings-section-page">
@@ -60,19 +59,6 @@ export default async function SettingsSectionPage({
         </div>
         <span className="settings-section-status">{section.status}</span>
       </header>
-
-      <nav className="settings-section-nav" aria-label="Submenus de configurações">
-        {visibleSections.map((candidate) => (
-          <Link
-            aria-current={candidate.key === section.key ? 'page' : undefined}
-            className="settings-section-tab"
-            href={candidate.href}
-            key={candidate.key}
-          >
-            {candidate.title}
-          </Link>
-        ))}
-      </nav>
 
       <section className="settings-section-layout" aria-label="Detalhes da configuração">
         <article className="settings-detail-panel">
@@ -94,6 +80,15 @@ export default async function SettingsSectionPage({
               </div>
             ))}
           </div>
+
+          {section.key === 'barbearia-filiais' ? (
+            <BusinessHoursSettingsPanel
+              branchName={session.branchName}
+              settings={getStoreOperationsSettings(
+                session.activeBranchId ?? session.branchScope[0] ?? '',
+              )}
+            />
+          ) : null}
         </article>
 
         <aside className="settings-action-panel" aria-label="Próximas ações">

@@ -91,7 +91,7 @@ describe('Inventory data loading layer', () => {
     });
   });
 
-  test('builds empty state with write actions blocked except refresh', () => {
+  test('builds empty state with entry action available for first stock movement', () => {
     const model = getDevelopmentInventoryViewModel(inventorySession(), { state: 'empty' });
 
     expect(model.state).toBe('empty');
@@ -99,7 +99,7 @@ describe('Inventory data loading layer', () => {
     expect(model.lowStockAlerts).toEqual([]);
     expect(model.movements).toEqual([]);
     expect(action(model, 'inventory.record-entry')).toMatchObject({
-      enabled: false,
+      enabled: true,
       reason: undefined,
     });
     expect(action(model, 'inventory.adjust-stock')).toMatchObject({

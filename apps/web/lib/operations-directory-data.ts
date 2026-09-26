@@ -12,7 +12,7 @@ export type OperationsDirectoryField = {
   min?: number;
   minLength?: number;
   placeholder: string;
-  type: 'text' | 'tel' | 'email' | 'number' | 'select';
+  type: 'text' | 'tel' | 'email' | 'number' | 'select' | 'url' | 'color';
   options?: readonly string[];
 };
 
@@ -24,6 +24,10 @@ export type OperationsDirectoryItem = {
   statusTone: 'success' | 'warning' | 'neutral';
   metrics: readonly { label: string; value: string }[];
   tags: readonly string[];
+  imageUrl?: string;
+  iconKey?: string;
+  colorHex?: string;
+  formValues?: Readonly<Record<string, string>>;
 };
 
 export type OperationsDirectoryModel = {
@@ -258,6 +262,7 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
       type: 'text',
     },
     { id: 'phone', label: 'Telefone', maxLength: 15, placeholder: '(11) 99999-9999', type: 'tel' },
+    { id: 'avatarUrl', label: 'Foto', maxLength: 2048, placeholder: 'https://...', type: 'url' },
     {
       id: 'email',
       label: 'Email',
@@ -290,6 +295,7 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
       options: ['Barbeiro', 'Barbeiro senior', 'Especialista em barba', 'Recepção'],
     },
     { id: 'phone', label: 'Telefone', maxLength: 15, placeholder: '(11) 99999-9999', type: 'tel' },
+    { id: 'avatarUrl', label: 'Foto', maxLength: 2048, placeholder: 'https://...', type: 'url' },
     { id: 'branch', label: 'Filial', placeholder: 'Centro', type: 'select', options: ['Centro'] },
   ],
   servicos: [
@@ -310,6 +316,15 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
     },
     { id: 'duration', label: 'Duração', max: 480, min: 5, placeholder: '45', type: 'number' },
     { id: 'price', label: 'Preço', max: 100000, min: 1, placeholder: '60', type: 'number' },
+    {
+      id: 'imageUrl',
+      label: 'Foto do serviço',
+      maxLength: 2048,
+      placeholder: 'https://...',
+      type: 'url',
+    },
+    { id: 'iconKey', label: 'Ícone', maxLength: 40, placeholder: 'scissors', type: 'text' },
+    { id: 'colorHex', label: 'Cor', placeholder: '#A45A36', type: 'color' },
   ],
 };
 

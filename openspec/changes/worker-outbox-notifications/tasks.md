@@ -58,4 +58,4 @@
 - [x] 8.3 Run focused unit/API/component tests for contracts, outbox, notifications, payments, orders, scheduling, finance, worker runtime and operational failure UI, and verify the selected `npx vitest run` command passes.
 - [x] 8.4 Run `npm run validate:worker` or equivalent migration validation and verify worker/outbox/notification schema remains valid.
 - [x] 8.5 Run `openspec validate worker-outbox-notifications --strict` and verify the change remains valid after implementation task updates.
-- [ ] 8.6 Run the full validation gate with `npm run validate` and verify format, lint, typecheck, unit tests and build all pass.
+- [x] 8.6 Run the full validation gate with `npm run validate` and verify format, lint, typecheck, unit tests and build all pass.
