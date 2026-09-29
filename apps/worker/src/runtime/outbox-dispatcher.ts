@@ -54,6 +54,7 @@ export function createWorkerJobsForOutboxEvent(
         ? event.sourceId
         : undefined,
     payload: {
+      ...event.payload,
       outboxEventId: event.id,
       eventType: event.eventType,
       sourceType: event.sourceType,
@@ -75,9 +76,11 @@ function getJobTypesForEvent(event: OutboxEvent): WorkerJobType[] {
   switch (event.eventType) {
     case 'APPOINTMENT_CREATED':
     case 'APPOINTMENT_CONFIRMED':
-      return ['APPOINTMENT_REMINDER'];
+      return ['APPOINTMENT_CONFIRMATION', 'APPOINTMENT_REMINDER'];
     case 'APPOINTMENT_CANCELLED':
-      return [];
+      return ['APPOINTMENT_CANCELLATION'];
+    case 'APPOINTMENT_COMPLETED':
+      return ['POST_SERVICE_FOLLOW_UP'];
     case 'ORDER_PAID':
       return ['POST_SERVICE_FOLLOW_UP', 'FINANCE_RECALCULATION'];
     case 'PAYMENT_COMPLETED':
@@ -102,7 +105,13 @@ function getJobTypesForEvent(event: OutboxEvent): WorkerJobType[] {
 function getJobPriority(type: WorkerJobType) {
   if (type === 'WHATSAPP_DELIVERY' || type === 'MESSAGING_WEBHOOK_PROCESSING') return 85;
   if (type === 'CAMPAIGN_DISPATCH') return 70;
-  if (type === 'NOTIFICATION_DELIVERY' || type === 'APPOINTMENT_REMINDER') return 80;
+  if (
+    type === 'NOTIFICATION_DELIVERY' ||
+    type === 'APPOINTMENT_CANCELLATION' ||
+    type === 'APPOINTMENT_CONFIRMATION' ||
+    type === 'APPOINTMENT_REMINDER'
+  )
+    return 80;
   if (type === 'STOCK_ALERT') return 60;
   return 50;
 }
@@ -110,6 +119,12 @@ function getJobPriority(type: WorkerJobType) {
 function getJobMaxAttempts(type: WorkerJobType) {
   if (type === 'WHATSAPP_DELIVERY' || type === 'MESSAGING_WEBHOOK_PROCESSING') return 8;
   if (type === 'CAMPAIGN_DISPATCH') return 10;
-  if (type === 'NOTIFICATION_DELIVERY' || type === 'APPOINTMENT_REMINDER') return 8;
+  if (
+    type === 'NOTIFICATION_DELIVERY' ||
+    type === 'APPOINTMENT_CANCELLATION' ||
+    type === 'APPOINTMENT_CONFIRMATION' ||
+    type === 'APPOINTMENT_REMINDER'
+  )
+    return 8;
   return 5;
 }

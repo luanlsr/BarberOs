@@ -12,9 +12,8 @@ import {
   ReceiptText,
   RefreshCcw,
   WalletCards,
-  X,
 } from 'lucide-react';
-import { Button, IconButton, StatusBadge } from '@barberos/ui';
+import { Button, StatusBadge } from '@barberos/ui';
 import type {
   CommissionAccrualModel,
   CommissionActionModel,
@@ -24,6 +23,7 @@ import type {
   PayoutModel,
 } from '../lib/commission-data';
 import { FinanceSectionTabs } from './finance-section-tabs';
+import { FormModal } from './form-modal';
 
 type CommissionModalState =
   | { type: 'rule'; rule?: CommissionRuleModel }
@@ -37,9 +37,14 @@ type CommissionModalState =
 
 type CommissionSectionFilter = 'all' | 'rules' | 'accruals' | 'payouts' | 'diagnostics';
 
-export function CommissionView({ model }: Readonly<{ model: CommissionsViewModel }>) {
+export function CommissionView({
+  initialModal,
+  model,
+}: Readonly<{ initialModal?: 'rule'; model: CommissionsViewModel }>) {
   const [section, setSection] = React.useState<CommissionSectionFilter>('all');
-  const [modal, setModal] = React.useState<CommissionModalState>(null);
+  const [modal, setModal] = React.useState<CommissionModalState>(() =>
+    initialModal === 'rule' ? { type: 'rule' } : null,
+  );
 
   if (model.state === 'permission-denied') return <CommissionBoundaryState model={model} />;
   if (model.state === 'error') return <CommissionBoundaryState model={model} />;
@@ -557,6 +562,7 @@ function CommissionModal({
       <AppModal
         description="Configure a regra sem tirar a lista de produção da tela principal."
         eyebrow={modal.rule ? 'Detalhes da regra' : 'Nova regra'}
+        icon={<BadgePercent size={18} />}
         title={modal.rule?.label ?? 'Nova regra de comissão'}
         onClose={onClose}
       >
@@ -569,6 +575,7 @@ function CommissionModal({
       <AppModal
         description="Selecione profissional e período para fechar um repasse auditável."
         eyebrow="Fechamento"
+        icon={<ClipboardCheck size={18} />}
         title="Fechar repasse"
         onClose={onClose}
       >
@@ -581,6 +588,7 @@ function CommissionModal({
       <AppModal
         description="Pagamento em dinheiro exige caixa aberto da mesma unidade."
         eyebrow="Pagamento"
+        icon={<WalletCards size={18} />}
         title="Pagar repasse"
         onClose={onClose}
       >
@@ -593,6 +601,7 @@ function CommissionModal({
       <AppModal
         description="Repasses pagos não sao sobrescritos; correcao gera movimento auditável."
         eyebrow="Correcao"
+        icon={<ReceiptText size={18} />}
         title="Corrigir repasse pago"
         onClose={onClose}
       >
@@ -605,6 +614,7 @@ function CommissionModal({
       <AppModal
         description="Detalhes da comissão aberta selecionada."
         eyebrow="Comissão"
+        icon={<ReceiptText size={18} />}
         title={modal.accrual.professionalName}
         onClose={onClose}
       >
@@ -617,6 +627,7 @@ function CommissionModal({
       <AppModal
         description="Histórico e status do repasse selecionado."
         eyebrow="Repasse"
+        icon={<WalletCards size={18} />}
         title={modal.payout.professionalName}
         onClose={onClose}
       >
@@ -628,6 +639,7 @@ function CommissionModal({
     <AppModal
       description="Item pago sem regra ativa correspondente."
       eyebrow="Diagnostico"
+      icon={<AlertTriangle size={18} />}
       title={modal.item.itemLabel}
       onClose={onClose}
     >
@@ -636,46 +648,7 @@ function CommissionModal({
   );
 }
 
-function AppModal({
-  children,
-  description,
-  eyebrow,
-  onClose,
-  title,
-}: Readonly<{
-  children: React.ReactNode;
-  description: string;
-  eyebrow: string;
-  onClose: () => void;
-  title: string;
-}>) {
-  const titleId = React.useId();
-  const descriptionId = React.useId();
-  return (
-    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
-      <section
-        aria-describedby={descriptionId}
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="app-dialog"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className="app-dialog-header">
-          <div>
-            <p className="eyebrow">{eyebrow}</p>
-            <h2 id={titleId}>{title}</h2>
-            <p id={descriptionId}>{description}</p>
-          </div>
-          <IconButton label="Fechar" onClick={onClose} type="button">
-            <X size={18} aria-hidden="true" />
-          </IconButton>
-        </header>
-        {children}
-      </section>
-    </div>
-  );
-}
+const AppModal = FormModal;
 
 function RuleForm({
   model,
@@ -684,41 +657,77 @@ function RuleForm({
   return (
     <form className="commissions-form">
       <fieldset disabled={!model.canManage}>
-        <label>
-          Escopo
-          <select defaultValue={rule?.scope ?? 'TENANT_DEFAULT'}>
-            <option value="TENANT_DEFAULT">Padrao</option>
-            <option value="PROFESSIONAL">Profissional</option>
-            <option value="SERVICE">Serviço</option>
-            <option value="PRODUCT">Produto</option>
-            <option value="ORDER_ITEM">Item manual</option>
-          </select>
-        </label>
-        <div className="commissions-form-grid">
+        <section className="form-modal-section" aria-labelledby="commission-rule-scope-title">
+          <div className="form-modal-section-heading">
+            <div>
+              <p className="eyebrow">Aplicação</p>
+              <h3 id="commission-rule-scope-title">Escopo da regra</h3>
+            </div>
+            <BadgePercent size={18} aria-hidden="true" />
+          </div>
           <label>
-            Tipo
-            <select defaultValue="PERCENTAGE">
-              <option value="PERCENTAGE">Percentual</option>
-              <option value="FIXED_AMOUNT">Valor fixo</option>
+            Escopo
+            <select defaultValue={rule?.scope ?? 'TENANT_DEFAULT'}>
+              <option value="TENANT_DEFAULT">Padrao</option>
+              <option value="PROFESSIONAL">Profissional</option>
+              <option value="SERVICE">Serviço</option>
+              <option value="PRODUCT">Produto</option>
+              <option value="ORDER_ITEM">Item manual</option>
             </select>
           </label>
-          <label>
-            Valor
-            <input inputMode="decimal" placeholder="50" defaultValue={rule?.valueLabel} />
-          </label>
-        </div>
-        <div className="commissions-form-grid">
-          <label>
-            Inicio
-            <input type="date" defaultValue={model.periodStart} />
-          </label>
-          <label>
-            Fim
-            <input type="date" />
-          </label>
-        </div>
+          <p className="form-modal-help">
+            Regras mais específicas vencem regras gerais. A ordem aplicada aparece na tela de
+            comissões.
+          </p>
+        </section>
+
+        <section className="form-modal-section" aria-labelledby="commission-rule-value-title">
+          <div className="form-modal-section-heading">
+            <div>
+              <p className="eyebrow">Cálculo</p>
+              <h3 id="commission-rule-value-title">Tipo e valor</h3>
+            </div>
+            <ReceiptText size={18} aria-hidden="true" />
+          </div>
+          <div className="commissions-form-grid">
+            <label>
+              Tipo
+              <select defaultValue="PERCENTAGE">
+                <option value="PERCENTAGE">Percentual</option>
+                <option value="FIXED_AMOUNT">Valor fixo</option>
+              </select>
+            </label>
+            <label>
+              Valor
+              <input inputMode="decimal" placeholder="50" defaultValue={rule?.valueLabel} />
+            </label>
+          </div>
+        </section>
+
+        <section className="form-modal-section" aria-labelledby="commission-rule-period-title">
+          <div className="form-modal-section-heading">
+            <div>
+              <p className="eyebrow">Vigência</p>
+              <h3 id="commission-rule-period-title">Período ativo</h3>
+            </div>
+            <ClipboardCheck size={18} aria-hidden="true" />
+          </div>
+          <div className="commissions-form-grid">
+            <label>
+              Inicio
+              <input type="date" defaultValue={model.periodStart} />
+            </label>
+            <label>
+              Fim
+              <input type="date" />
+            </label>
+          </div>
+        </section>
       </fieldset>
       <div className="app-dialog-actions">
+        <Button variant="secondary" type="button">
+          Cancelar
+        </Button>
         <Button disabled={!model.canManage} type="button">
           <BadgePercent size={16} aria-hidden="true" />
           Salvar regra

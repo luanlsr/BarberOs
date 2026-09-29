@@ -11,5 +11,6 @@ export * from './commissions';
 export * from './inventory';
 export * from './outbox';
 export * from './notifications';
+export * from './campaigns';
 
 export * from './platform-data';

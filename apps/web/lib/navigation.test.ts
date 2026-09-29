@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SessionContext } from '@barberos/contracts';
 import {
   buildReceivePaymentAction,
+  buildSidebarNavigationTree,
   filterNavigation,
   filterPrimaryActions,
   navigationItems,
@@ -223,6 +224,30 @@ describe('filterNavigation', () => {
 
 it('keeps finance details out of the sidebar tree', () => {
   expect(navigationItems.filter((item) => item.parentHref === '/financeiro')).toEqual([]);
+});
+
+it('keeps settings details out of the sidebar tree even when legacy children exist', () => {
+  const tree = buildSidebarNavigationTree([
+    {
+      href: '/configuracoes',
+      label: 'Configurações',
+      icon: 'settings',
+      permission: 'settings.read',
+      group: 'Sistema',
+    },
+    {
+      href: '/configuracoes/equipe',
+      label: 'Equipe',
+      icon: 'team',
+      permission: 'professionals.read',
+      parentHref: '/configuracoes',
+      group: 'Sistema',
+    },
+  ]);
+
+  expect(tree).toHaveLength(1);
+  expect(tree[0]?.href).toBe('/configuracoes');
+  expect(tree[0]?.children).toEqual([]);
 });
 
 describe('filterPrimaryActions', () => {

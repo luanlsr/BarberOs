@@ -34,11 +34,13 @@ import { IconButton } from '@barberos/ui';
 import type { SessionContext } from '@barberos/contracts';
 import { SessionProvider, useSessionContext } from '../lib/session-context';
 import {
+  buildSidebarNavigationTree,
   filterNavigation,
   filterPrimaryActions,
   navigationItems,
   primaryActionItems,
   type NavigationItem,
+  type NavigationTreeItem,
   type PrimaryActionItem,
 } from '../lib/navigation';
 import { useTheme } from './theme-provider';
@@ -46,8 +48,6 @@ import { AuthGate } from './auth-gate';
 import { BrandLogo } from './brand-logo';
 import { LogoutButton } from './logout-button';
 import { WorkspaceSwitcher } from './workspace-switcher';
-
-type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
 
 const icons = {
   activity: Activity,
@@ -137,7 +137,7 @@ function NavLink({
 }
 
 function groupNavigationItems(items: NavigationItem[]) {
-  const treeItems = buildNavigationTree(items);
+  const treeItems = buildSidebarNavigationTree(items);
   const groups: Array<{ label: string; items: NavigationTreeItem[] }> = [];
   for (const item of treeItems) {
     const label = item.group ?? 'Operação';
@@ -146,14 +146,6 @@ function groupNavigationItems(items: NavigationItem[]) {
     else groups.push({ label, items: [item] });
   }
   return groups;
-}
-
-function buildNavigationTree(items: NavigationItem[]): NavigationTreeItem[] {
-  const parents = items.filter((item) => !item.parentHref);
-  return parents.map((item) => ({
-    ...item,
-    children: items.filter((candidate) => candidate.parentHref === item.href),
-  }));
 }
 
 function getActiveHref(pathname: string, items: NavigationItem[]) {
@@ -190,7 +182,7 @@ function MobileOverflowMenu({
         aria-hidden={!open}
         className={`mobile-action-menu mobile-overflow-menu ${open ? 'is-open' : ''}`}
       >
-        {buildNavigationTree(items).map((item) => (
+        {buildSidebarNavigationTree(items).map((item) => (
           <div className="mobile-overflow-cluster" key={item.href}>
             <NavLink activeHref={activeHref} item={item} onNavigate={() => setOpen(false)} />
             {item.children.map((child) => (

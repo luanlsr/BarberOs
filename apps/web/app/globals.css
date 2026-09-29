@@ -5176,6 +5176,14 @@ button.mobile-add-button:disabled {
   box-shadow: 0 24px 80px rgba(20, 19, 17, 0.24);
 }
 
+.form-modal {
+  overflow: hidden;
+}
+
+.form-modal-wide {
+  width: min(100%, 860px);
+}
+
 .app-confirm-dialog {
   width: min(100%, 480px);
 }
@@ -5202,6 +5210,74 @@ button.mobile-add-button:disabled {
 .app-dialog-header p:not(.eyebrow) {
   color: var(--foreground-muted);
   font-size: 13px;
+}
+
+.form-modal-header {
+  align-items: flex-start;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 62%, transparent), transparent),
+    var(--surface);
+}
+
+.form-modal-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.form-modal-title {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.form-modal-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.form-modal-section {
+  display: grid;
+  gap: var(--space-3);
+  padding: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-modal-section:last-child {
+  border-bottom: 0;
+}
+
+.form-modal-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.form-modal-section-heading h3,
+.form-modal-section-heading p {
+  margin: 0;
+}
+
+.form-modal-section-heading h3 {
+  font-size: 1rem;
+}
+
+.form-modal-section-heading svg {
+  color: var(--accent);
+}
+
+.form-modal-help {
+  margin: 0;
+  color: var(--foreground-muted);
+  font-size: 0.84rem;
 }
 
 .app-dialog .inventory-form fieldset {

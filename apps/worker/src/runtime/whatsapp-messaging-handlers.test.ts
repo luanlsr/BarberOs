@@ -1,6 +1,7 @@
 import type {
   NotificationDeliveryAttempt,
   RawMessagingProviderEvent,
+  RecordNotificationDeliveryAttemptCommand,
   WorkerJob,
 } from '@barberos/contracts';
 import { describe, expect, it, vi } from 'vitest';
@@ -76,6 +77,134 @@ describe('WhatsApp worker handlers', () => {
       status: 'DEAD_LETTERED',
       attemptNumber: 8,
       error: { code: 'WORKER_RETRY_EXHAUSTED', retryable: false },
+    });
+  });
+
+  it('does not call the provider again when an idempotent delivery already reached a final state', async () => {
+    const attempts: NotificationDeliveryAttempt[] = [];
+    const provider: WhatsAppProviderAdapter = {
+      provider: 'LOCAL',
+      send: vi.fn(),
+    };
+
+    const result = await handleWhatsAppDelivery(makeDeliveryJob(), {
+      provider,
+      notifications: {
+        async findLatestDeliveryAttempt() {
+          return {
+            id: 'attempt-existing',
+            tenantId: 'tenant-1',
+            branchId: 'branch-1',
+            notificationIntentId: 'notification-1',
+            channel: 'WHATSAPP',
+            status: 'SENT',
+            attemptNumber: 1,
+            provider: 'LOCAL',
+            providerMessageId: 'local-message-existing',
+            createdAt: '2026-09-23T12:04:00.000Z',
+          };
+        },
+        async recordDeliveryAttempt(command) {
+          attempts.push(toAttempt(command, attempts.length + 1));
+        },
+      },
+    });
+
+    expect(result).toEqual({ status: 'succeeded', effect: 'whatsapp_delivered' });
+    expect(provider.send).not.toHaveBeenCalled();
+    expect(attempts).toEqual([]);
+  });
+
+  it('rechecks transactional consent at send time and blocks provider calls when opted out', async () => {
+    const attempts: NotificationDeliveryAttempt[] = [];
+    const provider: WhatsAppProviderAdapter = {
+      provider: 'LOCAL',
+      send: vi.fn(),
+    };
+
+    const result = await handleWhatsAppDelivery(makeDeliveryJob(), {
+      provider,
+      eligibility: {
+        async evaluateTransactionalDelivery(input) {
+          expect(input).toMatchObject({
+            tenantId: 'tenant-1',
+            branchId: 'branch-1',
+            connectionId: 'connection-1',
+            recipientPhoneHash: 'hash-5511999999999',
+            templateKey: 'appointment.reminder.v1',
+          });
+          return { allowed: false, reason: 'WHATSAPP_OPTED_OUT' };
+        },
+      },
+      notifications: notificationPorts(attempts),
+      now: () => new Date('2026-09-23T12:05:00.000Z'),
+    });
+
+    expect(result).toEqual({ status: 'skipped', reason: 'whatsapp_delivery_blocked_by_consent' });
+    expect(provider.send).not.toHaveBeenCalled();
+    expect(attempts).toEqual([
+      expect.objectContaining({
+        notificationIntentId: 'notification-1',
+        channel: 'WHATSAPP',
+        status: 'BLOCKED_BY_CONSENT',
+        provider: 'whatsapp-eligibility',
+        error: expect.objectContaining({ code: 'MESSAGING_CONSENT_BLOCKED', retryable: false }),
+      }),
+    ]);
+  });
+
+  it.each([
+    ['QUEUED', { status: 'succeeded', effect: 'whatsapp_delivery_queued' }],
+    ['SENT', { status: 'succeeded', effect: 'whatsapp_delivered' }],
+    ['DELIVERED', { status: 'succeeded', effect: 'whatsapp_delivered' }],
+    ['READ', { status: 'succeeded', effect: 'whatsapp_delivered' }],
+    ['SKIPPED', { status: 'skipped', reason: 'whatsapp_delivery_skipped' }],
+    ['BLOCKED_BY_CONSENT', { status: 'skipped', reason: 'whatsapp_delivery_blocked_by_consent' }],
+    ['FAILED', { status: 'skipped', reason: 'whatsapp_delivery_failed' }],
+  ] as const)(
+    'records outbound WhatsApp delivery state %s with the matching worker result',
+    async (deliveryState, expectedResult) => {
+      const attempts: NotificationDeliveryAttempt[] = [];
+      const provider: WhatsAppProviderAdapter = {
+        provider: 'LOCAL',
+        send: vi.fn(async () => ({
+          accepted: true as const,
+          provider: 'LOCAL',
+          providerMessageId: 'local-message-' + deliveryState.toLowerCase(),
+          deliveryState,
+          retryable: false as const,
+        })),
+      };
+
+      const result = await handleWhatsAppDelivery(makeDeliveryJob(), {
+        provider,
+        notifications: notificationPorts(attempts),
+        now: () => new Date('2026-09-23T12:05:00.000Z'),
+      });
+
+      expect(result).toEqual(expectedResult);
+      expect(attempts[0]).toMatchObject({
+        notificationIntentId: 'notification-1',
+        channel: 'WHATSAPP',
+        status: deliveryState,
+        provider: 'LOCAL',
+        providerMessageId: 'local-message-' + deliveryState.toLowerCase(),
+      });
+    },
+  );
+
+  it('records permanent provider failure without scheduling a retry', async () => {
+    const attempts: NotificationDeliveryAttempt[] = [];
+    const result = await handleWhatsAppDelivery(makeDeliveryJob(), {
+      provider: failingProvider(false),
+      notifications: notificationPorts(attempts),
+      now: () => new Date('2026-09-23T12:05:00.000Z'),
+    });
+
+    expect(result).toEqual({ status: 'skipped', reason: 'whatsapp_delivery_failed' });
+    expect(attempts[0]).toMatchObject({
+      status: 'FAILED',
+      error: { code: 'NOTIFICATION_DELIVERY_FAILED', retryable: false },
     });
   });
 
@@ -182,13 +311,23 @@ describe('WhatsApp worker handlers', () => {
 
 function notificationPorts(attempts: NotificationDeliveryAttempt[]) {
   return {
-    async recordDeliveryAttempt(command: Omit<NotificationDeliveryAttempt, 'id' | 'createdAt'>) {
-      attempts.push({
-        id: 'attempt-' + (attempts.length + 1),
-        createdAt: '2026-09-23T12:05:00.000Z',
-        ...command,
-      });
+    async recordDeliveryAttempt(command: RecordNotificationDeliveryAttemptCommand) {
+      attempts.push(toAttempt(command, attempts.length + 1));
     },
+  };
+}
+
+function toAttempt(
+  command: RecordNotificationDeliveryAttemptCommand,
+  sequence: number,
+): NotificationDeliveryAttempt {
+  return {
+    id: 'attempt-' + sequence,
+    createdAt: '2026-09-23T12:05:00.000Z',
+    ...command,
+    error: command.error
+      ? { ...command.error, retryable: command.error.retryable ?? false }
+      : undefined,
   };
 }
 

@@ -133,4 +133,19 @@ describe('CommissionView', () => {
     expect(html).not.toContain('R$');
     expect(html).not.toContain('Lucas Pereira');
   });
+
+  test('renders the new rule form in the shared form modal when requested', () => {
+    const html = renderToStaticMarkup(
+      <CommissionView
+        initialModal="rule"
+        model={getDevelopmentCommissionsViewModel(developmentSession)}
+      />,
+    );
+
+    expect(html).toContain('form-modal');
+    expect(html).toContain('Escopo da regra');
+    expect(html).toContain('Tipo e valor');
+    expect(html).toContain('Período ativo');
+    expect(html).toContain('Salvar regra');
+  });
 });

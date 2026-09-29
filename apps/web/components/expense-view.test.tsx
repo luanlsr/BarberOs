@@ -123,4 +123,19 @@ describe('ExpenseView', () => {
     expect(html).toContain('Cancelar');
     expect(html).toContain('disabled=""');
   });
+
+  test('renders the create expense form in the shared form modal when requested', () => {
+    const html = renderToStaticMarkup(
+      <ExpenseView
+        initialModal="create"
+        model={getDevelopmentExpensesViewModel(developmentSession)}
+      />,
+    );
+
+    expect(html).toContain('form-modal');
+    expect(html).toContain('Dados da despesa');
+    expect(html).toContain('Datas e recorrência');
+    expect(html).toContain('Método e comprovante');
+    expect(html).toContain('Cadastrar despesa');
+  });
 });

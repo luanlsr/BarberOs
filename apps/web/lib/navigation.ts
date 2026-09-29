@@ -32,6 +32,8 @@ export type NavigationItem = {
   group?: 'Operação' | 'Gestão' | 'Sistema';
 };
 
+export type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
+
 export type PrimaryActionItem = {
   href: string;
   label: string;
@@ -53,6 +55,8 @@ const tenantOperationRoles = [
   'RECEPTIONIST',
   'PROFESSIONAL',
 ] as const satisfies readonly NavigationRole[];
+
+const sidebarChildlessHrefs = new Set(['/configuracoes']);
 
 export const navigationItems: NavigationItem[] = [
   {
@@ -252,6 +256,16 @@ export function filterPrimaryActions(
   options: NavigationFilterOptions = {},
 ) {
   return items.filter((item) => canAccess(item, permissions, entitlements, options));
+}
+
+export function buildSidebarNavigationTree(items: readonly NavigationItem[]): NavigationTreeItem[] {
+  const parents = items.filter((item) => !item.parentHref);
+  return parents.map((item) => ({
+    ...item,
+    children: sidebarChildlessHrefs.has(item.href)
+      ? []
+      : items.filter((candidate) => candidate.parentHref === item.href),
+  }));
 }
 
 export function buildReceivePaymentAction(

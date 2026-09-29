@@ -40,27 +40,27 @@
 
 - [x] 5.1 Add worker handlers for outbound WhatsApp delivery attempts, using provider adapters and existing retry/dead-letter behavior.
 - [x] 5.2 Add worker handlers for raw inbound webhook processing into conversations, messages, opt-out changes and delivery status events.
-- [ ] 5.3 Extend notification delivery routing to select WhatsApp when the intent, connection and consent state allow it.
-- [ ] 5.4 Extend appointment reminder and follow-up jobs to create WhatsApp-capable transactional intents while keeping local/noop development behavior explicit.
-- [ ] 5.5 Add delivery state transitions for queued, sent, delivered, failed, skipped, blocked-by-consent and retry-exhausted outcomes.
-- [ ] 5.6 Add worker tests for idempotent delivery, provider retry, provider permanent failure, stale appointment cancellation and consent recheck at send time.
+- [x] 5.3 Extend notification delivery routing to select WhatsApp when the intent, connection and consent state allow it.
+- [x] 5.4 Extend appointment reminder and follow-up jobs to create WhatsApp-capable transactional intents while keeping local/noop development behavior explicit.
+- [x] 5.5 Add delivery state transitions for queued, sent, delivered, failed, skipped, blocked-by-consent and retry-exhausted outcomes.
+- [x] 5.6 Add worker tests for idempotent delivery, provider retry, provider permanent failure, stale appointment cancellation and consent recheck at send time.
 
 ## 6. Scheduling integration
 
-- [ ] 6.1 Emit confirmation notification intents when appointments are created or confirmed for eligible customers.
-- [ ] 6.2 Emit reminder notification intents using tenant/branch reminder settings and appointment timezone context.
-- [ ] 6.3 Cancel or no-op pending reminder intents when appointments are cancelled, rescheduled or no longer eligible.
-- [ ] 6.4 Emit post-service follow-up intents when appointments reach completed status and follow-up is configured.
-- [ ] 6.5 Add scheduling integration tests proving messaging failures do not roll back appointment creation, confirmation, cancellation or completion.
+- [x] 6.1 Emit confirmation notification intents when appointments are created or confirmed for eligible customers.
+- [x] 6.2 Emit reminder notification intents using tenant/branch reminder settings and appointment timezone context.
+- [x] 6.3 Cancel or no-op pending reminder intents when appointments are cancelled, rescheduled or no longer eligible.
+- [x] 6.4 Emit post-service follow-up intents when appointments reach completed status and follow-up is configured.
+- [x] 6.5 Add scheduling integration tests proving messaging failures do not roll back appointment creation, confirmation, cancellation or completion.
 
 ## 7. Campaign domain and dispatch
 
-- [ ] 7.1 Create `campaigns` module boundaries in `apps/web` with domain, application, infrastructure and presentation exports.
-- [ ] 7.2 Implement campaign draft, review, approval, scheduling, sending, sent, partially failed and cancelled lifecycle rules.
-- [ ] 7.3 Implement audience criteria, preview counts and exclusion reasons with customer/branch scope and consent filtering.
-- [ ] 7.4 Implement frozen campaign run audience snapshots and per-recipient idempotency records.
-- [ ] 7.5 Add worker campaign dispatch handler that creates delivery work within provider rate limits and records per-recipient outcomes.
-- [ ] 7.6 Implement metrics aggregation for sent, delivered, failed, skipped, blocked-by-consent, opt-outs and replies.
+- [x] 7.1 Create `campaigns` module boundaries in `apps/web` with domain, application, infrastructure and presentation exports.
+- [x] 7.2 Implement campaign draft, review, approval, scheduling, sending, sent, partially failed and cancelled lifecycle rules.
+- [x] 7.3 Implement audience criteria, preview counts and exclusion reasons with customer/branch scope and consent filtering.
+- [x] 7.4 Implement frozen campaign run audience snapshots and per-recipient idempotency records.
+- [x] 7.5 Add worker campaign dispatch handler that creates delivery work within provider rate limits and records per-recipient outcomes.
+- [x] 7.6 Implement metrics aggregation for sent, delivered, failed, skipped, blocked-by-consent, opt-outs and replies.
 - [ ] 7.7 Add unit and integration tests for lifecycle permissions, approval, audience filtering, dispatch idempotency, partial failures and metric updates.
 
 ## 8. APIs and UI surfaces

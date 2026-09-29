@@ -75,7 +75,7 @@ export interface SchedulingOutboxProducer {
       CreateOutboxEventCommand,
       'tenantId' | 'branchId' | 'payload' | 'idempotencyKey' | 'correlationId'
     > & {
-      eventType: 'APPOINTMENT_CONFIRMED' | 'APPOINTMENT_CANCELLED';
+      eventType: 'APPOINTMENT_CONFIRMED' | 'APPOINTMENT_CANCELLED' | 'APPOINTMENT_COMPLETED';
       sourceType: 'APPOINTMENT';
       sourceId: string;
     },

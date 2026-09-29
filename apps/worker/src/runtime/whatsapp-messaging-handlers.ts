@@ -1,5 +1,6 @@
 import type {
   MessageDeliveryState,
+  NotificationDeliveryAttempt,
   NotificationDeliveryAttemptStatus,
   WorkerJobAttemptStatus,
   RawMessagingProviderEvent,
@@ -39,10 +40,32 @@ export type WhatsAppProviderAdapter = {
   send(input: WhatsAppDeliveryPayload): Promise<WhatsAppProviderSendResult>;
 };
 
+export type WhatsAppDeliveryEligibilityDecision = {
+  allowed: boolean;
+  reason?: 'NO_DESTINATION' | 'WHATSAPP_OPTED_OUT' | 'MARKETING_OPTED_OUT' | 'UNKNOWN_CONSENT';
+};
+
+export type WhatsAppDeliveryEligibilityInput = {
+  tenantId: string;
+  branchId?: string;
+  connectionId: string;
+  notificationIntentId?: string;
+  recipientPhoneHash: string;
+  templateKey: string;
+};
+
 export type WhatsAppDeliveryPorts = {
   provider: WhatsAppProviderAdapter;
   notifications?: {
+    findLatestDeliveryAttempt?(
+      notificationIntentId: string,
+    ): Promise<NotificationDeliveryAttempt | null>;
     recordDeliveryAttempt(command: RecordNotificationDeliveryAttemptCommand): Promise<unknown>;
+  };
+  eligibility?: {
+    evaluateTransactionalDelivery(
+      input: WhatsAppDeliveryEligibilityInput,
+    ): Promise<WhatsAppDeliveryEligibilityDecision>;
   };
   now?: () => Date;
 };
@@ -91,18 +114,48 @@ export async function handleWhatsAppDelivery(
   }
 
   const now = ports.now?.() ?? new Date();
+  const previous = payload.notificationIntentId
+    ? await ports.notifications?.findLatestDeliveryAttempt?.(payload.notificationIntentId)
+    : null;
+  if (previous && isFinalDeliveryAttempt(previous.status)) {
+    return workerResultFromDeliveryAttemptStatus(previous.status);
+  }
+
+  const eligibility = await ports.eligibility?.evaluateTransactionalDelivery({
+    tenantId: payload.tenantId,
+    branchId: payload.branchId,
+    connectionId: payload.connectionId,
+    notificationIntentId: payload.notificationIntentId,
+    recipientPhoneHash: payload.recipientPhoneHash,
+    templateKey: payload.templateKey,
+  });
+  if (eligibility && !eligibility.allowed) {
+    const status = deliveryAttemptStatusFromEligibilityDecision(eligibility);
+    await recordNotificationAttemptIfNeeded(job, ports, payload, {
+      status,
+      provider: 'whatsapp-eligibility',
+      error: {
+        code:
+          status === 'BLOCKED_BY_CONSENT'
+            ? 'MESSAGING_CONSENT_BLOCKED'
+            : 'MESSAGING_VALIDATION_ERROR',
+        message: 'WhatsApp delivery blocked by current eligibility state.',
+        retryable: false,
+      },
+    });
+    return workerResultFromDeliveryAttemptStatus(status);
+  }
+
   const result = await ports.provider.send(payload);
   if (result.accepted) {
+    const attemptStatus = notificationAttemptStatusFromDeliveryState(result.deliveryState);
     await recordNotificationAttemptIfNeeded(job, ports, payload, {
-      status: notificationAttemptStatusFromDeliveryState(result.deliveryState),
+      status: attemptStatus,
       provider: result.provider,
       providerMessageId: result.providerMessageId,
       sentAt: now.toISOString(),
     });
-    return {
-      status: 'succeeded',
-      effect: result.deliveryState === 'QUEUED' ? 'whatsapp_delivery_queued' : 'whatsapp_delivered',
-    };
+    return workerResultFromDeliveryAttemptStatus(attemptStatus);
   }
 
   const decision = decideWorkerJobFailure({
@@ -218,6 +271,39 @@ function notificationAttemptStatusFromDeliveryState(
 ): NotificationDeliveryAttemptStatus {
   if (state === 'RECEIVED') return 'QUEUED';
   return state;
+}
+
+function workerResultFromDeliveryAttemptStatus(
+  status: NotificationDeliveryAttemptStatus,
+): WorkerJobHandlerResult {
+  if (status === 'QUEUED') return { status: 'succeeded', effect: 'whatsapp_delivery_queued' };
+  if (status === 'SENT' || status === 'DELIVERED' || status === 'READ') {
+    return { status: 'succeeded', effect: 'whatsapp_delivered' };
+  }
+  if (status === 'SKIPPED') return { status: 'skipped', reason: 'whatsapp_delivery_skipped' };
+  if (status === 'BLOCKED_BY_CONSENT') {
+    return { status: 'skipped', reason: 'whatsapp_delivery_blocked_by_consent' };
+  }
+  return { status: 'skipped', reason: 'whatsapp_delivery_failed' };
+}
+
+function deliveryAttemptStatusFromEligibilityDecision(
+  decision: WhatsAppDeliveryEligibilityDecision,
+): NotificationDeliveryAttemptStatus {
+  if (decision.reason === 'NO_DESTINATION') return 'SKIPPED';
+  return 'BLOCKED_BY_CONSENT';
+}
+
+function isFinalDeliveryAttempt(status: NotificationDeliveryAttemptStatus) {
+  return (
+    status === 'QUEUED' ||
+    status === 'SENT' ||
+    status === 'DELIVERED' ||
+    status === 'READ' ||
+    status === 'SKIPPED' ||
+    status === 'BLOCKED_BY_CONSENT' ||
+    status === 'DEAD_LETTERED'
+  );
 }
 
 function stringMetadata(value: unknown) {

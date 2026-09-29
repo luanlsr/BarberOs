@@ -548,6 +548,65 @@ describe('AppointmentApplicationService', () => {
     ]);
   });
 
+  it('persists appointment lifecycle changes even when async messaging later fails', async () => {
+    const created = await service.create(context, {
+      branchId: 'branch-1',
+      customerId: 'customer-1',
+      professionalId: 'professional-1',
+      startsAt: '2026-09-07T15:00:00.000Z',
+      services: [{ serviceId: 'service-1' }],
+    });
+    await expect(simulateAsyncMessagingFailure(lastOutboxEvent(outbox))).rejects.toThrow(
+      'Messaging provider unavailable',
+    );
+    expect(repository.appointments.get(created.id)?.status).toBe('CONFIRMED');
+
+    repository.appointments.set('appointment-pending', {
+      ...appointment,
+      id: 'appointment-pending',
+      status: 'PENDING',
+    });
+    await service.updateStatus(context, {
+      id: 'appointment-pending',
+      status: 'CONFIRMED',
+      reason: 'Confirmado pelo cliente',
+    });
+    await expect(simulateAsyncMessagingFailure(lastOutboxEvent(outbox))).rejects.toThrow(
+      'Messaging provider unavailable',
+    );
+    expect(repository.appointments.get('appointment-pending')?.status).toBe('CONFIRMED');
+
+    await service.cancel(context, {
+      id: 'appointment-1',
+      reason: 'Cliente cancelou',
+    });
+    await expect(simulateAsyncMessagingFailure(lastOutboxEvent(outbox))).rejects.toThrow(
+      'Messaging provider unavailable',
+    );
+    expect(repository.appointments.get('appointment-1')?.status).toBe('CANCELLED');
+
+    repository.appointments.set('appointment-in-service', {
+      ...appointment,
+      id: 'appointment-in-service',
+      status: 'IN_SERVICE',
+    });
+    await service.updateStatus(context, {
+      id: 'appointment-in-service',
+      status: 'COMPLETED',
+      reason: 'Atendimento finalizado',
+    });
+    await expect(simulateAsyncMessagingFailure(lastOutboxEvent(outbox))).rejects.toThrow(
+      'Messaging provider unavailable',
+    );
+    expect(repository.appointments.get('appointment-in-service')?.status).toBe('COMPLETED');
+    expect(lastOutboxEvent(outbox)).toEqual(
+      expect.objectContaining({
+        eventType: 'APPOINTMENT_COMPLETED',
+        sourceId: 'appointment-in-service',
+      }),
+    );
+  });
+
   it('does not duplicate a reminder event on an idempotent cancellation retry', async () => {
     await service.cancel(context, { id: 'appointment-1', reason: 'Cliente cancelou' });
     await service.cancel(context, { id: 'appointment-1', reason: 'Retry do cancelamento' });
@@ -576,3 +635,13 @@ describe('AppointmentApplicationService', () => {
     ]);
   });
 });
+
+function lastOutboxEvent(outbox: FakeOutbox) {
+  const event = [...outbox.events.values()].at(-1);
+  if (!event) throw new Error('Expected outbox event.');
+  return event;
+}
+
+async function simulateAsyncMessagingFailure(_event: unknown) {
+  throw new Error('Messaging provider unavailable');
+}

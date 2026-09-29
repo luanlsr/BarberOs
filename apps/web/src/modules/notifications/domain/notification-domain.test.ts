@@ -67,6 +67,11 @@ describe('notification domain helpers', () => {
 
   it('guards delivery lifecycle and permanent failure states', () => {
     expect(canTransitionNotificationDeliveryStatus('PENDING', 'SENT')).toBe(true);
+    expect(canTransitionNotificationDeliveryStatus('PENDING', 'QUEUED')).toBe(true);
+    expect(canTransitionNotificationDeliveryStatus('PENDING', 'DELIVERED')).toBe(true);
+    expect(canTransitionNotificationDeliveryStatus('PENDING', 'READ')).toBe(true);
+    expect(canTransitionNotificationDeliveryStatus('PENDING', 'SKIPPED')).toBe(true);
+    expect(canTransitionNotificationDeliveryStatus('PENDING', 'BLOCKED_BY_CONSENT')).toBe(true);
     expect(canTransitionNotificationDeliveryStatus('RETRY_SCHEDULED', 'DEAD_LETTERED')).toBe(true);
     expect(canTransitionNotificationDeliveryStatus('SENT', 'FAILED')).toBe(false);
     expect(() =>

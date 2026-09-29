@@ -14,6 +14,7 @@ import {
   messagingConversationSchema,
   messagingMessageSchema,
   messagingProviderSchema,
+  outboxEventTypeSchema,
   permissionSchema,
   providerStatusEventPayloadSchema,
   rawMessagingProviderEventSchema,
@@ -35,6 +36,9 @@ describe('messaging and campaign contracts', () => {
     expect(permissionSchema.parse('campaigns.send')).toBe('campaigns.send');
     expect(entitlementSchema.parse('messaging')).toBe('messaging');
     expect(entitlementSchema.parse('campaigns')).toBe('campaigns');
+    expect(outboxEventTypeSchema.parse('APPOINTMENT_COMPLETED')).toBe('APPOINTMENT_COMPLETED');
+    expect(workerJobTypeSchema.parse('APPOINTMENT_CANCELLATION')).toBe('APPOINTMENT_CANCELLATION');
+    expect(workerJobTypeSchema.parse('APPOINTMENT_CONFIRMATION')).toBe('APPOINTMENT_CONFIRMATION');
     expect(workerJobTypeSchema.parse('WHATSAPP_DELIVERY')).toBe('WHATSAPP_DELIVERY');
     expect(workerJobTypeSchema.parse('CAMPAIGN_DISPATCH')).toBe('CAMPAIGN_DISPATCH');
     expect(messagingProviderSchema.safeParse('BROWSER_SECRET_PROVIDER').success).toBe(false);

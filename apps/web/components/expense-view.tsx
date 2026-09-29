@@ -12,10 +12,9 @@ import {
   RefreshCcw,
   Repeat,
   WalletCards,
-  X,
   XCircle,
 } from 'lucide-react';
-import { Button, IconButton, StatusBadge } from '@barberos/ui';
+import { Button, StatusBadge } from '@barberos/ui';
 import type { ExpenseStatus } from '@barberos/contracts';
 import type {
   ExpenseActionModel,
@@ -25,6 +24,7 @@ import type {
   ExpensesViewModel,
 } from '../lib/expense-data';
 import { FinanceSectionTabs } from './finance-section-tabs';
+import { FormModal } from './form-modal';
 
 type ExpenseModalState =
   | { type: 'create' }
@@ -340,6 +340,7 @@ function ExpenseModal({
       <AppModal
         description={model.description}
         eyebrow="Lancamento"
+        icon={<Plus size={18} />}
         title="Nova despesa"
         onClose={onClose}
       >
@@ -352,6 +353,7 @@ function ExpenseModal({
       <AppModal
         description="Dados completos do compromisso financeiro selecionado."
         eyebrow="Detalhes"
+        icon={<FileText size={18} />}
         title={modal.expense.description}
         onClose={onClose}
       >
@@ -364,6 +366,7 @@ function ExpenseModal({
       <AppModal
         description="Confirme o método antes de gerar o movimento financeiro auditável."
         eyebrow="Pagamento"
+        icon={<WalletCards size={18} />}
         title={'Pagar ' + modal.expense.description}
         onClose={onClose}
       >
@@ -375,6 +378,7 @@ function ExpenseModal({
     <AppModal
       description="O cancelamento preserva histórico e bloqueia novas alteracoes diretas nesta despesa."
       eyebrow="Confirmacao"
+      icon={<XCircle size={18} />}
       title={'Cancelar ' + modal.expense.description + '?'}
       onClose={onClose}
     >
@@ -383,46 +387,7 @@ function ExpenseModal({
   );
 }
 
-function AppModal({
-  children,
-  description,
-  eyebrow,
-  onClose,
-  title,
-}: Readonly<{
-  children: React.ReactNode;
-  description: string;
-  eyebrow: string;
-  onClose: () => void;
-  title: string;
-}>) {
-  const titleId = React.useId();
-  const descriptionId = React.useId();
-  return (
-    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
-      <section
-        aria-describedby={descriptionId}
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="app-dialog"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className="app-dialog-header">
-          <div>
-            <p className="eyebrow">{eyebrow}</p>
-            <h2 id={titleId}>{title}</h2>
-            <p id={descriptionId}>{description}</p>
-          </div>
-          <IconButton label="Fechar" onClick={onClose} type="button">
-            <X size={18} aria-hidden="true" />
-          </IconButton>
-        </header>
-        {children}
-      </section>
-    </div>
-  );
-}
+const AppModal = FormModal;
 
 function ExpenseFormContent({ model }: Readonly<{ model: ExpensesViewModel }>) {
   const createAction = model.allowedActions.find((action) => action.id === 'expenses.create');
@@ -431,66 +396,100 @@ function ExpenseFormContent({ model }: Readonly<{ model: ExpensesViewModel }>) {
   return (
     <form className="expenses-form">
       <fieldset disabled={formDisabled}>
-        <label>
-          Categoria
-          <select aria-label="Categoria da despesa" defaultValue="">
-            <option value="" disabled>
-              Selecione
-            </option>
-            {model.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Descrição
-          <input maxLength={160} placeholder="Ex.: Energia da unidade" />
-        </label>
-        <label>
-          Fornecedor
-          <input maxLength={120} placeholder="Opcional" />
-        </label>
-        <label>
-          Valor
-          <input inputMode="decimal" placeholder="0,00" />
-        </label>
-        <div className="expenses-form-grid">
+        <section className="form-modal-section" aria-labelledby="expense-basic-title">
+          <div className="form-modal-section-heading">
+            <div>
+              <p className="eyebrow">Identificação</p>
+              <h3 id="expense-basic-title">Dados da despesa</h3>
+            </div>
+            <ReceiptText size={18} aria-hidden="true" />
+          </div>
+          <div className="expenses-form-grid">
+            <label>
+              Categoria
+              <select aria-label="Categoria da despesa" defaultValue="">
+                <option value="" disabled>
+                  Selecione
+                </option>
+                {model.categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Valor
+              <input inputMode="decimal" placeholder="0,00" />
+            </label>
+          </div>
           <label>
-            Competencia
-            <input type="date" defaultValue={model.periodStart} />
+            Descrição
+            <input maxLength={160} placeholder="Ex.: Energia da unidade" />
           </label>
           <label>
-            Vencimento
-            <input type="date" />
+            Fornecedor
+            <input maxLength={120} placeholder="Opcional" />
           </label>
-        </div>
-        <label>
-          Metodo de pagamento
-          <select defaultValue="PIX">
-            <option value="PIX">PIX</option>
-            <option value="CASH">Dinheiro</option>
-            <option value="DEBIT_CARD">Debito</option>
-            <option value="CREDIT_CARD">Credito</option>
-            <option value="OTHER">Outro</option>
-          </select>
-        </label>
-        <label>
-          Recorrencia
-          <select defaultValue="NONE">
-            <option value="NONE">Sem recorrencia</option>
-            <option value="MONTHLY">Mensal</option>
-            <option value="WEEKLY">Semanal</option>
-            <option value="YEARLY">Anual</option>
-          </select>
-        </label>
-        <label>
-          Anexo
-          <input type="file" />
-        </label>
+        </section>
+
+        <section className="form-modal-section" aria-labelledby="expense-dates-title">
+          <div className="form-modal-section-heading">
+            <div>
+              <p className="eyebrow">Agenda financeira</p>
+              <h3 id="expense-dates-title">Datas e recorrência</h3>
+            </div>
+            <CalendarDays size={18} aria-hidden="true" />
+          </div>
+          <div className="expenses-form-grid">
+            <label>
+              Competencia
+              <input type="date" defaultValue={model.periodStart} />
+            </label>
+            <label>
+              Vencimento
+              <input type="date" />
+            </label>
+          </div>
+          <label>
+            Recorrencia
+            <select defaultValue="NONE">
+              <option value="NONE">Sem recorrencia</option>
+              <option value="MONTHLY">Mensal</option>
+              <option value="WEEKLY">Semanal</option>
+              <option value="YEARLY">Anual</option>
+            </select>
+          </label>
+        </section>
+
+        <section className="form-modal-section" aria-labelledby="expense-payment-title">
+          <div className="form-modal-section-heading">
+            <div>
+              <p className="eyebrow">Pagamento</p>
+              <h3 id="expense-payment-title">Método e comprovante</h3>
+            </div>
+            <WalletCards size={18} aria-hidden="true" />
+          </div>
+          <label>
+            Metodo de pagamento
+            <select defaultValue="PIX">
+              <option value="PIX">PIX</option>
+              <option value="CASH">Dinheiro</option>
+              <option value="DEBIT_CARD">Debito</option>
+              <option value="CREDIT_CARD">Credito</option>
+              <option value="OTHER">Outro</option>
+            </select>
+          </label>
+          <label>
+            Anexo
+            <input type="file" />
+          </label>
+        </section>
       </fieldset>
       <div className="app-dialog-actions">
+        <Button variant="secondary" type="button">
+          Cancelar
+        </Button>
         <Button disabled={formDisabled} type="button">
           <Plus size={16} aria-hidden="true" />
           Cadastrar despesa

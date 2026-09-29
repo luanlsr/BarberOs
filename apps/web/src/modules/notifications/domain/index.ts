@@ -97,6 +97,8 @@ const deliveryTransitionTargets: Record<
   PENDING: [
     'QUEUED',
     'SENT',
+    'DELIVERED',
+    'READ',
     'SKIPPED',
     'BLOCKED_BY_CONSENT',
     'RETRY_SCHEDULED',

@@ -9,7 +9,7 @@ import {
 } from './outbox-dispatcher';
 
 describe('OutboxDispatcher', () => {
-  it('dispatches one appointment event into one reminder job without duplicates', async () => {
+  it('dispatches appointment events into confirmation and reminder jobs without duplicates', async () => {
     const event = makeEvent({ eventType: 'APPOINTMENT_CONFIRMED', sourceType: 'APPOINTMENT' });
     const store = new InMemoryOutboxDispatchStore();
     const dispatcher = new OutboxDispatcher(store);
@@ -17,14 +17,21 @@ describe('OutboxDispatcher', () => {
     const first = await dispatcher.dispatch(event, new Date('2026-09-19T12:00:00.000Z'));
     const second = await dispatcher.dispatch(event, new Date('2026-09-19T12:05:00.000Z'));
 
-    expect(first.jobs).toHaveLength(1);
-    expect(first.jobs[0]).toMatchObject({
-      type: 'APPOINTMENT_REMINDER',
-      outboxEventId: event.id,
-      idempotencyKey: createOutboxJobIdempotencyKey(event, 'APPOINTMENT_REMINDER'),
-    });
+    expect(first.jobs).toHaveLength(2);
+    expect(first.jobs).toEqual([
+      expect.objectContaining({
+        type: 'APPOINTMENT_CONFIRMATION',
+        outboxEventId: event.id,
+        idempotencyKey: createOutboxJobIdempotencyKey(event, 'APPOINTMENT_CONFIRMATION'),
+      }),
+      expect.objectContaining({
+        type: 'APPOINTMENT_REMINDER',
+        outboxEventId: event.id,
+        idempotencyKey: createOutboxJobIdempotencyKey(event, 'APPOINTMENT_REMINDER'),
+      }),
+    ]);
     expect(second.jobs).toEqual(first.jobs);
-    expect(store.createdCommands).toHaveLength(1);
+    expect(store.createdCommands).toHaveLength(2);
     expect(store.dispatchedEvents).toEqual([event.id, event.id]);
   });
 
@@ -43,6 +50,36 @@ describe('OutboxDispatcher', () => {
     expect(second.jobs.map((job) => job.id)).toEqual(first.jobs.map((job) => job.id));
     expect(store.createdCommands).toHaveLength(2);
     expect(new Set(store.createdCommands.map((command) => command.idempotencyKey)).size).toBe(2);
+  });
+
+  it('dispatches appointment cancellation events into cancellation notification jobs', () => {
+    const event = makeEvent({ eventType: 'APPOINTMENT_CANCELLED', sourceType: 'APPOINTMENT' });
+
+    expect(createWorkerJobsForOutboxEvent(event, '2026-09-19T12:00:00.000Z')).toEqual([
+      expect.objectContaining({
+        type: 'APPOINTMENT_CANCELLATION',
+        priority: 80,
+        maxAttempts: 8,
+        sourceType: 'APPOINTMENT',
+        sourceId: event.sourceId,
+        idempotencyKey: createOutboxJobIdempotencyKey(event, 'APPOINTMENT_CANCELLATION'),
+      }),
+    ]);
+  });
+
+  it('dispatches appointment completion events into post-service follow-up jobs', () => {
+    const event = makeEvent({ eventType: 'APPOINTMENT_COMPLETED', sourceType: 'APPOINTMENT' });
+
+    expect(createWorkerJobsForOutboxEvent(event, '2026-09-19T12:00:00.000Z')).toEqual([
+      expect.objectContaining({
+        type: 'POST_SERVICE_FOLLOW_UP',
+        priority: 50,
+        maxAttempts: 5,
+        sourceType: 'APPOINTMENT',
+        sourceId: event.sourceId,
+        idempotencyKey: createOutboxJobIdempotencyKey(event, 'POST_SERVICE_FOLLOW_UP'),
+      }),
+    ]);
   });
 
   it('uses minimal payloads and links notification delivery jobs to notification intents', () => {
@@ -77,6 +114,10 @@ describe('OutboxDispatcher', () => {
     const campaign = makeEvent({
       eventType: 'CAMPAIGN_DISPATCH_REQUESTED',
       sourceType: 'CAMPAIGN_RUN',
+      payload: {
+        campaignId: 'campaign-1',
+        campaignRunId: 'campaign-run-1',
+      },
     });
 
     expect(createWorkerJobsForOutboxEvent(delivery, '2026-09-19T12:00:00.000Z')).toEqual([
@@ -90,7 +131,16 @@ describe('OutboxDispatcher', () => {
       }),
     ]);
     expect(createWorkerJobsForOutboxEvent(campaign, '2026-09-19T12:00:00.000Z')).toEqual([
-      expect.objectContaining({ type: 'CAMPAIGN_DISPATCH', priority: 70, maxAttempts: 10 }),
+      expect.objectContaining({
+        type: 'CAMPAIGN_DISPATCH',
+        priority: 70,
+        maxAttempts: 10,
+        payload: expect.objectContaining({
+          campaignId: 'campaign-1',
+          campaignRunId: 'campaign-run-1',
+          eventType: 'CAMPAIGN_DISPATCH_REQUESTED',
+        }),
+      }),
     ]);
   });
 });
@@ -140,6 +190,7 @@ class InMemoryOutboxDispatchStore implements OutboxDispatchStore {
 function makeEvent(input: {
   eventType: OutboxEvent['eventType'];
   sourceType: OutboxEvent['sourceType'];
+  payload?: Record<string, unknown>;
 }): OutboxEvent {
   return {
     id: `event-${input.eventType.toLowerCase()}`,
@@ -148,7 +199,7 @@ function makeEvent(input: {
     eventType: input.eventType,
     sourceType: input.sourceType,
     sourceId: `source-${input.eventType.toLowerCase()}`,
-    payload: {},
+    payload: input.payload ?? {},
     idempotencyKey: `event:${input.eventType.toLowerCase()}`,
     status: 'PENDING',
     correlationId: `correlation-${input.eventType.toLowerCase()}`,

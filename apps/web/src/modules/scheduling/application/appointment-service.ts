@@ -98,7 +98,7 @@ export class AppointmentApplicationService {
         services: serviceSnapshots,
       }),
     );
-    await this.enqueueReminderEvent(context, created);
+    await this.enqueueAppointmentMessagingEvent(context, created);
     return created;
   }
 
@@ -126,7 +126,7 @@ export class AppointmentApplicationService {
         endsAt,
       }),
     );
-    await this.enqueueReminderEvent(context, updated);
+    await this.enqueueAppointmentMessagingEvent(context, updated);
     return updated;
   }
 
@@ -137,7 +137,7 @@ export class AppointmentApplicationService {
     const current = await this.getAuthorizedAppointment(context, parsed.id, permission);
 
     if (current.status === parsed.status) {
-      await this.enqueueReminderEvent(context, current);
+      await this.enqueueAppointmentMessagingEvent(context, current);
       return current;
     }
 
@@ -147,7 +147,7 @@ export class AppointmentApplicationService {
       previousStatus: current.status,
       actorId: context.userId,
     });
-    await this.enqueueReminderEvent(context, updated, parsed.reason);
+    await this.enqueueAppointmentMessagingEvent(context, updated, parsed.reason);
     return updated;
   }
 
@@ -156,7 +156,7 @@ export class AppointmentApplicationService {
     const current = await this.getAuthorizedAppointment(context, parsed.id, 'appointments.cancel');
 
     if (current.status === 'CANCELLED') {
-      await this.enqueueReminderEvent(context, current, parsed.reason);
+      await this.enqueueAppointmentMessagingEvent(context, current, parsed.reason);
       return current;
     }
 
@@ -167,21 +167,28 @@ export class AppointmentApplicationService {
       previousStatus: current.status,
       actorId: context.userId,
     });
-    await this.enqueueReminderEvent(context, cancelled, parsed.reason);
+    await this.enqueueAppointmentMessagingEvent(context, cancelled, parsed.reason);
     return cancelled;
   }
 
-  private async enqueueReminderEvent(
+  private async enqueueAppointmentMessagingEvent(
     context: RequestContext,
     appointment: Appointment,
     reason?: string,
   ) {
-    if (!this.outbox || !['CONFIRMED', 'CANCELLED'].includes(appointment.status)) return;
-    const cancelled = appointment.status === 'CANCELLED';
+    if (!this.outbox || !['CONFIRMED', 'CANCELLED', 'COMPLETED'].includes(appointment.status)) {
+      return;
+    }
+    const eventTypeByStatus = {
+      CONFIRMED: 'APPOINTMENT_CONFIRMED',
+      CANCELLED: 'APPOINTMENT_CANCELLED',
+      COMPLETED: 'APPOINTMENT_COMPLETED',
+    } as const;
+    const eventType = eventTypeByStatus[appointment.status as keyof typeof eventTypeByStatus];
     await this.outbox.createEvent(context, {
       tenantId: appointment.tenantId,
       branchId: appointment.branchId,
-      eventType: cancelled ? 'APPOINTMENT_CANCELLED' : 'APPOINTMENT_CONFIRMED',
+      eventType,
       sourceType: 'APPOINTMENT',
       sourceId: appointment.id,
       payload: {
@@ -194,7 +201,12 @@ export class AppointmentApplicationService {
         reason,
       },
       idempotencyKey:
-        'appointment:' + appointment.id + ':' + (cancelled ? 'cancelled' : appointment.startsAt),
+        'appointment:' +
+        appointment.id +
+        ':' +
+        eventType.toLowerCase() +
+        ':' +
+        appointment.startsAt,
       correlationId: context.requestId,
     });
   }

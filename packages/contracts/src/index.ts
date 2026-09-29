@@ -383,6 +383,7 @@ export const outboxEventTypeSchema = z.enum([
   'APPOINTMENT_CREATED',
   'APPOINTMENT_CONFIRMED',
   'APPOINTMENT_CANCELLED',
+  'APPOINTMENT_COMPLETED',
   'ORDER_OPENED',
   'ORDER_PAID',
   'PAYMENT_COMPLETED',
@@ -419,6 +420,8 @@ export type OutboxSourceType = z.infer<typeof outboxSourceTypeSchema>;
 
 export const workerJobTypeSchema = z.enum([
   'OUTBOX_DISPATCH',
+  'APPOINTMENT_CANCELLATION',
+  'APPOINTMENT_CONFIRMATION',
   'APPOINTMENT_REMINDER',
   'POST_SERVICE_FOLLOW_UP',
   'FINANCE_RECALCULATION',
