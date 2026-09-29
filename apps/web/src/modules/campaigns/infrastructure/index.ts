@@ -1,1 +1,1 @@
-export {};
+export * from './supabase-campaign-repository';

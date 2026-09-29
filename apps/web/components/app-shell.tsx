@@ -13,6 +13,8 @@ import {
   CreditCard,
   LayoutDashboard,
   Link2,
+  Megaphone,
+  MessageSquare,
   MoreHorizontal,
   Package,
   Palette,
@@ -21,6 +23,7 @@ import {
   Plus,
   ReceiptText,
   Scissors,
+  Send,
   Settings,
   ShieldCheck,
   SunMoon,
@@ -35,6 +38,7 @@ import type { SessionContext } from '@barberos/contracts';
 import { SessionProvider, useSessionContext } from '../lib/session-context';
 import {
   buildSidebarNavigationTree,
+  buildMobileNavigationItems,
   filterNavigation,
   filterPrimaryActions,
   navigationItems,
@@ -63,8 +67,11 @@ const icons = {
   building: Building2,
   'credit-card': CreditCard,
   link: Link2,
+  megaphone: Megaphone,
+  message: MessageSquare,
   more: MoreHorizontal,
   palette: Palette,
+  send: Send,
   shield: ShieldCheck,
   settings: Settings,
 };
@@ -176,7 +183,7 @@ function MobileOverflowMenu({
         onClick={() => setOpen((current) => !current)}
       >
         <MoreHorizontal size={20} aria-hidden="true" />
-        <span>Configurações</span>
+        <span>Mais</span>
       </button>
       <div
         aria-hidden={!open}
@@ -336,18 +343,8 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   );
   const activeHref = getActiveHref(pathname, visibleItems);
   const navigationGroups = groupNavigationItems(visibleItems);
-  const preferredMobileHrefs = ['/inicio', '/agenda', '/comandas', '/clientes'];
-  const mobileCandidates = visibleItems.filter((item) => item.mobile);
-  const preferredMobileItems = preferredMobileHrefs
-    .map((href) => mobileCandidates.find((item) => item.href === href))
-    .filter((item): item is NavigationItem => Boolean(item));
-  const fallbackMobileItems = mobileCandidates.filter(
-    (item) => !preferredMobileItems.some((preferredItem) => preferredItem.href === item.href),
-  );
-  const mobileNavItems = [...preferredMobileItems, ...fallbackMobileItems].slice(0, 3);
-  const mobileOverflowItems = visibleItems.filter(
-    (item) => !mobileNavItems.some((mobileItem) => mobileItem.href === item.href),
-  );
+  const { primaryItems: mobileNavItems, overflowItems: mobileOverflowItems } =
+    buildMobileNavigationItems(visibleItems);
   const leadingMobileItems = mobileNavItems.slice(0, 2);
   const trailingMobileItems = mobileNavItems.slice(2, 3);
 

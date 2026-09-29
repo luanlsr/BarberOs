@@ -61,13 +61,13 @@
 - [x] 7.4 Implement frozen campaign run audience snapshots and per-recipient idempotency records.
 - [x] 7.5 Add worker campaign dispatch handler that creates delivery work within provider rate limits and records per-recipient outcomes.
 - [x] 7.6 Implement metrics aggregation for sent, delivered, failed, skipped, blocked-by-consent, opt-outs and replies.
-- [ ] 7.7 Add unit and integration tests for lifecycle permissions, approval, audience filtering, dispatch idempotency, partial failures and metric updates.
+- [x] 7.7 Add unit and integration tests for lifecycle permissions, approval, audience filtering, dispatch idempotency, partial failures and metric updates.
 
 ## 8. APIs and UI surfaces
 
-- [ ] 8.1 Add server APIs for messaging connections, delivery health, conversations, campaign drafts, previews, approvals, scheduling, cancellation and metrics.
-- [ ] 8.2 Add permission-aware shell entries and route guards for messaging, delivery status and campaigns without crowding mobile core operations.
-- [ ] 8.3 Build messaging setup/status screens with loading, empty, error, permission denied, offline and inactive-provider states.
+- [x] 8.1 Add server APIs for messaging connections, delivery health, conversations, campaign drafts, previews, approvals, scheduling, cancellation and metrics.
+- [x] 8.2 Add permission-aware shell entries and route guards for messaging, delivery status and campaigns without crowding mobile core operations.
+- [x] 8.3 Build messaging setup/status screens with loading, empty, error, permission denied, offline and inactive-provider states.
 - [ ] 8.4 Build campaign list, editor, audience preview, approval, schedule/send confirmation and result screens for mobile, tablet and desktop.
 - [ ] 8.5 Build conversation/message status surfaces with sanitized content and branch-scoped visibility.
 - [ ] 8.6 Add component and route tests for permission denied, offline send prevention, partial failure presentation and responsive navigation.

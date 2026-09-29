@@ -6010,7 +6010,8 @@ button.mobile-add-button:disabled {
 
 /* Inventory and product management */
 .products-page,
-.inventory-page {
+.inventory-page,
+.messaging-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -6020,7 +6021,8 @@ button.mobile-add-button:disabled {
 }
 
 .products-heading,
-.inventory-heading {
+.inventory-heading,
+.messaging-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -6086,15 +6088,25 @@ button.mobile-add-button:disabled {
   align-items: start;
 }
 
+.messaging-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
 .inventory-primary,
-.inventory-side {
+.inventory-side,
+.messaging-primary,
+.messaging-side {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
 }
 
-.inventory-panel {
+.inventory-panel,
+.messaging-panel {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -6102,6 +6114,146 @@ button.mobile-add-button:disabled {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.messaging-connection-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.messaging-connection-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.messaging-connection-head > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.messaging-connection-head strong,
+.messaging-connection-head span {
+  overflow-wrap: anywhere;
+}
+
+.messaging-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.messaging-detail-grid > div {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  background: var(--color-surface);
+}
+
+.messaging-detail-grid dt,
+.messaging-detail-grid dd {
+  margin: 0;
+}
+
+.messaging-detail-grid dt,
+.messaging-muted,
+.messaging-empty-panel p,
+.messaging-note-list span {
+  color: var(--color-muted-foreground);
+}
+
+.messaging-detail-grid dd {
+  margin-top: 4px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.messaging-empty-panel {
+  min-height: 240px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.messaging-empty-panel.compact {
+  min-height: 180px;
+}
+
+.messaging-empty-panel h2 {
+  margin: 0;
+  color: var(--color-foreground);
+}
+
+.messaging-note-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.messaging-note-list li {
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.messaging-metric-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.messaging-metric {
+  min-height: 76px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.messaging-metric span {
+  color: var(--color-muted-foreground);
+}
+
+.messaging-metric strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.messaging-loading-state {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.messaging-loading-state .skeleton {
+  min-height: 160px;
+  border-radius: var(--radius-lg);
 }
 
 .inventory-panel-heading {
@@ -6372,18 +6524,21 @@ button.mobile-add-button:disabled {
 }
 
 @media (max-width: 1023px) {
-  .inventory-workspace {
+  .inventory-workspace,
+  .messaging-workspace {
     grid-template-columns: 1fr;
   }
 
-  .inventory-side {
+  .inventory-side,
+  .messaging-side {
     order: -1;
   }
 }
 
 @media (max-width: 640px) {
   .products-heading,
-  .inventory-heading {
+  .inventory-heading,
+  .messaging-heading {
     flex-direction: column;
   }
 
@@ -6395,7 +6550,10 @@ button.mobile-add-button:disabled {
 
   .inventory-summary-grid,
   .inventory-form-grid,
-  .inventory-detail-list {
+  .inventory-detail-list,
+  .messaging-detail-grid,
+  .messaging-metric-list,
+  .messaging-loading-state {
     grid-template-columns: 1fr;
   }
 

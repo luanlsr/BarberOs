@@ -477,6 +477,112 @@ describe('CampaignApplicationService', () => {
     expect(runs.lastRollup).toEqual(rollup);
   });
 
+  it('updates campaign metric rollups idempotently from the latest recipient outcomes', async () => {
+    const runs = new FakeCampaignRunRepository();
+    runs.run = campaignRunSchema.parse({
+      id: 'campaign-run-metrics',
+      tenantId: 'tenant-1',
+      branchId: 'branch-1',
+      campaignId: 'campaign-1',
+      status: 'SENDING',
+      audienceSize: 3,
+      eligibleCount: 3,
+      excludedCount: 0,
+      idempotencyKey: 'campaign-run-metrics-key',
+      createdAt: '2026-09-29T10:00:00.000Z',
+      updatedAt: '2026-09-29T10:00:00.000Z',
+    });
+    runs.outcomes = [
+      recipientOutcome('recipient-queued', 'QUEUED'),
+      recipientOutcome('recipient-sent', 'SENT'),
+      recipientOutcome('recipient-failed', 'FAILED'),
+    ];
+    const service = new CampaignApplicationService(
+      new FakeCampaignRepository(),
+      new FakeCampaignAudienceRepository(),
+      runs,
+      { now: () => new Date('2026-09-29T11:00:00.000Z') },
+    );
+
+    await service.aggregateRunMetrics(context, { campaignRunId: 'campaign-run-metrics' });
+    expect(runs.lastRollup).toEqual(
+      expect.objectContaining({
+        sentCount: 1,
+        deliveredCount: 0,
+        failedCount: 1,
+      }),
+    );
+
+    runs.outcomes = [
+      recipientOutcome('recipient-delivered-1', 'DELIVERED'),
+      recipientOutcome('recipient-delivered-2', 'DELIVERED'),
+      recipientOutcome('recipient-skipped', 'SKIPPED'),
+    ];
+    runs.engagement = { optOutCount: 1, replyCount: 2 };
+
+    await service.aggregateRunMetrics(context, { campaignRunId: 'campaign-run-metrics' });
+
+    expect(runs.lastRollup).toEqual(
+      expect.objectContaining({
+        sentCount: 2,
+        deliveredCount: 2,
+        failedCount: 0,
+        skippedCount: 1,
+        optOutCount: 1,
+        replyCount: 2,
+      }),
+    );
+  });
+
+  it('enforces lifecycle permissions before approval, scheduling and metric reads', async () => {
+    const repository = new FakeCampaignRepository();
+    const runs = new FakeCampaignRunRepository();
+    runs.run = campaignRunSchema.parse({
+      id: 'campaign-run-metrics',
+      tenantId: 'tenant-1',
+      branchId: 'branch-1',
+      campaignId: 'campaign-1',
+      status: 'SENDING',
+      audienceSize: 1,
+      eligibleCount: 1,
+      excludedCount: 0,
+      idempotencyKey: 'campaign-run-metrics-key',
+      createdAt: '2026-09-29T10:00:00.000Z',
+      updatedAt: '2026-09-29T10:00:00.000Z',
+    });
+    const service = new CampaignApplicationService(
+      repository,
+      new FakeCampaignAudienceRepository(),
+      runs,
+    );
+    const creatorOnlyContext: RequestContext = {
+      ...context,
+      permissions: ['campaigns.read', 'campaigns.create'],
+    };
+    const approverOnlyContext: RequestContext = {
+      ...context,
+      permissions: ['campaigns.read', 'campaigns.approve'],
+    };
+    const sendOnlyContext: RequestContext = {
+      ...context,
+      permissions: ['campaigns.send'],
+    };
+
+    await expect(
+      service.approve(creatorOnlyContext, { campaignId: 'campaign-1' }),
+    ).rejects.toThrow();
+    await expect(
+      service.schedule(approverOnlyContext, {
+        campaignId: 'campaign-1',
+        scheduledFor: '2026-09-29T13:00:00.000Z',
+        idempotencyKey: 'campaign-1:schedule',
+      }),
+    ).rejects.toThrow();
+    await expect(
+      service.aggregateRunMetrics(sendOnlyContext, { campaignRunId: 'campaign-run-metrics' }),
+    ).rejects.toThrow();
+  });
+
   it('moves campaigns through review, approval, scheduling, sending and completion states', async () => {
     const repository = new FakeCampaignRepository();
     const service = new CampaignApplicationService(repository, {
@@ -513,6 +619,30 @@ describe('CampaignApplicationService', () => {
     ).resolves.toEqual(expect.objectContaining({ status: 'SENT' }));
     expect(repository.lastLifecycle).toEqual(
       expect.objectContaining({ id: 'campaign-1', status: 'SENT', updatedBy: 'user-1' }),
+    );
+  });
+
+  it('allows sending campaigns to finish as partially failed without losing approval metadata', async () => {
+    const repository = new FakeCampaignRepository();
+    const service = new CampaignApplicationService(repository, {
+      now: () => new Date('2026-09-28T13:00:00.000Z'),
+    });
+
+    await service.submitForReview(context, { campaignId: 'campaign-1' });
+    await service.approve(context, { campaignId: 'campaign-1' });
+    await service.markSending(context, { campaignId: 'campaign-1' });
+
+    const campaign = await service.completeDispatch(context, {
+      campaignId: 'campaign-1',
+      status: 'PARTIALLY_FAILED',
+    });
+
+    expect(campaign).toEqual(
+      expect.objectContaining({
+        status: 'PARTIALLY_FAILED',
+        approvedBy: 'user-1',
+        approvedAt: '2026-09-28T13:00:00.000Z',
+      }),
     );
   });
 

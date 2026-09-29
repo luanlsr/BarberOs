@@ -19,8 +19,11 @@ export type NavigationItem = {
     | 'building'
     | 'credit-card'
     | 'link'
+    | 'megaphone'
+    | 'message'
     | 'more'
     | 'palette'
+    | 'send'
     | 'shield'
     | 'settings';
   permission: Permission;
@@ -29,7 +32,7 @@ export type NavigationItem = {
   roles?: readonly NavigationRole[];
   mobile?: boolean;
   parentHref?: string;
-  group?: 'Operação' | 'Gestão' | 'Sistema';
+  group?: 'Operação' | 'Gestão' | 'Crescimento' | 'Sistema';
 };
 
 export type NavigationTreeItem = NavigationItem & { children: NavigationItem[] };
@@ -42,6 +45,11 @@ export type PrimaryActionItem = {
   entitlement?: Entitlement;
   entitlements?: readonly Entitlement[];
   roles?: readonly NavigationRole[];
+};
+
+export type MobileNavigationModel = {
+  primaryItems: NavigationItem[];
+  overflowItems: NavigationItem[];
 };
 
 type NavigationFilterOptions = {
@@ -57,6 +65,8 @@ const tenantOperationRoles = [
 ] as const satisfies readonly NavigationRole[];
 
 const sidebarChildlessHrefs = new Set(['/configuracoes']);
+
+export const preferredMobileHrefs = ['/inicio', '/agenda', '/comandas', '/clientes'] as const;
 
 export const navigationItems: NavigationItem[] = [
   {
@@ -167,6 +177,33 @@ export const navigationItems: NavigationItem[] = [
     group: 'Operação',
   },
   {
+    href: '/mensagens',
+    label: 'Mensagens',
+    icon: 'message',
+    permission: 'messaging.read',
+    entitlement: 'messaging',
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    group: 'Crescimento',
+  },
+  {
+    href: '/campanhas',
+    label: 'Campanhas',
+    icon: 'megaphone',
+    permission: 'campaigns.read',
+    entitlement: 'campaigns',
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    group: 'Crescimento',
+  },
+  {
+    href: '/entregas',
+    label: 'Entregas',
+    icon: 'send',
+    permission: 'notifications.status.read',
+    entitlement: 'notifications',
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    group: 'Crescimento',
+  },
+  {
     href: '/master',
     label: 'Master Admin',
     icon: 'layout',
@@ -266,6 +303,25 @@ export function buildSidebarNavigationTree(items: readonly NavigationItem[]): Na
       ? []
       : items.filter((candidate) => candidate.parentHref === item.href),
   }));
+}
+
+export function buildMobileNavigationItems(
+  items: readonly NavigationItem[],
+  preferredHrefs: readonly string[] = preferredMobileHrefs,
+): MobileNavigationModel {
+  const mobileCandidates = items.filter((item) => item.mobile);
+  const preferredItems = preferredHrefs
+    .map((href) => mobileCandidates.find((item) => item.href === href))
+    .filter((item): item is NavigationItem => Boolean(item));
+  const fallbackItems = mobileCandidates.filter(
+    (item) => !preferredItems.some((preferredItem) => preferredItem.href === item.href),
+  );
+  const primaryItems = [...preferredItems, ...fallbackItems].slice(0, 3);
+  const overflowItems = items.filter(
+    (item) => !primaryItems.some((primaryItem) => primaryItem.href === item.href),
+  );
+
+  return { primaryItems, overflowItems };
 }
 
 export function buildReceivePaymentAction(

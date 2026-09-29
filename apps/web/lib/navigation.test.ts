@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionContext } from '@barberos/contracts';
 import {
+  buildMobileNavigationItems,
   buildReceivePaymentAction,
   buildSidebarNavigationTree,
   filterNavigation,
@@ -124,6 +125,20 @@ describe('filterNavigation', () => {
     expect(owner).toEqual([]);
   });
 
+  it('exposes messaging, campaigns and delivery status only with their entitlements', () => {
+    const permissions = ['messaging.read', 'campaigns.read', 'notifications.status.read'] as const;
+
+    expect(navFor('OWNER', permissions, [])).toEqual([]);
+    expect(navFor('OWNER', permissions, ['messaging', 'campaigns', 'notifications'])).toEqual([
+      '/mensagens',
+      '/campanhas',
+      '/entregas',
+    ]);
+    expect(
+      navFor('PROFESSIONAL', permissions, ['messaging', 'campaigns', 'notifications']),
+    ).toEqual([]);
+  });
+
   it('models the four demo access profiles in role-aware navigation', () => {
     expect(
       navFor(
@@ -218,6 +233,39 @@ describe('filterNavigation', () => {
       '/equipe',
       '/servicos',
       '/minha-carteira',
+    ]);
+  });
+});
+
+describe('buildMobileNavigationItems', () => {
+  it('keeps growth and delivery entries in overflow instead of crowding primary mobile navigation', () => {
+    const visible = filterNavigation(
+      navigationItems,
+      [
+        'dashboard.read',
+        'appointments.read',
+        'orders.read',
+        'customers.read',
+        'messaging.read',
+        'campaigns.read',
+        'notifications.status.read',
+      ],
+      ['core.operations', 'messaging', 'campaigns', 'notifications'],
+      { role: 'OWNER' },
+    );
+
+    const model = buildMobileNavigationItems(visible);
+
+    expect(model.primaryItems.map((item) => item.href)).toEqual([
+      '/inicio',
+      '/agenda',
+      '/comandas',
+    ]);
+    expect(model.overflowItems.map((item) => item.href)).toEqual([
+      '/clientes',
+      '/mensagens',
+      '/campanhas',
+      '/entregas',
     ]);
   });
 });

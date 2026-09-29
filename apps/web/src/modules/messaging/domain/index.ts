@@ -18,6 +18,21 @@ export type MessagingConnectionFilters = {
   provider?: MessagingConnection['provider'];
 };
 
+export type MessagingConversationFilters = {
+  branchId?: string;
+  status?: MessagingConversation['status'];
+  customerId?: string;
+  connectionId?: string;
+  limit?: number;
+  cursor?: string;
+};
+
+export type MessagingMessageFilters = {
+  conversationId: string;
+  limit?: number;
+  cursor?: string;
+};
+
 export type ConversationLookup = {
   tenantId: string;
   branchId?: string;
@@ -73,6 +88,14 @@ export interface MessagingRepository {
     context: RequestContext,
     filters?: MessagingConnectionFilters,
   ): Promise<MessagingConnection[]>;
+  listConversations(
+    context: RequestContext,
+    filters?: MessagingConversationFilters,
+  ): Promise<MessagingConversation[]>;
+  listMessages(
+    context: RequestContext,
+    filters: MessagingMessageFilters,
+  ): Promise<MessagingMessage[]>;
   findActiveConnectionForBranch(
     context: RequestContext,
     branchId?: string,

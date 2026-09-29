@@ -13,6 +13,8 @@ import { MessagingApplicationService } from './messaging-service';
 import type {
   ConversationLookup,
   MessagingConnectionFilters,
+  MessagingConversationFilters,
+  MessagingMessageFilters,
   MessagingRepository,
   RecordConsentCommand,
   RecordConversationCommand,
@@ -236,6 +238,20 @@ class MemoryMessagingRepository implements MessagingRepository {
   async findActiveConnectionForBranch(context: RequestContext, branchId?: string) {
     const connections = await this.listConnections(context, { status: 'ACTIVE' });
     return connections.find((candidate) => candidate.branchId === branchId) ?? null;
+  }
+
+  async listConversations(_context: RequestContext, filters: MessagingConversationFilters = {}) {
+    return this.conversations.filter(
+      (conversation) =>
+        (!filters.branchId || conversation.branchId === filters.branchId) &&
+        (!filters.status || conversation.status === filters.status) &&
+        (!filters.customerId || conversation.customerId === filters.customerId) &&
+        (!filters.connectionId || conversation.connectionId === filters.connectionId),
+    );
+  }
+
+  async listMessages(_context: RequestContext, filters: MessagingMessageFilters) {
+    return this.messages.filter((message) => message.conversationId === filters.conversationId);
   }
 
   async findProviderEventByIdempotencyKey(_context: RequestContext, idempotencyKey: string) {

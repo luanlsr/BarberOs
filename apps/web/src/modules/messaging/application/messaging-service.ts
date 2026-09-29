@@ -16,6 +16,9 @@ import {
   evaluateMessagingEligibility,
   isOptOutKeyword,
   type MessagingRepository,
+  type MessagingConnectionFilters,
+  type MessagingConversationFilters,
+  type MessagingMessageFilters,
   type RecordConsentCommand,
   type RecordConversationCommand,
   type RecordMessageCommand,
@@ -33,6 +36,44 @@ export class MessagingApplicationService {
       branchId: parsed.branchId,
     });
     return this.repository.createConnection(context, parsed);
+  }
+
+  async listConnections(context: RequestContext, filters: MessagingConnectionFilters = {}) {
+    authorize(context, {
+      permission: 'messaging.read',
+      entitlement: 'messaging',
+      branchId: filters.branchId,
+    });
+    const connections = await this.repository.listConnections(context, filters);
+    return connections.filter(
+      (connection) =>
+        connection.tenantId === context.tenantId &&
+        (!connection.branchId || context.branchScope.includes(connection.branchId)),
+    );
+  }
+
+  async listConversations(context: RequestContext, filters: MessagingConversationFilters = {}) {
+    authorize(context, {
+      permission: 'messaging.read',
+      entitlement: 'messaging',
+      branchId: filters.branchId,
+    });
+    const conversations = await this.repository.listConversations(context, filters);
+    return conversations.filter(
+      (conversation) =>
+        conversation.tenantId === context.tenantId &&
+        (!conversation.branchId || context.branchScope.includes(conversation.branchId)),
+    );
+  }
+
+  async listMessages(context: RequestContext, filters: MessagingMessageFilters) {
+    authorize(context, { permission: 'messaging.read', entitlement: 'messaging' });
+    const messages = await this.repository.listMessages(context, filters);
+    return messages.filter(
+      (message) =>
+        message.tenantId === context.tenantId &&
+        (!message.branchId || context.branchScope.includes(message.branchId)),
+    );
   }
 
   async selectConnection(context: RequestContext, input: { branchId?: string }) {

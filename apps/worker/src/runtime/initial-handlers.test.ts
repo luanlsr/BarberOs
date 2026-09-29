@@ -1020,6 +1020,180 @@ describe('initial worker handlers', () => {
     ]);
   });
 
+  it('keeps campaign dispatch idempotent when the same job is processed again', async () => {
+    const intents = new Map<string, NotificationIntent>();
+    const outcomes = [
+      campaignRecipientOutcome('recipient-1', 'customer-1', 'hash-customer-1', 'PENDING'),
+      campaignRecipientOutcome('recipient-2', 'customer-2', 'hash-customer-2', 'PENDING'),
+    ];
+    const createCalls: string[] = [];
+    const ports: InitialWorkerHandlerPorts = {
+      notifications: {
+        async createIntent(command) {
+          createCalls.push(command.idempotencyKey);
+          const existing = intents.get(command.idempotencyKey);
+          if (existing) return existing;
+          const intent: NotificationIntent = {
+            id: `notification-${intents.size + 1}`,
+            tenantId: command.tenantId,
+            branchId: command.branchId,
+            recipientType: command.recipientType,
+            recipientId: command.recipientId,
+            channel: command.channel,
+            templateKey: command.templateKey,
+            sourceType: command.sourceType,
+            sourceId: command.sourceId,
+            payload: command.payload ?? {},
+            status: 'PENDING',
+            idempotencyKey: command.idempotencyKey,
+            correlationId: command.correlationId,
+            createdAt: '2026-09-29T12:00:00.000Z',
+            updatedAt: '2026-09-29T12:00:00.000Z',
+          };
+          intents.set(command.idempotencyKey, intent);
+          return intent;
+        },
+      },
+      campaigns: {
+        async findRunById() {
+          return campaignRun({ status: 'SENDING' });
+        },
+        async listRecipientOutcomes() {
+          return outcomes;
+        },
+        async resolveWhatsAppConnection() {
+          return {
+            connectionId: 'connection-campaign-1',
+            templateKey: 'campaign.reactivation.v1',
+          };
+        },
+        async updateRecipientOutcome(input) {
+          const outcome = outcomes.find(
+            (candidate) => candidate.contactPhoneHash === input.contactPhoneHash,
+          );
+          if (outcome) {
+            outcome.status = input.status;
+            outcome.notificationIntentId = input.notificationIntentId;
+          }
+        },
+      },
+    };
+    const job = makeJob({
+      type: 'CAMPAIGN_DISPATCH',
+      sourceType: 'CAMPAIGN_RUN',
+      sourceId: 'campaign-run-1',
+      payload: {
+        campaignId: 'campaign-1',
+        campaignRunId: 'campaign-run-1',
+        idempotencyKey: 'campaign-dispatch-1',
+        correlationId: 'correlation-1',
+      },
+    });
+
+    await expect(handleCampaignDispatch(job, ports)).resolves.toEqual({
+      status: 'succeeded',
+      effect: 'campaign_dispatch_work_created',
+    });
+    await expect(handleCampaignDispatch(job, ports)).resolves.toEqual({
+      status: 'skipped',
+      reason: 'campaign_no_pending_recipients',
+    });
+
+    expect([...intents.keys()]).toEqual([
+      'recipient-1-key:notification',
+      'recipient-2-key:notification',
+    ]);
+    expect(createCalls).toEqual(['recipient-1-key:notification', 'recipient-2-key:notification']);
+    expect(outcomes).toEqual([
+      expect.objectContaining({ status: 'QUEUED', notificationIntentId: 'notification-1' }),
+      expect.objectContaining({ status: 'QUEUED', notificationIntentId: 'notification-2' }),
+    ]);
+  });
+
+  it('dispatches pending campaign recipients while preserving partial failure outcomes', async () => {
+    const notifications: CreateNotificationIntentCommand[] = [];
+    const updates: unknown[] = [];
+
+    const result = await handleCampaignDispatch(
+      makeJob({
+        type: 'CAMPAIGN_DISPATCH',
+        sourceType: 'CAMPAIGN_RUN',
+        sourceId: 'campaign-run-1',
+        payload: {
+          campaignId: 'campaign-1',
+          campaignRunId: 'campaign-run-1',
+          idempotencyKey: 'campaign-dispatch-1',
+          correlationId: 'correlation-1',
+        },
+      }),
+      {
+        notifications: {
+          async createIntent(command) {
+            notifications.push(command);
+            return { id: 'notification-pending-1' };
+          },
+        },
+        campaigns: {
+          async findRunById() {
+            return campaignRun({ status: 'SENDING' });
+          },
+          async listRecipientOutcomes() {
+            return [
+              campaignRecipientOutcome(
+                'recipient-pending',
+                'customer-1',
+                'hash-customer-1',
+                'PENDING',
+              ),
+              campaignRecipientOutcome(
+                'recipient-failed',
+                'customer-2',
+                'hash-customer-2',
+                'FAILED',
+              ),
+              campaignRecipientOutcome(
+                'recipient-blocked',
+                'customer-3',
+                'hash-customer-3',
+                'BLOCKED_BY_CONSENT',
+              ),
+              campaignRecipientOutcome(
+                'recipient-skipped',
+                'customer-4',
+                'hash-customer-4',
+                'SKIPPED',
+              ),
+            ];
+          },
+          async resolveWhatsAppConnection() {
+            return {
+              connectionId: 'connection-campaign-1',
+              templateKey: 'campaign.reactivation.v1',
+            };
+          },
+          async updateRecipientOutcome(input) {
+            updates.push(input);
+          },
+        },
+      },
+    );
+
+    expect(result).toEqual({ status: 'succeeded', effect: 'campaign_dispatch_work_created' });
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        recipientId: 'customer-1',
+        idempotencyKey: 'recipient-pending-key:notification',
+      }),
+    ]);
+    expect(updates).toEqual([
+      expect.objectContaining({
+        contactPhoneHash: 'hash-customer-1',
+        status: 'QUEUED',
+        notificationIntentId: 'notification-pending-1',
+      }),
+    ]);
+  });
+
   it('routes WhatsApp notification delivery intents through the WhatsApp handler', async () => {
     const attempts: NotificationDeliveryAttempt[] = [];
     const whatsappProvider = {

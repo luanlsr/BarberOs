@@ -1,17 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import type { Permission } from '@barberos/contracts';
 import { OperationsDirectoryView } from '../../components/operations-directory-view';
 import { getSessionContext } from '../../lib/auth/server';
 import {
   getOperationsDirectoryModel,
   isOperationsDirectoryArea,
 } from '../../lib/operations-directory-data';
-
-const areas: Record<string, { label: string; permission: Permission }> = {
-  financeiro: { label: 'Financeiro', permission: 'finance.read' },
-  configuracoes: { label: 'Configurações', permission: 'settings.read' },
-};
+import { canAccessProtectedArea, getProtectedAreaRoute } from '../../lib/protected-area-routes';
 
 type AreaPageParams = Promise<{ area: string }>;
 type AreaSearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -36,8 +31,8 @@ export default async function AreaPage({
     return <OperationsDirectoryView model={model} />;
   }
 
-  const target = areas[area] ?? { label: 'Área', permission: 'dashboard.read' as Permission };
-  if (!session.permissions.includes(target.permission)) redirect('/forbidden');
+  const target = getProtectedAreaRoute(area);
+  if (!canAccessProtectedArea(session, target)) redirect('/forbidden');
   return (
     <div className="placeholder-page">
       <div>

@@ -57,10 +57,7 @@ export type PrepareCampaignRunCommand = {
 };
 
 export type CampaignAudienceExclusionReason =
-  | 'NO_DESTINATION'
-  | 'WHATSAPP_OPTED_OUT'
-  | 'MARKETING_OPTED_OUT'
-  | 'UNKNOWN_CONSENT';
+  'NO_DESTINATION' | 'WHATSAPP_OPTED_OUT' | 'MARKETING_OPTED_OUT' | 'UNKNOWN_CONSENT';
 
 export type CampaignAudienceCandidate = {
   tenantId: string;
@@ -165,6 +162,10 @@ export interface CampaignRunRepository {
     context: RequestContext,
     campaignRunId: string,
   ): Promise<CampaignRecipientOutcome[]>;
+  findMetricRollup?(
+    context: RequestContext,
+    campaignRunId: string,
+  ): Promise<CampaignMetricRollup | null>;
   countRunEngagementMetrics(
     context: RequestContext,
     campaignRunId: string,
@@ -252,8 +253,8 @@ export function aggregateCampaignMetrics(input: {
   engagement: CampaignRunEngagementMetrics;
   updatedAt: string;
 }): CampaignMetricRollup {
-  const sentCount = input.recipients.filter((recipient) =>
-    recipient.status === 'SENT' || recipient.status === 'DELIVERED',
+  const sentCount = input.recipients.filter(
+    (recipient) => recipient.status === 'SENT' || recipient.status === 'DELIVERED',
   ).length;
   const deliveredCount = input.recipients.filter(
     (recipient) => recipient.status === 'DELIVERED',
