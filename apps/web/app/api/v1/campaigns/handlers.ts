@@ -7,7 +7,10 @@ import type {
 import { createSupabaseServerClient, getRequestContext } from '../../../../lib/auth/server';
 import { CampaignApplicationService } from '../../../../src/modules/campaigns/application';
 import type { CampaignFilters } from '../../../../src/modules/campaigns/domain';
-import { SupabaseCampaignRepository } from '../../../../src/modules/campaigns/infrastructure';
+import {
+  SupabaseCampaignAuditSink,
+  SupabaseCampaignRepository,
+} from '../../../../src/modules/campaigns/infrastructure';
 import {
   createCampaignActionRouteHandlers,
   createCampaignMetricsRouteHandlers,
@@ -78,5 +81,7 @@ async function getCampaignApplicationService() {
     });
   }
   const repository = new SupabaseCampaignRepository(client);
-  return new CampaignApplicationService(repository, repository, repository);
+  return new CampaignApplicationService(repository, repository, repository, {
+    auditSink: new SupabaseCampaignAuditSink(client),
+  });
 }

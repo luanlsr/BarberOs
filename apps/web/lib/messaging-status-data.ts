@@ -1,4 +1,5 @@
 import type {
+  ConversationStatus,
   MessageDeliveryState,
   MessagingConnection,
   Permission,
@@ -29,6 +30,29 @@ export type MessagingDeliveryMetricModel = {
   tone: MessagingStatusTone;
 };
 
+export type MessagingMessageStatusModel = {
+  id: string;
+  directionLabel: string;
+  deliveryState: MessageDeliveryState;
+  deliveryStateLabel: string;
+  deliveryTone: MessagingStatusTone;
+  bodyPreview: string;
+  createdAtLabel: string;
+};
+
+export type MessagingConversationItemModel = {
+  id: string;
+  customerLabel: string;
+  branchName: string;
+  status: ConversationStatus;
+  statusLabel: string;
+  statusTone: MessagingStatusTone;
+  lastMessageAtLabel: string;
+  lastMessagePreview: string;
+  unreadCount: number;
+  messages: readonly MessagingMessageStatusModel[];
+};
+
 export type MessagingActionModel = {
   id:
     | 'messaging.refresh'
@@ -54,6 +78,8 @@ export type MessagingStatusViewModel = {
   canReadDeliveryHealth: boolean;
   connection?: MessagingConnectionStatusModel;
   deliveryMetrics: readonly MessagingDeliveryMetricModel[];
+  conversations: readonly MessagingConversationItemModel[];
+  selectedConversation?: MessagingConversationItemModel;
   allowedActions: readonly MessagingActionModel[];
   healthNotes: readonly string[];
   error?: { code: string; message: string; requestId: string };
@@ -61,11 +87,13 @@ export type MessagingStatusViewModel = {
 
 type MessagingStatusOptions = {
   branchId?: string;
+  conversationId?: string;
   state?: string;
 };
 
 type DevelopmentMessagingStatusOptions = {
   branchId?: string;
+  conversationId?: string;
   state?: 'loading' | 'empty' | 'error' | 'offline' | 'inactive-provider';
 };
 
@@ -92,6 +120,100 @@ const deliveryToneByState: Record<MessageDeliveryState, MessagingStatusTone> = {
   SKIPPED: 'warning',
   BLOCKED_BY_CONSENT: 'warning',
 };
+
+const conversationStatusLabels: Record<ConversationStatus, string> = {
+  OPEN: 'Aberta',
+  RESOLVED: 'Resolvida',
+  ARCHIVED: 'Arquivada',
+};
+
+const conversationStatusTones: Record<ConversationStatus, MessagingStatusTone> = {
+  OPEN: 'success',
+  RESOLVED: 'neutral',
+  ARCHIVED: 'neutral',
+};
+
+const developmentConversations: readonly {
+  id: string;
+  branchId: string;
+  customerLabel: string;
+  status: ConversationStatus;
+  unreadCount: number;
+  lastMessageAt: string;
+  messages: readonly {
+    id: string;
+    direction: 'INBOUND' | 'OUTBOUND';
+    deliveryState: MessageDeliveryState;
+    body: string;
+    createdAt: string;
+  }[];
+}[] = [
+  {
+    id: 'conversation-ana',
+    branchId: 'dev-branch',
+    customerLabel: 'Ana P.',
+    status: 'OPEN',
+    unreadCount: 1,
+    lastMessageAt: '2026-09-29T13:05:00.000Z',
+    messages: [
+      {
+        id: 'message-ana-1',
+        direction: 'OUTBOUND',
+        deliveryState: 'DELIVERED',
+        body: 'Oi Ana, seu horário de corte amanhã às 10h está confirmado.',
+        createdAt: '2026-09-29T12:55:00.000Z',
+      },
+      {
+        id: 'message-ana-2',
+        direction: 'INBOUND',
+        deliveryState: 'RECEIVED',
+        body: 'Confirmado! Meu telefone alternativo é +55 11 94444-0000 e meu email ana@email.com',
+        createdAt: '2026-09-29T13:05:00.000Z',
+      },
+    ],
+  },
+  {
+    id: 'conversation-carlos',
+    branchId: 'dev-branch',
+    customerLabel: 'Carlos M.',
+    status: 'RESOLVED',
+    unreadCount: 0,
+    lastMessageAt: '2026-09-29T10:15:00.000Z',
+    messages: [
+      {
+        id: 'message-carlos-1',
+        direction: 'OUTBOUND',
+        deliveryState: 'SENT',
+        body: 'Temos horários livres nesta sexta. Veja detalhes em https://barberos.local/agenda',
+        createdAt: '2026-09-29T10:12:00.000Z',
+      },
+      {
+        id: 'message-carlos-2',
+        direction: 'INBOUND',
+        deliveryState: 'RECEIVED',
+        body: 'Pode reservar o corte completo às 17h.',
+        createdAt: '2026-09-29T10:15:00.000Z',
+      },
+    ],
+  },
+  {
+    id: 'conversation-north-hidden',
+    branchId: 'dev-branch-north',
+    customerLabel: 'Cliente Norte',
+    status: 'OPEN',
+    unreadCount: 2,
+    lastMessageAt: '2026-09-29T09:00:00.000Z',
+    messages: [
+      {
+        id: 'message-north-1',
+        direction: 'INBOUND',
+        deliveryState: 'RECEIVED',
+        body: 'Mensagem de outra unidade.',
+        createdAt: '2026-09-29T09:00:00.000Z',
+      },
+    ],
+  },
+];
 
 const developmentConnections: readonly MessagingConnection[] = [
   {
@@ -149,6 +271,7 @@ export async function getMessagingStatusViewModel(
 ): Promise<MessagingStatusViewModel> {
   return getDevelopmentMessagingStatusViewModel(session, {
     branchId: options.branchId,
+    conversationId: options.conversationId,
     state: developmentStateFrom(options.state),
   });
 }
@@ -221,6 +344,8 @@ export function getDevelopmentMessagingStatusViewModel(
       ? 'Conexão, consentimento e entregas recentes por unidade.'
       : 'Nenhuma conexão WhatsApp ativa nesta unidade.',
     connection,
+    undefined,
+    options.conversationId,
   );
 }
 
@@ -251,7 +376,12 @@ function buildModel(
   description: string,
   connection?: MessagingConnection,
   error?: MessagingStatusViewModel['error'],
+  conversationId?: string,
 ): MessagingStatusViewModel {
+  const conversations =
+    base.canRead && (state === 'ready' || state === 'offline')
+      ? conversationsFor(base.branchId, base.branchName)
+      : [];
   return {
     ...base,
     state,
@@ -259,10 +389,44 @@ function buildModel(
     connection: connection ? toConnectionModel(connection, base.branchName) : undefined,
     deliveryMetrics:
       base.canReadDeliveryHealth && state !== 'permission-denied' ? deliveryMetricsFor(state) : [],
+    conversations,
+    selectedConversation:
+      conversations.find((conversation) => conversation.id === conversationId) ?? conversations[0],
     allowedActions: actionsFor(base, state, Boolean(connection)),
     healthNotes: healthNotesFor(state, base, connection),
     error,
   };
+}
+
+function conversationsFor(
+  branchId: string,
+  branchName: string,
+): readonly MessagingConversationItemModel[] {
+  return developmentConversations
+    .filter((conversation) => conversation.branchId === branchId)
+    .map((conversation) => {
+      const messages = conversation.messages.map((message): MessagingMessageStatusModel => ({
+        id: message.id,
+        directionLabel: message.direction === 'INBOUND' ? 'Cliente' : 'Barbearia',
+        deliveryState: message.deliveryState,
+        deliveryStateLabel: deliveryLabelByState[message.deliveryState],
+        deliveryTone: deliveryToneByState[message.deliveryState],
+        bodyPreview: sanitizeMessageBody(message.body),
+        createdAtLabel: formatDateTime(message.createdAt),
+      }));
+      return {
+        id: conversation.id,
+        customerLabel: conversation.customerLabel,
+        branchName,
+        status: conversation.status,
+        statusLabel: conversationStatusLabels[conversation.status],
+        statusTone: conversationStatusTones[conversation.status],
+        lastMessageAtLabel: formatDateTime(conversation.lastMessageAt),
+        lastMessagePreview: messages.at(-1)?.bodyPreview ?? 'Sem mensagens recentes.',
+        unreadCount: conversation.unreadCount,
+        messages,
+      };
+    });
 }
 
 function activeConnectionFor(branchId: string) {
@@ -449,4 +613,14 @@ function formatDateTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function sanitizeMessageBody(value: string) {
+  return value
+    .replace(/https?:\/\/\S+/gi, '[link removido]')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email removido]')
+    .replace(/\+?\d[\d\s().-]{8,}\d/g, '[telefone removido]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 180);
 }

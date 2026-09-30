@@ -8,9 +8,9 @@ Ultimo change concluido: worker-outbox-notifications (38 de 38 tarefas; validado
 
 Ultimo change arquivado: inventory-products (47 de 47 tarefas; archive OpenSpec em 2026-09-18).
 
-Change em implementacao: whatsapp-messaging-campaigns (proposal, specs, design e tasks criados; validado com npx openspec validate whatsapp-messaging-campaigns --strict em 2026-09-27; 45 de 56 tarefas implementadas).
+Change em implementacao: whatsapp-messaging-campaigns (proposal, specs, design e tasks criados; validado com npx openspec validate whatsapp-messaging-campaigns --strict em 2026-09-27; 50 de 56 tarefas implementadas).
 
-Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas; worker-outbox-notifications concluido com 38 de 38 tarefas; whatsapp-messaging-campaigns em implementacao com 45 de 56 tarefas implementadas.
+Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas; worker-outbox-notifications concluido com 38 de 38 tarefas; whatsapp-messaging-campaigns em implementacao com 50 de 56 tarefas implementadas.
 Progresso estimado do PRD: 73%.
 
 O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in, telas iniciais de Clientes, Equipe e Servicos com estados operacionais, pagamentos, caixa, financeiro, comissoes, estoque, catalogo, transactional outbox, worker persistente, jobs, retries, dead-letter, notificacoes provider-agnostic e visibilidade operacional de falhas assincronas.

@@ -12,6 +12,7 @@ import {
 import type {
   CampaignAudienceCandidate,
   CampaignAudienceRepository,
+  CampaignAuditSink,
   CampaignFilters,
   CampaignMetricRollup,
   CampaignRepository,
@@ -585,8 +586,10 @@ describe('CampaignApplicationService', () => {
 
   it('moves campaigns through review, approval, scheduling, sending and completion states', async () => {
     const repository = new FakeCampaignRepository();
+    const audit = new FakeCampaignAuditSink();
     const service = new CampaignApplicationService(repository, {
       now: () => new Date('2026-09-28T13:00:00.000Z'),
+      auditSink: audit,
     });
 
     await expect(service.submitForReview(context, { campaignId: 'campaign-1' })).resolves.toEqual(
@@ -620,12 +623,28 @@ describe('CampaignApplicationService', () => {
     expect(repository.lastLifecycle).toEqual(
       expect.objectContaining({ id: 'campaign-1', status: 'SENT', updatedBy: 'user-1' }),
     );
+    expect(audit.contexts.every((item) => item.requestId === 'request-campaigns')).toBe(true);
+    expect(audit.events.map((event) => event.action)).toEqual([
+      'CAMPAIGN_APPROVED',
+      'CAMPAIGN_SCHEDULED',
+      'CAMPAIGN_SEND_STARTED',
+      'CAMPAIGN_SEND_COMPLETED',
+    ]);
+    expect(audit.events[0]).toMatchObject({
+      entityType: 'CAMPAIGN',
+      entityId: 'campaign-1',
+      result: 'SUCCESS',
+      beforeState: expect.objectContaining({ status: 'READY_FOR_REVIEW' }),
+      afterState: expect.objectContaining({ status: 'APPROVED', approvedBy: 'user-1' }),
+    });
   });
 
   it('allows sending campaigns to finish as partially failed without losing approval metadata', async () => {
     const repository = new FakeCampaignRepository();
+    const audit = new FakeCampaignAuditSink();
     const service = new CampaignApplicationService(repository, {
       now: () => new Date('2026-09-28T13:00:00.000Z'),
+      auditSink: audit,
     });
 
     await service.submitForReview(context, { campaignId: 'campaign-1' });
@@ -644,6 +663,10 @@ describe('CampaignApplicationService', () => {
         approvedAt: '2026-09-28T13:00:00.000Z',
       }),
     );
+    expect(audit.events.at(-1)).toMatchObject({
+      action: 'CAMPAIGN_SEND_PARTIALLY_FAILED',
+      afterState: expect.objectContaining({ status: 'PARTIALLY_FAILED' }),
+    });
   });
 
   it('cancels draft, review, approved or scheduled campaigns before dispatch starts', async () => {
@@ -655,11 +678,21 @@ describe('CampaignApplicationService', () => {
       approvedBy: 'owner-1',
       approvedAt: '2026-09-28T12:30:00.000Z',
     });
-    const service = new CampaignApplicationService(repository);
+    const audit = new FakeCampaignAuditSink();
+    const service = new CampaignApplicationService(repository, { auditSink: audit });
 
     await expect(
       service.cancel(context, { campaignId: 'campaign-approved', reason: 'Cliente pediu pausa' }),
     ).resolves.toEqual(expect.objectContaining({ status: 'CANCELLED' }));
+    expect(audit.events).toEqual([
+      expect.objectContaining({
+        action: 'CAMPAIGN_CANCELLED',
+        entityType: 'CAMPAIGN',
+        entityId: 'campaign-approved',
+        beforeState: expect.objectContaining({ status: 'APPROVED' }),
+        afterState: expect.objectContaining({ status: 'CANCELLED' }),
+      }),
+    ]);
   });
 
   it('rejects invalid lifecycle transitions and keeps dispatch send-only', async () => {
@@ -704,4 +737,14 @@ function recipientOutcome(
     updatedAt: '2026-09-29T10:00:00.000Z',
     ...overrides,
   });
+}
+
+class FakeCampaignAuditSink implements CampaignAuditSink {
+  readonly contexts: RequestContext[] = [];
+  readonly events: Array<Parameters<CampaignAuditSink['record']>[1]> = [];
+
+  async record(context: RequestContext, event: Parameters<CampaignAuditSink['record']>[1]) {
+    this.contexts.push(context);
+    this.events.push(event);
+  }
 }

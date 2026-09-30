@@ -38,6 +38,33 @@ export type MessagingWebhookRouteDependencies = {
   ): Promise<void> | void;
   webhookVerifyToken?: string;
   maxEventAgeMs?: number;
+  observability?: MessagingWebhookObservability;
+};
+
+export type MessagingWebhookObservability = {
+  log?(entry: MessagingWebhookLogEntry): void;
+  metric?(point: MessagingWebhookMetricPoint): void;
+};
+
+export type MessagingWebhookLogEntry = {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  module: 'messaging';
+  event: string;
+  requestId: string;
+  tenantId?: string;
+  branchId?: string;
+  connectionId?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type MessagingWebhookMetricPoint = {
+  timestamp: string;
+  module: 'messaging';
+  name: string;
+  value: number;
+  unit: 'count';
+  tags?: Record<string, string>;
 };
 
 const DEFAULT_MAX_EVENT_AGE_MS = 5 * 60 * 1000;
@@ -87,6 +114,13 @@ export function createMessagingWebhookRouteHandlers(
         });
 
         if (!signatureValid) {
+          observeWebhook(dependencies, {
+            level: 'warn',
+            event: 'messaging.webhook.rejected',
+            requestId,
+            metric: 'messaging_webhook_rejected_total',
+            tags: { reason: 'invalid_signature' },
+          });
           return jsonError(
             'MESSAGING_WEBHOOK_SIGNATURE_INVALID',
             'Webhook signature is invalid.',
@@ -98,6 +132,13 @@ export function createMessagingWebhookRouteHandlers(
         const body = parseWebhookBody(bodyText);
         const events = dependencies.adapter.normalizeWebhook(body, receivedAt);
         if (!events.length) {
+          observeWebhook(dependencies, {
+            level: 'info',
+            event: 'messaging.webhook.accepted',
+            requestId,
+            metric: 'messaging_webhook_accepted_total',
+            tags: { eventCount: 0, enqueued: 0 },
+          });
           return NextResponse.json({
             data: { accepted: true, events: 0, enqueued: 0 },
             requestId,
@@ -107,6 +148,17 @@ export function createMessagingWebhookRouteHandlers(
         let enqueued = 0;
         for (const event of events) {
           if (isStaleEvent(event, receivedAt, dependencies.maxEventAgeMs)) {
+            observeWebhook(dependencies, {
+              level: 'warn',
+              event: 'messaging.webhook.rejected',
+              requestId,
+              metric: 'messaging_webhook_rejected_total',
+              tags: {
+                provider: event.provider,
+                eventKind: event.eventKind,
+                reason: 'stale_event',
+              },
+            });
             return jsonError(
               'MESSAGING_VALIDATION_ERROR',
               'Webhook event timestamp is stale.',
@@ -121,6 +173,17 @@ export function createMessagingWebhookRouteHandlers(
             connection.provider !== event.provider ||
             connection.status !== 'ACTIVE'
           ) {
+            observeWebhook(dependencies, {
+              level: 'warn',
+              event: 'messaging.webhook.rejected',
+              requestId,
+              metric: 'messaging_webhook_rejected_total',
+              tags: {
+                provider: event.provider,
+                eventKind: event.eventKind,
+                reason: 'connection_not_found',
+              },
+            });
             return jsonError(
               'MESSAGING_VALIDATION_ERROR',
               'Messaging connection was not found.',
@@ -131,6 +194,20 @@ export function createMessagingWebhookRouteHandlers(
 
           const context = await dependencies.resolveContextForEvent(connection, event);
           if (!context) {
+            observeWebhook(dependencies, {
+              level: 'warn',
+              event: 'messaging.webhook.rejected',
+              requestId,
+              tenantId: connection.tenantId,
+              branchId: connection.branchId,
+              connectionId: connection.id,
+              metric: 'messaging_webhook_rejected_total',
+              tags: {
+                provider: event.provider,
+                eventKind: event.eventKind,
+                reason: 'permission_denied',
+              },
+            });
             return jsonError('MESSAGING_PERMISSION_DENIED', 'Permission denied.', 403, requestId);
           }
 
@@ -171,11 +248,36 @@ export function createMessagingWebhookRouteHandlers(
           }
         }
 
+        observeWebhook(dependencies, {
+          level: 'info',
+          event: 'messaging.webhook.accepted',
+          requestId,
+          metric: 'messaging_webhook_accepted_total',
+          tags: { eventCount: events.length, enqueued },
+        });
+        observeWebhook(dependencies, {
+          level: 'info',
+          event: 'messaging.webhook.events_enqueued',
+          requestId,
+          metric: 'messaging_webhook_events_enqueued_total',
+          tags: { eventCount: events.length, enqueued },
+          value: enqueued,
+        });
         return NextResponse.json({
           data: { accepted: true, events: events.length, enqueued },
           requestId,
         });
       } catch (error) {
+        observeWebhook(dependencies, {
+          level: 'error',
+          event: 'messaging.webhook.rejected',
+          requestId,
+          metric: 'messaging_webhook_rejected_total',
+          tags: { reason: 'handler_error' },
+          metadata: {
+            errorCode: error instanceof Error ? error.name : 'UNKNOWN',
+          },
+        });
         return jsonFromError(error, requestId);
       }
     },
@@ -204,4 +306,52 @@ function buildProviderEventIdempotencyKey(
   event: NormalizedMessagingProviderEvent,
 ) {
   return ['whatsapp-webhook', connectionId, event.provider, event.providerEventId].join(':');
+}
+
+function observeWebhook(
+  dependencies: MessagingWebhookRouteDependencies,
+  input: {
+    level: MessagingWebhookLogEntry['level'];
+    event: string;
+    requestId: string;
+    tenantId?: string;
+    branchId?: string;
+    connectionId?: string;
+    metric: string;
+    value?: number;
+    tags?: Record<string, string | number | boolean | undefined>;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  const timestamp = new Date().toISOString();
+  dependencies.observability?.log?.({
+    timestamp,
+    level: input.level,
+    module: 'messaging',
+    event: input.event,
+    requestId: input.requestId,
+    tenantId: input.tenantId,
+    branchId: input.branchId,
+    connectionId: input.connectionId,
+    metadata: input.metadata,
+  });
+  dependencies.observability?.metric?.({
+    timestamp,
+    module: 'messaging',
+    name: input.metric,
+    value: input.value ?? 1,
+    unit: 'count',
+    tags: sanitizeWebhookMetricTags(input.tags),
+  });
+}
+
+function sanitizeWebhookMetricTags(
+  tags: Record<string, string | number | boolean | undefined> = {},
+) {
+  const sanitized = Object.fromEntries(
+    Object.entries(tags)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, String(value).slice(0, 120)]),
+  );
+  return Object.keys(sanitized).length ? sanitized : undefined;
 }

@@ -15,6 +15,7 @@ import type {
   MessagingConnectionFilters,
   MessagingConversationFilters,
   MessagingMessageFilters,
+  MessagingAuditSink,
   MessagingRepository,
   RecordConsentCommand,
   RecordConversationCommand,
@@ -56,6 +57,47 @@ describe('MessagingApplicationService', () => {
     await expect(
       service.createConnection(context, { ...command, branchId: 'branch-2' }),
     ).rejects.toMatchObject({ code: 'BRANCH_SCOPE_DENIED' });
+  });
+
+  it('audits connection creation and provider credential reference changes without raw secrets', async () => {
+    const repository = new MemoryMessagingRepository();
+    const audit = new FakeMessagingAuditSink();
+    const service = new MessagingApplicationService(repository, audit);
+
+    await service.createConnection(context, {
+      branchId: 'branch-1',
+      provider: 'META_WHATSAPP_CLOUD',
+      displayName: 'WhatsApp Seguro',
+      displayPhoneNumber: '+5511999999999',
+      providerPhoneNumberId: 'phone-number-1',
+      credentialReference: 'vault:messaging/raw-secret-reference',
+      webhookSecretReference: 'vault:messaging/raw-webhook-secret',
+      allowTenantFallback: false,
+    });
+
+    expect(audit.contexts.at(-1)).toMatchObject({ tenantId: 'tenant-1', userId: 'user-1' });
+    expect(audit.events.map((event) => event.action)).toEqual([
+      'MESSAGING_CONNECTION_CREATED',
+      'MESSAGING_CONNECTION_CREDENTIAL_REFERENCE_CHANGED',
+    ]);
+    expect(audit.events[0]).toMatchObject({
+      entityType: 'MESSAGING_CONNECTION',
+      entityId: 'connection-1',
+      result: 'SUCCESS',
+      afterState: expect.objectContaining({ provider: 'META_WHATSAPP_CLOUD' }),
+    });
+    expect(audit.events[1]).toMatchObject({
+      afterState: {
+        connectionId: 'connection-1',
+        provider: 'META_WHATSAPP_CLOUD',
+        branchId: 'branch-1',
+        credentialReferenceChanged: true,
+        webhookSecretReferenceChanged: true,
+        providerPhoneNumberIdChanged: true,
+      },
+    });
+    expect(JSON.stringify(audit.events)).not.toContain('raw-secret-reference');
+    expect(JSON.stringify(audit.events)).not.toContain('raw-webhook-secret');
   });
 
   it('selects branch connection before tenant fallback', async () => {
@@ -170,6 +212,43 @@ describe('MessagingApplicationService', () => {
         hasReachableDestination: true,
       }),
     ).resolves.toEqual({ allowed: false, reason: 'UNKNOWN_CONSENT' });
+  });
+
+  it('audits consent changes with before and after snapshots', async () => {
+    const repository = new MemoryMessagingRepository();
+    const audit = new FakeMessagingAuditSink();
+    const service = new MessagingApplicationService(repository, audit);
+
+    await service.recordConsent(context, {
+      tenantId: 'tenant-1',
+      branchId: 'branch-1',
+      customerId: 'customer-1',
+      contactPhoneHash: 'hash-customer-phone-1',
+      purpose: 'WHATSAPP_MARKETING',
+      state: 'OPTED_IN',
+      source: 'OPERATOR',
+    });
+    await service.recordConsent(context, {
+      tenantId: 'tenant-1',
+      branchId: 'branch-1',
+      customerId: 'customer-1',
+      contactPhoneHash: 'hash-customer-phone-1',
+      purpose: 'WHATSAPP_MARKETING',
+      state: 'OPTED_OUT',
+      source: 'CUSTOMER_MESSAGE',
+      reason: 'SAIR',
+    });
+
+    expect(audit.events.map((event) => event.action)).toEqual([
+      'MESSAGING_CONSENT_CHANGED',
+      'MESSAGING_CONSENT_CHANGED',
+    ]);
+    expect(audit.events[1]).toMatchObject({
+      entityType: 'MESSAGING_CONSENT',
+      entityId: 'consent-2',
+      beforeState: expect.objectContaining({ state: 'OPTED_IN' }),
+      afterState: expect.objectContaining({ state: 'OPTED_OUT', reason: 'SAIR' }),
+    });
   });
 });
 
@@ -374,5 +453,15 @@ class MemoryMessagingRepository implements MessagingRepository {
             (!input.customerId || consent.customerId === input.customerId),
         ) ?? null
     );
+  }
+}
+
+class FakeMessagingAuditSink implements MessagingAuditSink {
+  readonly contexts: RequestContext[] = [];
+  readonly events: Array<Parameters<MessagingAuditSink['record']>[1]> = [];
+
+  async record(context: RequestContext, event: Parameters<MessagingAuditSink['record']>[1]) {
+    this.contexts.push(context);
+    this.events.push(event);
   }
 }

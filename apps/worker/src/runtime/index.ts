@@ -6,5 +6,6 @@ export * from './lease-lock-store';
 export * from './outbox-dispatcher';
 export * from './worker-runtime';
 export * from './worker-logger';
+export * from './worker-metrics';
 export * from './notification-delivery-handler';
 export * from './whatsapp-messaging-handlers';

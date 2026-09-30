@@ -9,36 +9,44 @@ const baseSession: Pick<SessionContext, 'permissions' | 'entitlements'> = {
 
 describe('protected area routes', () => {
   it('requires permission and entitlement for messaging, campaigns and delivery status', () => {
-    expect(
-      canAccessProtectedArea(
-        {
-          ...baseSession,
-          permissions: ['messaging.read'],
-          entitlements: [],
-        },
-        getProtectedAreaRoute('mensagens'),
-      ),
-    ).toBe(false);
-    expect(
-      canAccessProtectedArea(
-        {
-          ...baseSession,
-          permissions: ['campaigns.read'],
-          entitlements: ['campaigns'],
-        },
-        getProtectedAreaRoute('campanhas'),
-      ),
-    ).toBe(true);
-    expect(
-      canAccessProtectedArea(
-        {
-          ...baseSession,
-          permissions: ['notifications.status.read'],
-          entitlements: ['notifications'],
-        },
-        getProtectedAreaRoute('entregas'),
-      ),
-    ).toBe(true);
+    const cases = [
+      ['mensagens', 'messaging.read', 'messaging'],
+      ['campanhas', 'campaigns.read', 'campaigns'],
+      ['entregas', 'notifications.status.read', 'notifications'],
+    ] as const;
+
+    for (const [area, permission, entitlement] of cases) {
+      expect(
+        canAccessProtectedArea(
+          {
+            ...baseSession,
+            permissions: [permission],
+            entitlements: [],
+          },
+          getProtectedAreaRoute(area),
+        ),
+      ).toBe(false);
+      expect(
+        canAccessProtectedArea(
+          {
+            ...baseSession,
+            permissions: [],
+            entitlements: [entitlement],
+          },
+          getProtectedAreaRoute(area),
+        ),
+      ).toBe(false);
+      expect(
+        canAccessProtectedArea(
+          {
+            ...baseSession,
+            permissions: [permission],
+            entitlements: [entitlement],
+          },
+          getProtectedAreaRoute(area),
+        ),
+      ).toBe(true);
+    }
   });
 
   it('falls back unknown placeholder routes to dashboard permission', () => {

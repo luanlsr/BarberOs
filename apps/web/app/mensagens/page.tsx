@@ -16,6 +16,7 @@ export default async function MensagensPage({
   const params = await searchParams;
   const model = await getMessagingStatusViewModel(session, {
     branchId: singleValue(params.branchId),
+    conversationId: singleValue(params.conversationId),
     state: singleValue(params.state),
   });
 

@@ -68,14 +68,14 @@
 - [x] 8.1 Add server APIs for messaging connections, delivery health, conversations, campaign drafts, previews, approvals, scheduling, cancellation and metrics.
 - [x] 8.2 Add permission-aware shell entries and route guards for messaging, delivery status and campaigns without crowding mobile core operations.
 - [x] 8.3 Build messaging setup/status screens with loading, empty, error, permission denied, offline and inactive-provider states.
-- [ ] 8.4 Build campaign list, editor, audience preview, approval, schedule/send confirmation and result screens for mobile, tablet and desktop.
-- [ ] 8.5 Build conversation/message status surfaces with sanitized content and branch-scoped visibility.
-- [ ] 8.6 Add component and route tests for permission denied, offline send prevention, partial failure presentation and responsive navigation.
+- [x] 8.4 Build campaign list, editor, audience preview, approval, schedule/send confirmation and result screens for mobile, tablet and desktop.
+- [x] 8.5 Build conversation/message status surfaces with sanitized content and branch-scoped visibility.
+- [x] 8.6 Add component and route tests for permission denied, offline send prevention, partial failure presentation and responsive navigation.
 
 ## 9. Observability, audit and operations
 
-- [ ] 9.1 Add audit events for connection changes, consent changes, campaign approval/send/cancel and provider credential reference changes.
-- [ ] 9.2 Add structured logs and metrics for webhook acceptance/rejection, provider send latency, retries, dead letters and campaign throughput.
+- [x] 9.1 Add audit events for connection changes, consent changes, campaign approval/send/cancel and provider credential reference changes.
+- [x] 9.2 Add structured logs and metrics for webhook acceptance/rejection, provider send latency, retries, dead letters and campaign throughput.
 - [ ] 9.3 Add operational status queries for failed deliveries, blocked sends, delayed webhooks and campaign partial failures.
 - [ ] 9.4 Document environment variables, provider setup, local/noop development behavior and webhook testing workflow.
 

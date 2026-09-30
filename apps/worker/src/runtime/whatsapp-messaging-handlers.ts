@@ -17,6 +17,8 @@ import {
 
 import { decideWorkerJobFailure } from './job-retry-policy';
 import type { WorkerJobHandlerResult } from './initial-handlers';
+import type { WorkerLogger } from './worker-logger';
+import type { WorkerMetrics } from './worker-metrics';
 
 export type WhatsAppProviderSendResult =
   | {
@@ -67,6 +69,8 @@ export type WhatsAppDeliveryPorts = {
       input: WhatsAppDeliveryEligibilityInput,
     ): Promise<WhatsAppDeliveryEligibilityDecision>;
   };
+  logger?: WorkerLogger;
+  metrics?: WorkerMetrics;
   now?: () => Date;
 };
 
@@ -146,9 +150,40 @@ export async function handleWhatsAppDelivery(
     return workerResultFromDeliveryAttemptStatus(status);
   }
 
+  const providerSendStartedAt = Date.now();
   const result = await ports.provider.send(payload);
+  const providerSendLatencyMs = Date.now() - providerSendStartedAt;
+  ports.metrics?.timing({
+    name: 'whatsapp_provider_send_latency_ms',
+    value: providerSendLatencyMs,
+    job,
+    tags: {
+      provider: result.provider,
+      accepted: result.accepted,
+      deliveryState: result.deliveryState,
+    },
+  });
+
   if (result.accepted) {
     const attemptStatus = notificationAttemptStatusFromDeliveryState(result.deliveryState);
+    ports.logger?.info({
+      event: 'whatsapp.provider.send.accepted',
+      job,
+      metadata: {
+        provider: result.provider,
+        deliveryState: result.deliveryState,
+        latencyMs: providerSendLatencyMs,
+        hasProviderMessageId: Boolean(result.providerMessageId),
+      },
+    });
+    ports.metrics?.count({
+      name: 'whatsapp_provider_send_accepted_total',
+      job,
+      tags: {
+        provider: result.provider,
+        deliveryState: result.deliveryState,
+      },
+    });
     await recordNotificationAttemptIfNeeded(job, ports, payload, {
       status: attemptStatus,
       provider: result.provider,
@@ -163,6 +198,39 @@ export async function handleWhatsAppDelivery(
     error: result.error,
     now,
     retryAfterMs: result.retryAfterMs,
+  });
+  const retryScheduled = decision.attemptStatus === 'RETRY_SCHEDULED';
+  const deadLettered = decision.attemptStatus === 'DEAD_LETTERED';
+
+  ports.logger?.[retryScheduled ? 'warn' : 'error']({
+    event: retryScheduled
+      ? 'whatsapp.provider.send.retry_scheduled'
+      : deadLettered
+        ? 'whatsapp.provider.send.dead_lettered'
+        : 'whatsapp.provider.send.failed',
+    job,
+    error: decision.lastError,
+    metadata: {
+      provider: result.provider,
+      deliveryState: result.deliveryState,
+      latencyMs: providerSendLatencyMs,
+      retryAfterMs: result.retryAfterMs,
+      runAt: decision.runAt,
+      completedAt: decision.completedAt,
+    },
+  });
+  ports.metrics?.count({
+    name: retryScheduled
+      ? 'worker_job_retries_total'
+      : deadLettered
+        ? 'worker_job_dead_letters_total'
+        : 'whatsapp_provider_send_failed_total',
+    job,
+    tags: {
+      provider: result.provider,
+      deliveryState: result.deliveryState,
+      reason: decision.lastError.code,
+    },
   });
 
   await recordNotificationAttemptIfNeeded(job, ports, payload, {

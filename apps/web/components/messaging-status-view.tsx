@@ -16,12 +16,20 @@ import {
 import { StatusBadge } from '@barberos/ui';
 import type {
   MessagingActionModel,
+  MessagingConversationItemModel,
   MessagingStatusTone,
   MessagingStatusViewModel,
 } from '../lib/messaging-status-data';
 import { SummaryTile } from './product-view';
 
 export function MessagingStatusView({ model }: Readonly<{ model: MessagingStatusViewModel }>) {
+  const [selectedConversationId, setSelectedConversationId] = React.useState(
+    model.selectedConversation?.id,
+  );
+  const selectedConversation =
+    model.conversations.find((conversation) => conversation.id === selectedConversationId) ??
+    model.selectedConversation;
+
   if (model.state === 'permission-denied') return <MessagingBoundaryState model={model} />;
   if (model.state === 'error') return <MessagingBoundaryState model={model} />;
 
@@ -67,15 +75,124 @@ export function MessagingStatusView({ model }: Readonly<{ model: MessagingStatus
           <div className="messaging-workspace" aria-label="Status de mensagens responsivo">
             <main className="messaging-primary" aria-label="Conexão WhatsApp">
               <ConnectionPanel model={model} />
+              <ConversationList
+                conversations={model.conversations}
+                selectedId={selectedConversation?.id}
+                onSelect={setSelectedConversationId}
+              />
               <HealthNotes model={model} />
             </main>
             <aside className="messaging-side" aria-label="Saúde de entregas">
+              <ConversationDetail conversation={selectedConversation} />
               <DeliveryHealthPanel model={model} />
             </aside>
           </div>
         </>
       )}
     </div>
+  );
+}
+
+function ConversationList({
+  conversations,
+  onSelect,
+  selectedId,
+}: Readonly<{
+  conversations: readonly MessagingConversationItemModel[];
+  onSelect: (conversationId: string) => void;
+  selectedId?: string;
+}>) {
+  return (
+    <section className="messaging-panel" aria-labelledby="messaging-conversation-list-title">
+      <div className="inventory-panel-heading">
+        <div>
+          <p className="eyebrow">Conversas</p>
+          <h2 id="messaging-conversation-list-title">Atendimento WhatsApp</h2>
+        </div>
+        <MessageSquare size={20} aria-hidden="true" />
+      </div>
+      {conversations.length ? (
+        <div className="messaging-conversation-list">
+          {conversations.map((conversation) => (
+            <button
+              aria-pressed={selectedId === conversation.id}
+              className="messaging-conversation-row"
+              key={conversation.id}
+              type="button"
+              onClick={() => onSelect(conversation.id)}
+            >
+              <div>
+                <strong>{conversation.customerLabel}</strong>
+                <span>{conversation.lastMessagePreview}</span>
+              </div>
+              <div className="messaging-conversation-meta">
+                <StatusBadge variant={badgeVariant(conversation.statusTone)}>
+                  {conversation.statusLabel}
+                </StatusBadge>
+                <span>{conversation.lastMessageAtLabel}</span>
+                {conversation.unreadCount ? <strong>{conversation.unreadCount}</strong> : null}
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="messaging-muted">Sem conversas visíveis para esta unidade.</p>
+      )}
+    </section>
+  );
+}
+
+function ConversationDetail({
+  conversation,
+}: Readonly<{ conversation?: MessagingConversationItemModel }>) {
+  return (
+    <section className="messaging-panel" aria-labelledby="messaging-conversation-detail-title">
+      <div className="inventory-panel-heading">
+        <div>
+          <p className="eyebrow">Mensagens</p>
+          <h2 id="messaging-conversation-detail-title">
+            {conversation ? conversation.customerLabel : 'Conversa'}
+          </h2>
+        </div>
+        <MessageSquare size={20} aria-hidden="true" />
+      </div>
+      {conversation ? (
+        <>
+          <dl className="messaging-detail-grid">
+            <DetailTerm label="Unidade" value={conversation.branchName} />
+            <DetailTerm label="Status" value={conversation.statusLabel} />
+            <DetailTerm label="Não lidas" value={String(conversation.unreadCount)} />
+            <DetailTerm label="Última" value={conversation.lastMessageAtLabel} />
+          </dl>
+          <div className="messaging-message-list">
+            {conversation.messages.map((message) => (
+              <article
+                className={`messaging-message-bubble ${message.directionLabel === 'Cliente' ? 'inbound' : 'outbound'}`}
+                key={message.id}
+              >
+                <div>
+                  <strong>{message.directionLabel}</strong>
+                  <span>{message.createdAtLabel}</span>
+                </div>
+                <p>{message.bodyPreview}</p>
+                <StatusBadge variant={badgeVariant(message.deliveryTone)}>
+                  {message.deliveryStateLabel}
+                </StatusBadge>
+              </article>
+            ))}
+          </div>
+          <p className="messaging-muted">
+            Prévia sanitizada: telefones, emails e links são removidos desta superfície.
+          </p>
+        </>
+      ) : (
+        <div className="messaging-empty-panel compact">
+          <MessageSquare size={24} aria-hidden="true" />
+          <h2>Nenhuma conversa</h2>
+          <p>Conversas aparecem conforme escopo de unidade e permissão.</p>
+        </div>
+      )}
+    </section>
   );
 }
 

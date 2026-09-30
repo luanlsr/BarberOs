@@ -49,6 +49,10 @@ describe('getDevelopmentMessagingStatusViewModel', () => {
     expect(JSON.stringify(model)).not.toContain('credentialReference');
     expect(JSON.stringify(model)).not.toContain('webhookSecretReference');
     expect(model.deliveryMetrics.find((metric) => metric.id === 'DELIVERED')?.count).toBe(112);
+    expect(model.conversations.map((conversation) => conversation.id)).toEqual([
+      'conversation-ana',
+      'conversation-carlos',
+    ]);
   });
 
   it('communicates permission denied without delivery or connection data', () => {
@@ -61,6 +65,7 @@ describe('getDevelopmentMessagingStatusViewModel', () => {
     expect(model.state).toBe('permission-denied');
     expect(model.connection).toBeUndefined();
     expect(model.deliveryMetrics).toEqual([]);
+    expect(model.conversations).toEqual([]);
     expect(model.allowedActions.every((action) => !action.enabled)).toBe(true);
   });
 
@@ -93,5 +98,30 @@ describe('getDevelopmentMessagingStatusViewModel', () => {
       providerLabel: 'Meta WhatsApp Cloud',
       statusTone: 'warning',
     });
+  });
+
+  it('sanitizes message previews before exposing conversation content', () => {
+    const model = getDevelopmentMessagingStatusViewModel(baseSession, {
+      conversationId: 'conversation-ana',
+    });
+
+    expect(model.selectedConversation?.messages.at(-1)?.bodyPreview).toContain(
+      '[telefone removido]',
+    );
+    expect(model.selectedConversation?.messages.at(-1)?.bodyPreview).toContain('[email removido]');
+    expect(JSON.stringify(model.selectedConversation)).not.toContain('+55 11 94444-0000');
+    expect(JSON.stringify(model.selectedConversation)).not.toContain('ana@email.com');
+  });
+
+  it('keeps conversations scoped to the selected branch', () => {
+    const model = getDevelopmentMessagingStatusViewModel(baseSession, {
+      branchId: 'dev-branch-north',
+      state: 'offline',
+    });
+
+    expect(model.conversations.map((conversation) => conversation.id)).toEqual([
+      'conversation-north-hidden',
+    ]);
+    expect(model.conversations[0]?.branchName).toBe('Norte');
   });
 });

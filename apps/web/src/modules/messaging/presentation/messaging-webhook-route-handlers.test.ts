@@ -11,6 +11,8 @@ import type {
 } from '../infrastructure/messaging-provider-adapter';
 import {
   createMessagingWebhookRouteHandlers,
+  type MessagingWebhookLogEntry,
+  type MessagingWebhookMetricPoint,
   type MessagingWebhookRouteService,
 } from './messaging-webhook-route-handlers';
 
@@ -89,8 +91,12 @@ describe('messaging webhook route handlers', () => {
   let resolveContextForEvent: ReturnType<typeof vi.fn>;
   let enqueueWebhookProcessing: ReturnType<typeof vi.fn>;
   let handlers: ReturnType<typeof createMessagingWebhookRouteHandlers>;
+  let logs: MessagingWebhookLogEntry[];
+  let metrics: MessagingWebhookMetricPoint[];
 
   beforeEach(() => {
+    logs = [];
+    metrics = [];
     adapter = {
       provider: 'LOCAL',
       send: vi.fn(),
@@ -119,6 +125,14 @@ describe('messaging webhook route handlers', () => {
       enqueueWebhookProcessing,
       webhookVerifyToken: 'verify-token',
       maxEventAgeMs: 5 * 60 * 1000,
+      observability: {
+        log(entry) {
+          logs.push(entry);
+        },
+        metric(point) {
+          metrics.push(point);
+        },
+      },
     });
   });
 
@@ -154,6 +168,30 @@ describe('messaging webhook route handlers', () => {
         correlationId: 'request-1',
       }),
     );
+    expect(logs).toEqual([
+      expect.objectContaining({
+        level: 'info',
+        module: 'messaging',
+        event: 'messaging.webhook.accepted',
+        requestId: 'request-1',
+      }),
+      expect.objectContaining({
+        event: 'messaging.webhook.events_enqueued',
+        requestId: 'request-1',
+      }),
+    ]);
+    expect(metrics).toEqual([
+      expect.objectContaining({
+        name: 'messaging_webhook_accepted_total',
+        value: 1,
+        tags: { eventCount: '1', enqueued: '1' },
+      }),
+      expect.objectContaining({
+        name: 'messaging_webhook_events_enqueued_total',
+        value: 1,
+        tags: { eventCount: '1', enqueued: '1' },
+      }),
+    ]);
   });
 
   it('rejects invalid signatures before persisting payloads', async () => {
@@ -171,6 +209,19 @@ describe('messaging webhook route handlers', () => {
     });
     expect(service.recordProviderEvent).not.toHaveBeenCalled();
     expect(enqueueWebhookProcessing).not.toHaveBeenCalled();
+    expect(logs).toEqual([
+      expect.objectContaining({
+        level: 'warn',
+        event: 'messaging.webhook.rejected',
+        requestId: 'request-1',
+      }),
+    ]);
+    expect(metrics).toEqual([
+      expect.objectContaining({
+        name: 'messaging_webhook_rejected_total',
+        tags: { reason: 'invalid_signature' },
+      }),
+    ]);
   });
 
   it('rejects stale provider timestamps', async () => {

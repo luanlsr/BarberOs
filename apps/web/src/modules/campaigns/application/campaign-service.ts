@@ -17,6 +17,7 @@ import {
   type ApproveCampaignCommand,
   type CancelCampaignCommand,
   type CampaignAudienceRepository,
+  type CampaignAuditSink,
   type CampaignFilters,
   type CampaignRepository,
   type CampaignRunRepository,
@@ -50,13 +51,15 @@ const campaignRunIdCommandSchema = z.object({
 export class CampaignApplicationService {
   private readonly audiences?: CampaignAudienceRepository;
   private readonly runs?: CampaignRunRepository;
-  private readonly options: { now?: () => Date };
+  private readonly options: { now?: () => Date; auditSink?: CampaignAuditSink };
+  private readonly audit?: CampaignAuditSink;
 
   constructor(
     private readonly campaigns: CampaignRepository,
-    audiencesOrOptions: CampaignAudienceRepository | { now?: () => Date } = {},
-    runsOrOptions: CampaignRunRepository | { now?: () => Date } = {},
-    options: { now?: () => Date } = {},
+    audiencesOrOptions:
+      CampaignAudienceRepository | { now?: () => Date; auditSink?: CampaignAuditSink } = {},
+    runsOrOptions: CampaignRunRepository | { now?: () => Date; auditSink?: CampaignAuditSink } = {},
+    options: { now?: () => Date; auditSink?: CampaignAuditSink } = {},
   ) {
     if ('findAudienceCandidates' in audiencesOrOptions) {
       this.audiences = audiencesOrOptions;
@@ -69,6 +72,7 @@ export class CampaignApplicationService {
     } else {
       this.options = audiencesOrOptions;
     }
+    this.audit = this.options.auditSink;
   }
 
   async createDraft(context: RequestContext, command: unknown): Promise<Campaign> {
@@ -325,10 +329,47 @@ export class CampaignApplicationService {
       ...metadata,
     });
     assertCampaignScope(context, updated);
-    return campaignSchema.parse(updated);
+    const parsed = campaignSchema.parse(updated);
+    const action = auditActionForStatus(status);
+    if (action) {
+      await this.audit?.record(context, {
+        action,
+        entityType: 'CAMPAIGN',
+        entityId: parsed.id,
+        result: 'SUCCESS',
+        beforeState: campaignAuditState(campaign),
+        afterState: campaignAuditState(parsed),
+      });
+    }
+    return parsed;
   }
 
   private nowIso() {
     return (this.options.now ?? (() => new Date()))().toISOString();
   }
+}
+
+function auditActionForStatus(status: Campaign['status']) {
+  if (status === 'APPROVED') return 'CAMPAIGN_APPROVED';
+  if (status === 'SCHEDULED') return 'CAMPAIGN_SCHEDULED';
+  if (status === 'SENDING') return 'CAMPAIGN_SEND_STARTED';
+  if (status === 'SENT') return 'CAMPAIGN_SEND_COMPLETED';
+  if (status === 'PARTIALLY_FAILED') return 'CAMPAIGN_SEND_PARTIALLY_FAILED';
+  if (status === 'CANCELLED') return 'CAMPAIGN_CANCELLED';
+  return null;
+}
+
+function campaignAuditState(campaign: Campaign) {
+  return {
+    id: campaign.id,
+    tenantId: campaign.tenantId,
+    branchId: campaign.branchId,
+    name: campaign.name,
+    status: campaign.status,
+    scheduledFor: campaign.scheduledFor,
+    approvedBy: campaign.approvedBy,
+    approvedAt: campaign.approvedAt,
+    updatedBy: campaign.updatedBy,
+    updatedAt: campaign.updatedAt,
+  };
 }

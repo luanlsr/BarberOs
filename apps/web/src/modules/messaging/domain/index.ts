@@ -131,6 +131,23 @@ export interface MessagingRepository {
   ): Promise<void>;
 }
 
+export interface MessagingAuditSink {
+  record(
+    context: RequestContext,
+    event: {
+      action:
+        | 'MESSAGING_CONNECTION_CREATED'
+        | 'MESSAGING_CONNECTION_CREDENTIAL_REFERENCE_CHANGED'
+        | 'MESSAGING_CONSENT_CHANGED';
+      entityType: 'MESSAGING_CONNECTION' | 'MESSAGING_CONSENT';
+      entityId: string;
+      result: 'SUCCESS' | 'DENIED' | 'FAILURE';
+      beforeState?: unknown;
+      afterState?: unknown;
+    },
+  ): Promise<void>;
+}
+
 export function assertMessagingScope(
   context: RequestContext,
   value: { tenantId: string; branchId?: string },

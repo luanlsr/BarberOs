@@ -6,7 +6,10 @@ import type {
   MessagingConversationFilters,
   MessagingMessageFilters,
 } from '../../../../src/modules/messaging/domain';
-import { SupabaseMessagingRepository } from '../../../../src/modules/messaging/infrastructure';
+import {
+  SupabaseMessagingAuditSink,
+  SupabaseMessagingRepository,
+} from '../../../../src/modules/messaging/infrastructure';
 import {
   createMessagingConnectionRouteHandlers,
   createMessagingConversationRouteHandlers,
@@ -68,5 +71,8 @@ async function getMessagingApplicationService() {
       code: 'PERSISTENCE_NOT_CONFIGURED',
     });
   }
-  return new MessagingApplicationService(new SupabaseMessagingRepository(client));
+  return new MessagingApplicationService(
+    new SupabaseMessagingRepository(client),
+    new SupabaseMessagingAuditSink(client),
+  );
 }

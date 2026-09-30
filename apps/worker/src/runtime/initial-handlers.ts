@@ -21,6 +21,8 @@ import {
   type WhatsAppProviderAdapter,
   type WhatsAppWebhookProcessingPorts,
 } from './whatsapp-messaging-handlers';
+import type { WorkerLogger } from './worker-logger';
+import type { WorkerMetrics } from './worker-metrics';
 
 export type WorkerJobHandlerResult =
   | {
@@ -184,6 +186,8 @@ export type InitialWorkerHandlerPorts = {
   campaignDispatch?: {
     maxRecipientsPerDispatch?: number;
   };
+  logger?: WorkerLogger;
+  metrics?: WorkerMetrics;
 };
 
 export type InitialWorkerJobHandler = (job: WorkerJob) => Promise<WorkerJobHandlerResult>;
@@ -493,7 +497,8 @@ export async function handleCampaignDispatch(
 
   const run = await ports.campaigns.findRunById(payload.data.campaignRunId);
   if (!run || run.tenantId !== job.tenantId) return skipped('campaign_run_not_found');
-  if (run.branchId && job.branchId && run.branchId !== job.branchId) return skipped('branch_mismatch');
+  if (run.branchId && job.branchId && run.branchId !== job.branchId)
+    return skipped('branch_mismatch');
   if (run.status !== 'APPROVED' && run.status !== 'SCHEDULED' && run.status !== 'SENDING') {
     return skipped('campaign_run_not_dispatchable');
   }
@@ -543,8 +548,24 @@ export async function handleCampaignDispatch(
   }
 
   if (batch.length < pending.length) {
+    recordCampaignDispatchObservability(job, ports, {
+      campaignId: run.campaignId,
+      campaignRunId: run.id,
+      queuedRecipients: batch.length,
+      pendingRecipients: pending.length,
+      outcome: 'rate_limited',
+      limit,
+    });
     return skipped('campaign_dispatch_rate_limited');
   }
+  recordCampaignDispatchObservability(job, ports, {
+    campaignId: run.campaignId,
+    campaignRunId: run.id,
+    queuedRecipients: batch.length,
+    pendingRecipients: pending.length,
+    outcome: 'created',
+    limit,
+  });
   return succeeded('campaign_dispatch_work_created');
 }
 
@@ -637,6 +658,8 @@ function handleWhatsAppDeliveryJob(job: WorkerJob, ports: InitialWorkerHandlerPo
     notifications: ports.notifications?.recordDeliveryAttempt
       ? { recordDeliveryAttempt: ports.notifications.recordDeliveryAttempt }
       : undefined,
+    logger: ports.logger,
+    metrics: ports.metrics,
     now: () => now,
   });
 }
@@ -730,4 +753,51 @@ function succeeded(effect: string): WorkerJobHandlerResult {
 
 function skipped(reason: string): WorkerJobHandlerResult {
   return { status: 'skipped', reason };
+}
+
+function recordCampaignDispatchObservability(
+  job: WorkerJob,
+  ports: InitialWorkerHandlerPorts,
+  input: {
+    campaignId: string;
+    campaignRunId: string;
+    queuedRecipients: number;
+    pendingRecipients: number;
+    outcome: 'created' | 'rate_limited';
+    limit: number;
+  },
+) {
+  ports.logger?.[input.outcome === 'created' ? 'info' : 'warn']({
+    event:
+      input.outcome === 'created'
+        ? 'campaign.dispatch.work_created'
+        : 'campaign.dispatch.rate_limited',
+    job,
+    metadata: {
+      campaignId: input.campaignId,
+      campaignRunId: input.campaignRunId,
+      queuedRecipients: input.queuedRecipients,
+      pendingRecipients: input.pendingRecipients,
+      limit: input.limit,
+    },
+  });
+  ports.metrics?.count({
+    name: 'campaign_dispatch_recipients_queued_total',
+    value: input.queuedRecipients,
+    job,
+    tags: {
+      campaignId: input.campaignId,
+      campaignRunId: input.campaignRunId,
+      outcome: input.outcome,
+    },
+  });
+  ports.metrics?.count({
+    name: 'campaign_dispatch_runs_total',
+    job,
+    tags: {
+      campaignId: input.campaignId,
+      campaignRunId: input.campaignRunId,
+      outcome: input.outcome,
+    },
+  });
 }

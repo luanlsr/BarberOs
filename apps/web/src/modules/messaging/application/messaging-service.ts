@@ -19,6 +19,7 @@ import {
   type MessagingConnectionFilters,
   type MessagingConversationFilters,
   type MessagingMessageFilters,
+  type MessagingAuditSink,
   type RecordConsentCommand,
   type RecordConversationCommand,
   type RecordMessageCommand,
@@ -26,7 +27,10 @@ import {
 } from '../domain';
 
 export class MessagingApplicationService {
-  constructor(private readonly repository: MessagingRepository) {}
+  constructor(
+    private readonly repository: MessagingRepository,
+    private readonly audit?: MessagingAuditSink,
+  ) {}
 
   async createConnection(context: RequestContext, command: unknown) {
     const parsed = createMessagingConnectionCommandSchema.parse(command);
@@ -35,7 +39,31 @@ export class MessagingApplicationService {
       entitlement: 'messaging',
       branchId: parsed.branchId,
     });
-    return this.repository.createConnection(context, parsed);
+    const connection = await this.repository.createConnection(context, parsed);
+    await this.audit?.record(context, {
+      action: 'MESSAGING_CONNECTION_CREATED',
+      entityType: 'MESSAGING_CONNECTION',
+      entityId: connection.id,
+      result: 'SUCCESS',
+      afterState: connectionAuditState(connection),
+    });
+    if (parsed.credentialReference || parsed.webhookSecretReference) {
+      await this.audit?.record(context, {
+        action: 'MESSAGING_CONNECTION_CREDENTIAL_REFERENCE_CHANGED',
+        entityType: 'MESSAGING_CONNECTION',
+        entityId: connection.id,
+        result: 'SUCCESS',
+        afterState: {
+          connectionId: connection.id,
+          provider: connection.provider,
+          branchId: connection.branchId,
+          credentialReferenceChanged: Boolean(parsed.credentialReference),
+          webhookSecretReferenceChanged: Boolean(parsed.webhookSecretReference),
+          providerPhoneNumberIdChanged: Boolean(parsed.providerPhoneNumberId),
+        },
+      });
+    }
+    return connection;
   }
 
   async listConnections(context: RequestContext, filters: MessagingConnectionFilters = {}) {
@@ -104,13 +132,27 @@ export class MessagingApplicationService {
     const branchId = typeof command.branchId === 'string' ? command.branchId : undefined;
     authorize(context, { permission: 'messaging.manage', entitlement: 'messaging', branchId });
     assertMessagingScope(context, { tenantId: command.tenantId, branchId });
-    return this.repository.recordConsent(context, {
+    const previous = await this.repository.findLatestConsent(context, {
+      contactPhoneHash: parsed.contactPhoneHash,
+      customerId: parsed.customerId,
+      purpose: parsed.purpose,
+    });
+    const consent = await this.repository.recordConsent(context, {
       ...parsed,
       tenantId: command.tenantId,
       branchId,
       actorId: command.actorId ?? context.userId,
       providerMessageId: command.providerMessageId,
     });
+    await this.audit?.record(context, {
+      action: 'MESSAGING_CONSENT_CHANGED',
+      entityType: 'MESSAGING_CONSENT',
+      entityId: consent.id,
+      result: 'SUCCESS',
+      beforeState: previous ? consentAuditState(previous) : undefined,
+      afterState: consentAuditState(consent),
+    });
+    return consent;
   }
 
   async recordInboundMessage(
@@ -200,4 +242,45 @@ export class MessagingApplicationService {
     assertMessagingScope(context, connection);
     return messagingConnectionSchema.parse(connection);
   }
+}
+
+function connectionAuditState(connection: {
+  id: string;
+  tenantId: string;
+  branchId?: string;
+  provider: string;
+  status: string;
+  displayName: string;
+  displayPhoneNumber: string;
+  providerPhoneNumberId?: string;
+  allowTenantFallback: boolean;
+}) {
+  return {
+    id: connection.id,
+    tenantId: connection.tenantId,
+    branchId: connection.branchId,
+    provider: connection.provider,
+    status: connection.status,
+    displayName: connection.displayName,
+    displayPhoneNumber: connection.displayPhoneNumber,
+    providerPhoneNumberId: connection.providerPhoneNumberId,
+    allowTenantFallback: connection.allowTenantFallback,
+  };
+}
+
+function consentAuditState(consent: MessagingConsentRecord) {
+  return {
+    id: consent.id,
+    tenantId: consent.tenantId,
+    branchId: consent.branchId,
+    customerId: consent.customerId,
+    contactPhoneHash: consent.contactPhoneHash,
+    purpose: consent.purpose,
+    state: consent.state,
+    source: consent.source,
+    actorId: consent.actorId,
+    providerMessageId: consent.providerMessageId,
+    reason: consent.reason,
+    createdAt: consent.createdAt,
+  };
 }

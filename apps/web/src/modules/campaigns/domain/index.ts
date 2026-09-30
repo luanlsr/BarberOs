@@ -176,6 +176,26 @@ export interface CampaignRunRepository {
   ): Promise<CampaignMetricRollup>;
 }
 
+export interface CampaignAuditSink {
+  record(
+    context: RequestContext,
+    event: {
+      action:
+        | 'CAMPAIGN_APPROVED'
+        | 'CAMPAIGN_SCHEDULED'
+        | 'CAMPAIGN_SEND_STARTED'
+        | 'CAMPAIGN_SEND_COMPLETED'
+        | 'CAMPAIGN_SEND_PARTIALLY_FAILED'
+        | 'CAMPAIGN_CANCELLED';
+      entityType: 'CAMPAIGN';
+      entityId: string;
+      result: 'SUCCESS' | 'DENIED' | 'FAILURE';
+      beforeState?: unknown;
+      afterState?: unknown;
+    },
+  ): Promise<void>;
+}
+
 export function assertCampaignScope(
   context: RequestContext,
   value: { tenantId: string; branchId?: string },

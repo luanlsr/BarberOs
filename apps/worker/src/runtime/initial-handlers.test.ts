@@ -21,6 +21,8 @@ import {
   handleStockAlert,
   type InitialWorkerHandlerPorts,
 } from './initial-handlers';
+import { WorkerLogger, type WorkerLogEntry } from './worker-logger';
+import { WorkerMetrics, type WorkerMetricPoint } from './worker-metrics';
 
 type NotificationCreateIntent = NonNullable<
   InitialWorkerHandlerPorts['notifications']
@@ -837,6 +839,8 @@ describe('initial worker handlers', () => {
 
   it('creates campaign WhatsApp delivery work and queues recipient outcomes', async () => {
     const notifications: CreateNotificationIntentCommand[] = [];
+    const logs: WorkerLogEntry[] = [];
+    const metrics: WorkerMetricPoint[] = [];
     const outcomeUpdates: Array<{
       campaignRunId: string;
       contactPhoneHash: string;
@@ -914,6 +918,8 @@ describe('initial worker handlers', () => {
             outcomeUpdates.push(input);
           },
         },
+        logger: new WorkerLogger({ write: (entry) => logs.push(entry) }),
+        metrics: new WorkerMetrics({ record: (point) => metrics.push(point) }),
       },
     );
 
@@ -960,6 +966,35 @@ describe('initial worker handlers', () => {
         status: 'QUEUED',
         notificationIntentId: 'notification-2',
       },
+    ]);
+    expect(logs).toEqual([
+      expect.objectContaining({
+        level: 'info',
+        event: 'campaign.dispatch.work_created',
+        jobId: 'job-1',
+        metadata: expect.objectContaining({
+          campaignId: 'campaign-1',
+          campaignRunId: 'campaign-run-1',
+          queuedRecipients: 2,
+          pendingRecipients: 2,
+        }),
+      }),
+    ]);
+    expect(metrics).toEqual([
+      expect.objectContaining({
+        name: 'campaign_dispatch_recipients_queued_total',
+        value: 2,
+        tags: expect.objectContaining({
+          campaignId: 'campaign-1',
+          campaignRunId: 'campaign-run-1',
+          outcome: 'created',
+        }),
+      }),
+      expect.objectContaining({
+        name: 'campaign_dispatch_runs_total',
+        value: 1,
+        tags: expect.objectContaining({ outcome: 'created' }),
+      }),
     ]);
   });
 

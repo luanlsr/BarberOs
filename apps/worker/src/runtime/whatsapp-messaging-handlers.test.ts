@@ -13,6 +13,8 @@ import {
   type ProcessProviderStatusCommand,
   type WhatsAppProviderAdapter,
 } from './whatsapp-messaging-handlers';
+import { WorkerLogger, type WorkerLogEntry } from './worker-logger';
+import { WorkerMetrics, type WorkerMetricPoint } from './worker-metrics';
 
 describe('WhatsApp worker handlers', () => {
   it('sends outbound WhatsApp delivery and records queued notification attempts', async () => {
@@ -48,11 +50,74 @@ describe('WhatsApp worker handlers', () => {
     ]);
   });
 
+  it('emits structured logs and provider latency metrics for accepted sends', async () => {
+    const logs: WorkerLogEntry[] = [];
+    const metrics: WorkerMetricPoint[] = [];
+    const provider: WhatsAppProviderAdapter = {
+      provider: 'LOCAL',
+      send: vi.fn(async () => ({
+        accepted: true as const,
+        provider: 'LOCAL',
+        providerMessageId: 'local-message-1',
+        deliveryState: 'SENT' as const,
+        retryable: false as const,
+      })),
+    };
+
+    const result = await handleWhatsAppDelivery(makeDeliveryJob(), {
+      provider,
+      notifications: notificationPorts([]),
+      logger: new WorkerLogger({ write: (entry) => logs.push(entry) }),
+      metrics: new WorkerMetrics({ record: (point) => metrics.push(point) }),
+      now: () => new Date('2026-09-23T12:05:00.000Z'),
+    });
+
+    expect(result).toEqual({ status: 'succeeded', effect: 'whatsapp_delivered' });
+    expect(logs).toEqual([
+      expect.objectContaining({
+        level: 'info',
+        event: 'whatsapp.provider.send.accepted',
+        jobId: 'job-whatsapp-delivery',
+        tenantId: 'tenant-1',
+        correlationId: 'correlation-1',
+        metadata: expect.objectContaining({
+          provider: 'LOCAL',
+          deliveryState: 'SENT',
+          hasProviderMessageId: true,
+        }),
+      }),
+    ]);
+    expect(metrics).toEqual([
+      expect.objectContaining({
+        name: 'whatsapp_provider_send_latency_ms',
+        unit: 'milliseconds',
+        tags: expect.objectContaining({
+          provider: 'LOCAL',
+          accepted: 'true',
+          deliveryState: 'SENT',
+          tenantId: 'tenant-1',
+        }),
+      }),
+      expect.objectContaining({
+        name: 'whatsapp_provider_send_accepted_total',
+        value: 1,
+        tags: expect.objectContaining({
+          provider: 'LOCAL',
+          deliveryState: 'SENT',
+        }),
+      }),
+    ]);
+  });
+
   it('records retry and dead-letter attempts through the worker retry policy', async () => {
     const retryAttempts: NotificationDeliveryAttempt[] = [];
+    const logs: WorkerLogEntry[] = [];
+    const metrics: WorkerMetricPoint[] = [];
     const retry = await handleWhatsAppDelivery(makeDeliveryJob({ attemptCount: 1 }), {
       provider: failingProvider(true),
       notifications: notificationPorts(retryAttempts),
+      logger: new WorkerLogger({ write: (entry) => logs.push(entry) }),
+      metrics: new WorkerMetrics({ record: (point) => metrics.push(point) }),
       now: () => new Date('2026-09-23T12:05:00.000Z'),
     });
 
@@ -62,6 +127,8 @@ describe('WhatsApp worker handlers', () => {
       {
         provider: failingProvider(true),
         notifications: notificationPorts(deadLetterAttempts),
+        logger: new WorkerLogger({ write: (entry) => logs.push(entry) }),
+        metrics: new WorkerMetrics({ record: (point) => metrics.push(point) }),
         now: () => new Date('2026-09-23T12:05:00.000Z'),
       },
     );
@@ -78,6 +145,30 @@ describe('WhatsApp worker handlers', () => {
       attemptNumber: 8,
       error: { code: 'WORKER_RETRY_EXHAUSTED', retryable: false },
     });
+    expect(logs).toEqual([
+      expect.objectContaining({
+        level: 'warn',
+        event: 'whatsapp.provider.send.retry_scheduled',
+        error: expect.objectContaining({ code: 'WORKER_PROVIDER_UNAVAILABLE' }),
+      }),
+      expect.objectContaining({
+        level: 'error',
+        event: 'whatsapp.provider.send.dead_lettered',
+        error: expect.objectContaining({ code: 'WORKER_RETRY_EXHAUSTED' }),
+      }),
+    ]);
+    expect(metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'worker_job_retries_total',
+          tags: expect.objectContaining({ reason: 'WORKER_PROVIDER_UNAVAILABLE' }),
+        }),
+        expect.objectContaining({
+          name: 'worker_job_dead_letters_total',
+          tags: expect.objectContaining({ reason: 'WORKER_RETRY_EXHAUSTED' }),
+        }),
+      ]),
+    );
   });
 
   it('does not call the provider again when an idempotent delivery already reached a final state', async () => {
