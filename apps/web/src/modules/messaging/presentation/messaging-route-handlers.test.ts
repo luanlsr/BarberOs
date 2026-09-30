@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMessagingConnectionRouteHandlers,
   createMessagingConversationRouteHandlers,
+  createMessagingOperationsRouteHandlers,
   type MessagingRouteService,
 } from './messaging-route-handlers';
 
@@ -74,6 +75,7 @@ type MockService = MessagingRouteService & {
   createConnection: ReturnType<typeof vi.fn>;
   listConversations: ReturnType<typeof vi.fn>;
   listMessages: ReturnType<typeof vi.fn>;
+  getOperationalStatus: ReturnType<typeof vi.fn>;
 };
 
 describe('messaging route handlers', () => {
@@ -85,6 +87,23 @@ describe('messaging route handlers', () => {
       createConnection: vi.fn(async () => connection),
       listConversations: vi.fn(async () => [conversation]),
       listMessages: vi.fn(async () => [message]),
+      getOperationalStatus: vi.fn(async () => ({
+        tenantId: 'tenant-1',
+        branchId: 'branch-1',
+        generatedAt: '2026-09-29T12:10:00.000Z',
+        delayedWebhookThresholdMs: 60000,
+        metrics: [
+          { key: 'failedDeliveries', label: 'Entregas com falha', value: 1 },
+          { key: 'blockedSends', label: 'Envios bloqueados', value: 1 },
+          { key: 'delayedWebhooks', label: 'Webhooks atrasados', value: 1 },
+          {
+            key: 'campaignPartialFailures',
+            label: 'Campanhas parcialmente falhas',
+            value: 1,
+          },
+        ],
+        issues: [],
+      })),
     };
   });
 
@@ -179,5 +198,45 @@ describe('messaging route handlers', () => {
 
     expect(response.status).toBe(401);
     expect(service.listConnections).not.toHaveBeenCalled();
+  });
+
+  it('returns operational messaging status with safe filters', async () => {
+    const handlers = createMessagingOperationsRouteHandlers({
+      resolveContext: vi.fn(async () => context),
+      service,
+    });
+
+    const response = await handlers.GET(
+      new Request(
+        'https://barberos.local/api/v1/messaging/operations?branchId=branch-1&limit=20&delayedWebhookMs=60000',
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(service.getOperationalStatus).toHaveBeenCalledWith(context, {
+      branchId: 'branch-1',
+      limit: 20,
+      delayedWebhookMs: 60000,
+    });
+    expect(await response.json()).toEqual({
+      data: {
+        tenantId: 'tenant-1',
+        branchId: 'branch-1',
+        generatedAt: '2026-09-29T12:10:00.000Z',
+        delayedWebhookThresholdMs: 60000,
+        metrics: [
+          { key: 'failedDeliveries', label: 'Entregas com falha', value: 1 },
+          { key: 'blockedSends', label: 'Envios bloqueados', value: 1 },
+          { key: 'delayedWebhooks', label: 'Webhooks atrasados', value: 1 },
+          {
+            key: 'campaignPartialFailures',
+            label: 'Campanhas parcialmente falhas',
+            value: 1,
+          },
+        ],
+        issues: [],
+      },
+      requestId: 'request-1',
+    });
   });
 });

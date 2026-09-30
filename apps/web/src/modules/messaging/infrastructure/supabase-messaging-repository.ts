@@ -19,6 +19,8 @@ import type {
   MessagingConnectionFilters,
   MessagingConversationFilters,
   MessagingMessageFilters,
+  MessagingOperationalIssue,
+  MessagingOperationalStatusQuery,
   MessagingRepository,
   RecordConsentCommand,
   RecordConversationCommand,
@@ -41,6 +43,10 @@ const eventSelect =
   'id, tenant_id, branch_id, connection_id, provider, provider_event_id, event_kind, received_at, processed_at, idempotency_key, payload, signature_valid';
 const consentSelect =
   'id, tenant_id, branch_id, customer_id, contact_phone_hash, purpose, state, source, actor_id, provider_message_id, reason, created_at';
+const deliveryAttemptOperationalSelect =
+  'id, tenant_id, branch_id, notification_intent_id, channel, status, attempt_number, provider, error_code, error_retryable, created_at';
+const campaignRunOperationalSelect =
+  'id, tenant_id, branch_id, campaign_id, status, eligible_count, updated_at';
 
 export class SupabaseMessagingRepository implements MessagingRepository {
   constructor(private readonly client: SupabaseClient) {}
@@ -134,6 +140,20 @@ export class SupabaseMessagingRepository implements MessagingRepository {
       connections.find((connection) => !connection.branchId && connection.allowTenantFallback) ??
       null
     );
+  }
+
+  async listOperationalIssues(context: RequestContext, filters: MessagingOperationalStatusQuery) {
+    const delayedBefore = new Date(Date.now() - filters.delayedWebhookMs).toISOString();
+    const [failedDeliveries, blockedSends, delayedWebhooks, partialCampaigns] = await Promise.all([
+      this.listDeliveryAttemptIssues(context, filters, ['FAILED', 'DEAD_LETTERED']),
+      this.listDeliveryAttemptIssues(context, filters, ['BLOCKED_BY_CONSENT']),
+      this.listDelayedWebhookIssues(context, filters, delayedBefore),
+      this.listPartialCampaignIssues(context, filters),
+    ]);
+
+    return [...failedDeliveries, ...blockedSends, ...delayedWebhooks, ...partialCampaigns]
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+      .slice(0, filters.limit);
   }
 
   async findProviderEventByIdempotencyKey(context: RequestContext, idempotencyKey: string) {
@@ -282,6 +302,108 @@ export class SupabaseMessagingRepository implements MessagingRepository {
     const { data, error } = await query;
     if (error) throw error;
     return data?.[0] ? toConsent(data[0]) : null;
+  }
+
+  private async listDeliveryAttemptIssues(
+    context: RequestContext,
+    filters: MessagingOperationalStatusQuery,
+    statuses: readonly string[],
+  ): Promise<MessagingOperationalIssue[]> {
+    let query = this.client
+      .from('notification_delivery_attempts')
+      .select(deliveryAttemptOperationalSelect)
+      .eq('tenant_id', context.tenantId)
+      .in('status', statuses)
+      .order('created_at', { ascending: false })
+      .limit(filters.limit);
+    query = applyBranchScope(query, context, filters.branchId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      id: `delivery-attempt:${String(row.id)}`,
+      kind: row.status === 'BLOCKED_BY_CONSENT' ? 'BLOCKED_SEND' : 'FAILED_DELIVERY',
+      tenantId: String(row.tenant_id),
+      branchId: typeof row.branch_id === 'string' ? row.branch_id : undefined,
+      severity: row.status === 'DEAD_LETTERED' ? 'critical' : 'warning',
+      occurredAt: String(row.created_at),
+      sourceType: 'NOTIFICATION_DELIVERY',
+      sourceId: String(row.notification_intent_id),
+      status: String(row.status),
+      reason: typeof row.error_code === 'string' ? row.error_code : undefined,
+      metadata: {
+        channel: String(row.channel),
+        attemptNumber: Number(row.attempt_number ?? 0),
+        provider: typeof row.provider === 'string' ? row.provider : undefined,
+        retryable: typeof row.error_retryable === 'boolean' ? row.error_retryable : undefined,
+      },
+    }));
+  }
+
+  private async listDelayedWebhookIssues(
+    context: RequestContext,
+    filters: MessagingOperationalStatusQuery,
+    delayedBefore: string,
+  ): Promise<MessagingOperationalIssue[]> {
+    let query = this.client
+      .from('messaging_provider_events')
+      .select(eventSelect)
+      .eq('tenant_id', context.tenantId)
+      .is('processed_at', null)
+      .lt('received_at', delayedBefore)
+      .order('received_at', { ascending: true })
+      .limit(filters.limit);
+    query = applyBranchScope(query, context, filters.branchId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      id: `provider-event:${String(row.id)}`,
+      kind: 'DELAYED_WEBHOOK',
+      tenantId: String(row.tenant_id),
+      branchId: typeof row.branch_id === 'string' ? row.branch_id : undefined,
+      severity: 'warning',
+      occurredAt: String(row.received_at),
+      sourceType: 'MESSAGING_PROVIDER_EVENT',
+      sourceId: String(row.id),
+      status: 'UNPROCESSED',
+      reason: String(row.event_kind),
+      metadata: {
+        provider: String(row.provider),
+        connectionId: String(row.connection_id),
+        signatureValid: Boolean(row.signature_valid),
+      },
+    }));
+  }
+
+  private async listPartialCampaignIssues(
+    context: RequestContext,
+    filters: MessagingOperationalStatusQuery,
+  ): Promise<MessagingOperationalIssue[]> {
+    let query = this.client
+      .from('campaign_runs')
+      .select(campaignRunOperationalSelect)
+      .eq('tenant_id', context.tenantId)
+      .eq('status', 'PARTIALLY_FAILED')
+      .order('updated_at', { ascending: false })
+      .limit(filters.limit);
+    query = applyBranchScope(query, context, filters.branchId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      id: `campaign-run:${String(row.id)}`,
+      kind: 'CAMPAIGN_PARTIAL_FAILURE',
+      tenantId: String(row.tenant_id),
+      branchId: typeof row.branch_id === 'string' ? row.branch_id : undefined,
+      severity: 'warning',
+      occurredAt: String(row.updated_at),
+      sourceType: 'CAMPAIGN_RUN',
+      sourceId: String(row.id),
+      status: String(row.status),
+      reason: 'PARTIALLY_FAILED',
+      metadata: {
+        campaignId: String(row.campaign_id),
+        eligibleCount: Number(row.eligible_count ?? 0),
+      },
+    }));
   }
 }
 

@@ -76,12 +76,12 @@
 
 - [x] 9.1 Add audit events for connection changes, consent changes, campaign approval/send/cancel and provider credential reference changes.
 - [x] 9.2 Add structured logs and metrics for webhook acceptance/rejection, provider send latency, retries, dead letters and campaign throughput.
-- [ ] 9.3 Add operational status queries for failed deliveries, blocked sends, delayed webhooks and campaign partial failures.
-- [ ] 9.4 Document environment variables, provider setup, local/noop development behavior and webhook testing workflow.
+- [x] 9.3 Add operational status queries for failed deliveries, blocked sends, delayed webhooks and campaign partial failures.
+- [x] 9.4 Document environment variables, provider setup, local/noop development behavior and webhook testing workflow.
 
 ## 10. Validation
 
-- [ ] 10.1 Run focused tests for contracts, messaging, campaigns, scheduling notification integration, webhooks, worker handlers and UI routes/components.
-- [ ] 10.2 Run `npx openspec validate whatsapp-messaging-campaigns --strict` and fix any spec/task/design issues.
-- [ ] 10.3 Run the repo validation command required by the change scope and confirm lint, typecheck, tests and build pass.
-- [ ] 10.4 Update `PRODUCT_COMPLETION_ROADMAP.md` with the new change status, completed task count and next planned epic after implementation.
+- [x] 10.1 Run focused tests for contracts, messaging, campaigns, scheduling notification integration, webhooks, worker handlers and UI routes/components.
+- [x] 10.2 Run `npx openspec validate whatsapp-messaging-campaigns --strict` and fix any spec/task/design issues.
+- [x] 10.3 Run the repo validation command required by the change scope and confirm lint, typecheck, tests and build pass.
+- [x] 10.4 Update `PRODUCT_COMPLETION_ROADMAP.md` with the new change status, completed task count and next planned epic after implementation.

@@ -193,7 +193,7 @@ describe('campaign route handlers', () => {
   });
 
   it('returns stable errors for missing auth and missing required parameters', async () => {
-    let handlers = createCampaignRouteHandlers({
+    const handlers = createCampaignRouteHandlers({
       resolveContext: vi.fn(async () => null),
       service,
     });

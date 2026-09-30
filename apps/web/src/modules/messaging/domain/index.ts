@@ -33,6 +33,48 @@ export type MessagingMessageFilters = {
   cursor?: string;
 };
 
+export type MessagingOperationalStatusFilters = {
+  branchId?: string;
+  limit?: number;
+  delayedWebhookMs?: number;
+};
+
+export type MessagingOperationalStatusQuery = MessagingOperationalStatusFilters & {
+  limit: number;
+  delayedWebhookMs: number;
+};
+
+export type MessagingOperationalIssueKind =
+  'FAILED_DELIVERY' | 'BLOCKED_SEND' | 'DELAYED_WEBHOOK' | 'CAMPAIGN_PARTIAL_FAILURE';
+
+export type MessagingOperationalIssue = {
+  id: string;
+  kind: MessagingOperationalIssueKind;
+  tenantId: string;
+  branchId?: string;
+  severity: 'warning' | 'critical';
+  occurredAt: string;
+  sourceType: 'NOTIFICATION_DELIVERY' | 'MESSAGING_PROVIDER_EVENT' | 'CAMPAIGN_RUN';
+  sourceId: string;
+  status: string;
+  reason?: string;
+  correlationId?: string;
+  metadata?: Record<string, string | number | boolean | undefined>;
+};
+
+export type MessagingOperationalStatusSummary = {
+  tenantId: string;
+  branchId?: string;
+  generatedAt: string;
+  delayedWebhookThresholdMs: number;
+  metrics: readonly {
+    key: 'failedDeliveries' | 'blockedSends' | 'delayedWebhooks' | 'campaignPartialFailures';
+    label: string;
+    value: number;
+  }[];
+  issues: readonly MessagingOperationalIssue[];
+};
+
 export type ConversationLookup = {
   tenantId: string;
   branchId?: string;
@@ -96,6 +138,10 @@ export interface MessagingRepository {
     context: RequestContext,
     filters: MessagingMessageFilters,
   ): Promise<MessagingMessage[]>;
+  listOperationalIssues?(
+    context: RequestContext,
+    filters: MessagingOperationalStatusQuery,
+  ): Promise<MessagingOperationalIssue[]>;
   findActiveConnectionForBranch(
     context: RequestContext,
     branchId?: string,

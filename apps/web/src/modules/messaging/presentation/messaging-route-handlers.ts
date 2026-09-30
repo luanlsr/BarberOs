@@ -11,6 +11,7 @@ import type {
   MessagingConnectionFilters,
   MessagingConversationFilters,
   MessagingMessageFilters,
+  MessagingOperationalStatusFilters,
 } from '../domain';
 import { jsonError, jsonFromError } from '../../shared/presentation/api';
 
@@ -31,6 +32,10 @@ export type MessagingRouteService = {
     context: RequestContext,
     filters: MessagingMessageFilters,
   ): Promise<MessagingMessage[]>;
+  getOperationalStatus?(
+    context: RequestContext,
+    filters?: MessagingOperationalStatusFilters,
+  ): Promise<unknown>;
 };
 
 export type MessagingRouteDependencies = {
@@ -116,6 +121,39 @@ export function createMessagingConversationRouteHandlers(dependencies: Messaging
           }),
         );
         return NextResponse.json({ data: conversations, requestId: context.requestId });
+      } catch (error) {
+        return jsonFromError(error, context.requestId);
+      }
+    },
+  };
+}
+
+export function createMessagingOperationsRouteHandlers(dependencies: MessagingRouteDependencies) {
+  return {
+    GET: async (request: Request) => {
+      const requestId = getRequestId(request);
+      const context = await dependencies.resolveContext(request);
+      if (!context) return unauthenticated(requestId);
+      if (!dependencies.service.getOperationalStatus) {
+        return jsonError(
+          'PERSISTENCE_NOT_CONFIGURED',
+          'Messaging operational status is not configured.',
+          503,
+          context.requestId,
+        );
+      }
+
+      try {
+        const url = new URL(request.url);
+        const summary = await dependencies.service.getOperationalStatus(
+          context,
+          compact({
+            branchId: optionalParam(url, 'branchId'),
+            limit: optionalNumberParam(url, 'limit'),
+            delayedWebhookMs: optionalNumberParam(url, 'delayedWebhookMs'),
+          }),
+        );
+        return NextResponse.json({ data: summary, requestId: context.requestId });
       } catch (error) {
         return jsonFromError(error, context.requestId);
       }

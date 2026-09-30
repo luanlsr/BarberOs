@@ -256,33 +256,6 @@ function CashMovementAction({
   );
 }
 
-function CloseCashRegisterPanel({
-  model,
-  onCloseCash,
-}: Readonly<{ model: CashRegisterViewModel; onCloseCash: () => void }>) {
-  return (
-    <section className="cash-register-panel" aria-labelledby="cash-close-title">
-      <div className="cash-register-panel-heading">
-        <div>
-          <p className="eyebrow">Fechamento</p>
-          <h2 id="cash-close-title">Fechar caixa</h2>
-        </div>
-        <ClipboardList size={20} aria-hidden="true" />
-      </div>
-      <p className="cash-register-muted">Confira valores e registre divergencia em modal.</p>
-      <button
-        className="button button-primary"
-        disabled={!model.canClose}
-        type="button"
-        onClick={onCloseCash}
-      >
-        <ClipboardList size={16} aria-hidden="true" />
-        Fechar caixa
-      </button>
-    </section>
-  );
-}
-
 function ClosedCashRegisterPanel({ session }: Readonly<{ session: CashRegisterSessionModel }>) {
   return (
     <section className="cash-register-panel" aria-labelledby="cash-closed-title">

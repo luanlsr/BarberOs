@@ -16,6 +16,8 @@ import type {
   MessagingConversationFilters,
   MessagingMessageFilters,
   MessagingAuditSink,
+  MessagingOperationalIssue,
+  MessagingOperationalStatusQuery,
   MessagingRepository,
   RecordConsentCommand,
   RecordConversationCommand,
@@ -250,6 +252,85 @@ describe('MessagingApplicationService', () => {
       afterState: expect.objectContaining({ state: 'OPTED_OUT', reason: 'SAIR' }),
     });
   });
+
+  it('returns scoped operational status for delivery, webhook and campaign issues without raw payloads', async () => {
+    const repository = new MemoryMessagingRepository();
+    repository.operationalIssues.push(
+      operationalIssue({
+        id: 'delivery-attempt:failed-1',
+        kind: 'FAILED_DELIVERY',
+        sourceId: 'notification-1',
+        status: 'DEAD_LETTERED',
+        severity: 'critical',
+        reason: 'WORKER_RETRY_EXHAUSTED',
+      }),
+      operationalIssue({
+        id: 'delivery-attempt:blocked-1',
+        kind: 'BLOCKED_SEND',
+        sourceId: 'notification-2',
+        status: 'BLOCKED_BY_CONSENT',
+      }),
+      operationalIssue({
+        id: 'provider-event:raw-1',
+        kind: 'DELAYED_WEBHOOK',
+        sourceType: 'MESSAGING_PROVIDER_EVENT',
+        sourceId: 'raw-event-1',
+        status: 'UNPROCESSED',
+        metadata: { provider: 'LOCAL', rawBody: undefined },
+      }),
+      operationalIssue({
+        id: 'campaign-run:partial-1',
+        kind: 'CAMPAIGN_PARTIAL_FAILURE',
+        sourceType: 'CAMPAIGN_RUN',
+        sourceId: 'campaign-run-1',
+        status: 'PARTIALLY_FAILED',
+      }),
+      operationalIssue({
+        id: 'delivery-attempt:other-branch',
+        kind: 'FAILED_DELIVERY',
+        branchId: 'branch-2',
+      }),
+      operationalIssue({
+        id: 'delivery-attempt:other-tenant',
+        kind: 'FAILED_DELIVERY',
+        tenantId: 'tenant-2',
+      }),
+    );
+    const service = new MessagingApplicationService(repository);
+
+    const summary = await service.getOperationalStatus(context, {
+      branchId: 'branch-1',
+      limit: 50,
+      delayedWebhookMs: 60_000,
+    });
+
+    expect(repository.lastOperationalFilters).toEqual({
+      branchId: 'branch-1',
+      limit: 50,
+      delayedWebhookMs: 60_000,
+    });
+    expect(summary.metrics).toEqual([
+      { key: 'failedDeliveries', label: 'Entregas com falha', value: 1 },
+      { key: 'blockedSends', label: 'Envios bloqueados', value: 1 },
+      { key: 'delayedWebhooks', label: 'Webhooks atrasados', value: 1 },
+      {
+        key: 'campaignPartialFailures',
+        label: 'Campanhas parcialmente falhas',
+        value: 1,
+      },
+    ]);
+    expect(summary.issues.map((issue) => issue.id)).toEqual([
+      'delivery-attempt:failed-1',
+      'delivery-attempt:blocked-1',
+      'provider-event:raw-1',
+      'campaign-run:partial-1',
+    ]);
+    expect(JSON.stringify(summary)).not.toContain('provider payload');
+    expect(JSON.stringify(summary)).not.toContain('bodyPreview');
+    await expect(
+      service.getOperationalStatus({ ...context, permissions: [] }, {}),
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+  });
 });
 
 function connection(overrides: Partial<MessagingConnection> = {}): MessagingConnection {
@@ -279,6 +360,8 @@ class MemoryMessagingRepository implements MessagingRepository {
   readonly conversations: MessagingConversation[] = [];
   readonly messages: MessagingMessage[] = [];
   readonly consents: MessagingConsentRecord[] = [];
+  readonly operationalIssues: MessagingOperationalIssue[] = [];
+  lastOperationalFilters?: MessagingOperationalStatusQuery;
 
   constructor(connections: readonly MessagingConnection[] = []) {
     this.connections = [...connections];
@@ -331,6 +414,13 @@ class MemoryMessagingRepository implements MessagingRepository {
 
   async listMessages(_context: RequestContext, filters: MessagingMessageFilters) {
     return this.messages.filter((message) => message.conversationId === filters.conversationId);
+  }
+
+  async listOperationalIssues(_context: RequestContext, filters: MessagingOperationalStatusQuery) {
+    this.lastOperationalFilters = filters;
+    return this.operationalIssues.filter(
+      (issue) => !filters.branchId || issue.branchId === filters.branchId,
+    );
   }
 
   async findProviderEventByIdempotencyKey(_context: RequestContext, idempotencyKey: string) {
@@ -464,4 +554,23 @@ class FakeMessagingAuditSink implements MessagingAuditSink {
     this.contexts.push(context);
     this.events.push(event);
   }
+}
+
+function operationalIssue(
+  overrides: Partial<MessagingOperationalIssue> = {},
+): MessagingOperationalIssue {
+  return {
+    id: overrides.id ?? 'delivery-attempt:issue-1',
+    kind: overrides.kind ?? 'FAILED_DELIVERY',
+    tenantId: overrides.tenantId ?? 'tenant-1',
+    branchId: Object.hasOwn(overrides, 'branchId') ? overrides.branchId : 'branch-1',
+    severity: overrides.severity ?? 'warning',
+    occurredAt: overrides.occurredAt ?? now,
+    sourceType: overrides.sourceType ?? 'NOTIFICATION_DELIVERY',
+    sourceId: overrides.sourceId ?? 'notification-1',
+    status: overrides.status ?? 'FAILED',
+    reason: overrides.reason,
+    correlationId: overrides.correlationId ?? 'correlation-1',
+    metadata: overrides.metadata,
+  };
 }

@@ -478,9 +478,7 @@ function makeDeliveryJob(input: { attemptCount?: number; maxAttempts?: number } 
   };
 }
 
-function makeWebhookJob(
-  input: { eventKind?: WorkerJob['payload'] extends infer _ ? string : never } = {},
-): WorkerJob {
+function makeWebhookJob(input: { eventKind?: string } = {}): WorkerJob {
   return {
     id: 'job-webhook-processing',
     tenantId: 'tenant-1',

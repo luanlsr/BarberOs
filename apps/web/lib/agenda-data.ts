@@ -684,12 +684,6 @@ function toIsoDateTime(dateIso: string, timeLabel: string) {
   return `${dateIso}T${timeLabel}:00-03:00`;
 }
 
-function addMinutes(isoDateTime: string, minutes: number) {
-  const date = new Date(isoDateTime);
-  date.setMinutes(date.getMinutes() + minutes);
-  return date.toISOString();
-}
-
 function toLocalTimeLabel(isoDateTime: string) {
   const date = new Date(isoDateTime);
   return new Intl.DateTimeFormat('pt-BR', {

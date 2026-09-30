@@ -16,7 +16,6 @@ import { getStoreOperationsSettings } from '../../../lib/store-operations-settin
 import {
   canAccessSettingsSection,
   getSettingsSection,
-  settingsSections,
   type SettingsSectionIcon,
 } from '../../../lib/settings-sections';
 

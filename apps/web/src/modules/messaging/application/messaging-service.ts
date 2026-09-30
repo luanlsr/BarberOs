@@ -20,6 +20,7 @@ import {
   type MessagingConversationFilters,
   type MessagingMessageFilters,
   type MessagingAuditSink,
+  type MessagingOperationalStatusFilters,
   type RecordConsentCommand,
   type RecordConversationCommand,
   type RecordMessageCommand,
@@ -102,6 +103,59 @@ export class MessagingApplicationService {
         message.tenantId === context.tenantId &&
         (!message.branchId || context.branchScope.includes(message.branchId)),
     );
+  }
+
+  async getOperationalStatus(
+    context: RequestContext,
+    filters: MessagingOperationalStatusFilters = {},
+  ) {
+    authorize(context, {
+      permission: 'messaging.read',
+      entitlement: 'messaging',
+      branchId: filters.branchId,
+    });
+    const delayedWebhookThresholdMs = clampDelayedWebhookMs(filters.delayedWebhookMs);
+    const queryFilters = {
+      branchId: filters.branchId,
+      limit: clampOperationalLimit(filters.limit),
+      delayedWebhookMs: delayedWebhookThresholdMs,
+    };
+    const issues =
+      (await this.repository.listOperationalIssues?.(context, queryFilters))?.filter(
+        (issue) =>
+          issue.tenantId === context.tenantId &&
+          (!issue.branchId || context.branchScope.includes(issue.branchId)),
+      ) ?? [];
+
+    return {
+      tenantId: context.tenantId,
+      branchId: filters.branchId,
+      generatedAt: new Date().toISOString(),
+      delayedWebhookThresholdMs,
+      metrics: [
+        {
+          key: 'failedDeliveries' as const,
+          label: 'Entregas com falha',
+          value: issues.filter((issue) => issue.kind === 'FAILED_DELIVERY').length,
+        },
+        {
+          key: 'blockedSends' as const,
+          label: 'Envios bloqueados',
+          value: issues.filter((issue) => issue.kind === 'BLOCKED_SEND').length,
+        },
+        {
+          key: 'delayedWebhooks' as const,
+          label: 'Webhooks atrasados',
+          value: issues.filter((issue) => issue.kind === 'DELAYED_WEBHOOK').length,
+        },
+        {
+          key: 'campaignPartialFailures' as const,
+          label: 'Campanhas parcialmente falhas',
+          value: issues.filter((issue) => issue.kind === 'CAMPAIGN_PARTIAL_FAILURE').length,
+        },
+      ],
+      issues,
+    };
   }
 
   async selectConnection(context: RequestContext, input: { branchId?: string }) {
@@ -283,4 +337,14 @@ function consentAuditState(consent: MessagingConsentRecord) {
     reason: consent.reason,
     createdAt: consent.createdAt,
   };
+}
+
+function clampOperationalLimit(limit: number | undefined) {
+  if (limit === undefined || !Number.isFinite(limit)) return 25;
+  return Math.min(Math.max(Math.trunc(limit), 1), 100);
+}
+
+function clampDelayedWebhookMs(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) return 5 * 60 * 1000;
+  return Math.min(Math.max(Math.trunc(value), 30_000), 24 * 60 * 60 * 1000);
 }

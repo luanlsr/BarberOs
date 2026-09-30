@@ -6,7 +6,6 @@ import type {
   RawMessagingProviderEvent,
   RecordNotificationDeliveryAttemptCommand,
   WhatsAppDeliveryPayload,
-  WhatsAppWebhookEventPayload,
   WorkerJob,
   WorkerSanitizedError,
 } from '@barberos/contracts';

@@ -5,6 +5,7 @@ import type {
   MessagingConnectionFilters,
   MessagingConversationFilters,
   MessagingMessageFilters,
+  MessagingOperationalStatusFilters,
 } from '../../../../src/modules/messaging/domain';
 import {
   SupabaseMessagingAuditSink,
@@ -13,6 +14,7 @@ import {
 import {
   createMessagingConnectionRouteHandlers,
   createMessagingConversationRouteHandlers,
+  createMessagingOperationsRouteHandlers,
 } from '../../../../src/modules/messaging/presentation';
 
 export function buildMessagingConnectionRouteHandlers() {
@@ -30,6 +32,15 @@ export function buildMessagingConnectionRouteHandlers() {
       },
       async listMessages(context: RequestContext, filters: MessagingMessageFilters) {
         return (await getMessagingApplicationService()).listMessages(context, filters);
+      },
+      async getOperationalStatus(
+        context: RequestContext,
+        filters?: MessagingOperationalStatusFilters,
+      ) {
+        return (await getMessagingApplicationService()).getOperationalStatus(
+          context,
+          filters ?? {},
+        );
       },
     },
   });
@@ -50,6 +61,44 @@ export function buildMessagingConversationRouteHandlers() {
       },
       async listMessages(context: RequestContext, filters: MessagingMessageFilters) {
         return (await getMessagingApplicationService()).listMessages(context, filters);
+      },
+      async getOperationalStatus(
+        context: RequestContext,
+        filters?: MessagingOperationalStatusFilters,
+      ) {
+        return (await getMessagingApplicationService()).getOperationalStatus(
+          context,
+          filters ?? {},
+        );
+      },
+    },
+  });
+}
+
+export function buildMessagingOperationsRouteHandlers() {
+  return createMessagingOperationsRouteHandlers({
+    resolveContext,
+    service: {
+      async listConnections(context: RequestContext, filters?: MessagingConnectionFilters) {
+        return (await getMessagingApplicationService()).listConnections(context, filters ?? {});
+      },
+      async createConnection(context: RequestContext, command: CreateMessagingConnectionCommand) {
+        return (await getMessagingApplicationService()).createConnection(context, command);
+      },
+      async listConversations(context: RequestContext, filters?: MessagingConversationFilters) {
+        return (await getMessagingApplicationService()).listConversations(context, filters ?? {});
+      },
+      async listMessages(context: RequestContext, filters: MessagingMessageFilters) {
+        return (await getMessagingApplicationService()).listMessages(context, filters);
+      },
+      async getOperationalStatus(
+        context: RequestContext,
+        filters?: MessagingOperationalStatusFilters,
+      ) {
+        return (await getMessagingApplicationService()).getOperationalStatus(
+          context,
+          filters ?? {},
+        );
       },
     },
   });
