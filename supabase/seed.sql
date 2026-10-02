@@ -54,7 +54,14 @@ insert into public.permissions (code, description) values
   ('memberships.manage', 'Gerenciar membros'),
   ('audit.read', 'Visualizar auditoria'),
   ('worker.failures.read', 'Visualizar falhas operacionais de jobs e outbox'),
-  ('notifications.status.read', 'Visualizar status de notificacoes operacionais')
+  ('notifications.status.read', 'Visualizar status de notificacoes operacionais'),
+  ('platform.tenants.read', 'Visualizar tenants e metadados de plataforma'),
+  ('platform.tenants.manage', 'Gerenciar lifecycle de tenants'),
+  ('platform.plans.manage', 'Gerenciar planos e entitlements SaaS'),
+  ('platform.billing.read', 'Visualizar assinaturas e invoices SaaS'),
+  ('platform.billing.manage', 'Gerenciar assinaturas e estados de billing SaaS'),
+  ('platform.support.manage', 'Gerenciar escopos auditados de suporte'),
+  ('platform.audit.read', 'Visualizar auditoria de plataforma')
 on conflict (code) do update set description = excluded.description;
 
 insert into public.role_permissions (role_code, permission_code)
@@ -136,7 +143,13 @@ insert into public.role_permissions (role_code, permission_code) values
   ('FINANCE', 'cash.withdraw'),
   ('FINANCE', 'cash.close'),
   ('FINANCE', 'commission.read'),
-  ('FINANCE', 'commission.manage')
+  ('FINANCE', 'commission.manage'),
+  ('PLATFORM_SUPPORT', 'worker.failures.read'),
+  ('PLATFORM_SUPPORT', 'notifications.status.read'),
+  ('PLATFORM_SUPPORT', 'platform.tenants.read'),
+  ('PLATFORM_SUPPORT', 'platform.billing.read'),
+  ('PLATFORM_SUPPORT', 'platform.support.manage'),
+  ('PLATFORM_SUPPORT', 'platform.audit.read')
 on conflict (role_code, permission_code) do nothing;
 
 
@@ -154,12 +167,18 @@ insert into public.entitlements (code, description) values
   ('core.operations', 'Operacao principal'),
   ('finance', 'Modulo financeiro'),
   ('inventory', 'Modulo de estoque'),
+  ('worker.operations', 'Operacoes assincronas e jobs'),
+  ('notifications', 'Notificacoes operacionais'),
+  ('messaging', 'Mensageria WhatsApp operacional'),
+  ('campaigns', 'Campanhas e reativacao de clientes'),
   ('ai', 'Barber AI')
 on conflict (code) do update set description = excluded.description;
 insert into public.tenant_entitlements (tenant_id, entitlement_code) values
   ('00000000-0000-0000-0000-000000000001', 'core.operations'),
   ('00000000-0000-0000-0000-000000000001', 'finance'),
-  ('00000000-0000-0000-0000-000000000001', 'inventory')
+  ('00000000-0000-0000-0000-000000000001', 'inventory'),
+  ('00000000-0000-0000-0000-000000000001', 'worker.operations'),
+  ('00000000-0000-0000-0000-000000000001', 'notifications')
 on conflict (tenant_id, entitlement_code) do update set enabled = true;
 insert into public.professionals (id, tenant_id, display_name, email, phone, role_label, status) values
   ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001', 'Carlos Andrade', 'carlos@barbeariamodelo.local', '+5511999990101', 'Barbeiro senior', 'ACTIVE'),
@@ -449,10 +468,15 @@ insert into public.notification_delivery_attempts (id, tenant_id, branch_id, not
 on conflict (id) do update set status = excluded.status, error_code = excluded.error_code, error_message = excluded.error_message, error_retryable = excluded.error_retryable;
 
 -- Platform admin demo data: plans, subscriptions, usage, messaging, flags and incidents.
-insert into public.tenants (id, name, status) values
-  ('00000000-0000-0000-0000-000000000002', 'Barbearia Premium Sul', 'ACTIVE'),
-  ('00000000-0000-0000-0000-000000000003', 'Rede Navalha Urbana', 'ACTIVE')
-on conflict (id) do update set name = excluded.name, status = excluded.status;
+insert into public.tenants (id, name, status, lifecycle_status, lifecycle_reason) values
+  ('00000000-0000-0000-0000-000000000002', 'Barbearia Premium Sul', 'TRIALING', 'TRIALING', 'Tenant em trial para demo Master Admin'),
+  ('00000000-0000-0000-0000-000000000003', 'Rede Navalha Urbana', 'RESTRICTED', 'RESTRICTED', 'Invoice vencida usada para demo de billing')
+on conflict (id) do update set
+  name = excluded.name,
+  status = excluded.status,
+  lifecycle_status = excluded.lifecycle_status,
+  lifecycle_reason = excluded.lifecycle_reason,
+  lifecycle_updated_at = now();
 
 insert into public.branches (id, tenant_id, name, status) values
   ('00000000-0000-0000-0000-000000000021', '00000000-0000-0000-0000-000000000002', 'Unidade Campo Grande', 'ACTIVE'),
@@ -479,15 +503,23 @@ insert into public.plan_entitlements (plan_id, entitlement_code, enabled, limit_
   ('00000000-0000-0000-0000-000000009003', 'ai', true, 5000, '{"metric":"AI_REQUESTS"}'::jsonb)
 on conflict (plan_id, entitlement_code) do update set enabled = excluded.enabled, limit_value = excluded.limit_value, metadata = excluded.metadata;
 
-insert into public.tenant_subscriptions (id, tenant_id, plan_id, provider, external_subscription_id, status, current_period_start, current_period_end, trial_ends_at) values
-  ('00000000-0000-0000-0000-000000009101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000009002', 'seed', 'seed-sub-modelo', 'ACTIVE', '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z', null),
-  ('00000000-0000-0000-0000-000000009102', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000009001', 'seed', 'seed-sub-premium-sul', 'TRIALING', '2026-09-12T00:00:00Z', '2026-10-12T00:00:00Z', '2026-10-12T00:00:00Z'),
-  ('00000000-0000-0000-0000-000000009103', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000009003', 'seed', 'seed-sub-navalha-urbana', 'ACTIVE', '2026-09-15T00:00:00Z', '2026-10-15T00:00:00Z', null)
-on conflict (tenant_id, external_subscription_id) do update set plan_id = excluded.plan_id, status = excluded.status, current_period_start = excluded.current_period_start, current_period_end = excluded.current_period_end, trial_ends_at = excluded.trial_ends_at;
+insert into public.tenant_subscriptions (id, tenant_id, plan_id, provider, external_subscription_id, status, current_period_start, current_period_end, trial_starts_at, trial_ends_at, status_reason) values
+  ('00000000-0000-0000-0000-000000009101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000009002', 'seed', 'seed-sub-modelo', 'ACTIVE', '2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z', null, null, 'Assinatura ativa para demo'),
+  ('00000000-0000-0000-0000-000000009102', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000009001', 'seed', 'seed-sub-premium-sul', 'TRIALING', '2026-09-12T00:00:00Z', '2026-10-12T00:00:00Z', '2026-09-12T00:00:00Z', '2026-10-12T00:00:00Z', 'Trial ativo para demo'),
+  ('00000000-0000-0000-0000-000000009103', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000009003', 'seed', 'seed-sub-navalha-urbana', 'PAST_DUE', '2026-09-15T00:00:00Z', '2026-10-15T00:00:00Z', null, null, 'Invoice vencida restringiu operacao')
+on conflict (tenant_id, external_subscription_id) do update set
+  plan_id = excluded.plan_id,
+  status = excluded.status,
+  current_period_start = excluded.current_period_start,
+  current_period_end = excluded.current_period_end,
+  trial_starts_at = excluded.trial_starts_at,
+  trial_ends_at = excluded.trial_ends_at,
+  status_reason = excluded.status_reason;
 
 insert into public.billing_invoices (id, tenant_id, subscription_id, provider, external_invoice_id, status, amount_cents, due_at, paid_at, metadata) values
   ('00000000-0000-0000-0000-000000009201', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000009101', 'seed', 'seed-inv-modelo-2026-09', 'PAID', 19900, '2026-09-05T00:00:00Z', '2026-09-04T16:00:00Z', '{}'::jsonb),
-  ('00000000-0000-0000-0000-000000009202', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000009103', 'seed', 'seed-inv-navalha-2026-09', 'OPEN', 39900, '2026-09-25T00:00:00Z', null, '{}'::jsonb)
+  ('00000000-0000-0000-0000-000000009202', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000009103', 'seed', 'seed-inv-navalha-2026-09', 'OVERDUE', 39900, '2026-09-25T00:00:00Z', null, '{"reason":"past_due_demo"}'::jsonb),
+  ('00000000-0000-0000-0000-000000009203', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000009102', 'seed', 'seed-inv-premium-trial-2026-10', 'OPEN', 9900, '2026-10-12T00:00:00Z', null, '{"trialConversion":true}'::jsonb)
 on conflict (tenant_id, external_invoice_id) do update set status = excluded.status, amount_cents = excluded.amount_cents, due_at = excluded.due_at, paid_at = excluded.paid_at, metadata = excluded.metadata;
 
 insert into public.usage_counters (tenant_id, period_start, metric, quantity) values
@@ -545,9 +577,17 @@ on conflict (code) do update set description = excluded.description;
 insert into public.tenant_entitlements (tenant_id, entitlement_code) values
   ('00000000-0000-0000-0000-000000000001', 'messaging'),
   ('00000000-0000-0000-0000-000000000001', 'campaigns'),
+  ('00000000-0000-0000-0000-000000000002', 'core.operations'),
+  ('00000000-0000-0000-0000-000000000002', 'finance'),
+  ('00000000-0000-0000-0000-000000000002', 'messaging'),
   ('00000000-0000-0000-0000-000000000003', 'messaging'),
   ('00000000-0000-0000-0000-000000000003', 'campaigns')
 on conflict (tenant_id, entitlement_code) do update set enabled = true;
+
+insert into public.tenant_entitlement_overrides (id, tenant_id, entitlement_code, enabled, limit_value, reason, expires_at) values
+  ('00000000-0000-0000-0000-000000009211', '00000000-0000-0000-0000-000000000002', 'messaging', true, 500, 'Credito de onboarding para trial.', '2026-11-01T00:00:00Z'),
+  ('00000000-0000-0000-0000-000000009212', '00000000-0000-0000-0000-000000000003', 'ai', false, null, 'AI suspensa durante restricao financeira.', null)
+on conflict (id) do update set enabled = excluded.enabled, limit_value = excluded.limit_value, reason = excluded.reason, expires_at = excluded.expires_at, updated_at = now();
 
 insert into public.messaging_connections (id, tenant_id, branch_id, provider, status, display_name, display_phone_number, provider_phone_number_id, credential_reference, webhook_secret_reference, allow_tenant_fallback, metadata, created_by, updated_by) values
   ('00000000-0000-0000-0000-000000009401', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000011', 'LOCAL', 'ACTIVE', 'WhatsApp Local Centro', '+5511999990001', 'seed-local-phone-modelo', null, null, false, '{"source":"seed","demo":true,"secretPolicy":"no-real-provider-secrets"}'::jsonb, null, null),
@@ -596,7 +636,36 @@ insert into public.platform_incidents (id, title, severity, status, affected_are
   ('00000000-0000-0000-0000-000000009601', 'Fila de notificações com atraso', 'MEDIUM', 'MONITORING', 'WORKER', 'Worker processou backlog de notificações com atraso durante testes locais.', '2026-09-21T08:30:00Z')
 on conflict (id) do update set title = excluded.title, severity = excluded.severity, status = excluded.status, affected_area = excluded.affected_area, summary = excluded.summary, started_at = excluded.started_at;
 
-insert into public.audit_logs (id, tenant_id, actor_type, action, entity_type, entity_id, result, after_state, request_id, created_at) values
+insert into public.support_access_sessions (id, platform_membership_id, tenant_id, reason, purpose, operation_class, status, starts_at, expires_at, request_id)
+select
+  '00000000-0000-0000-0000-000000009611',
+  pm.id,
+  '00000000-0000-0000-0000-000000000003',
+  'Investigar invoice vencida da demo.',
+  'Investigar invoice vencida da demo.',
+  'BILLING_SUPPORT',
+  'ACTIVE',
+  '2026-09-21T09:05:00Z',
+  '2026-10-21T09:05:00Z',
+  'seed-support-scope'
+from public.platform_memberships pm
+where pm.status = 'ACTIVE'
+order by pm.created_at asc
+limit 1
+on conflict (id) do update set
+  tenant_id = excluded.tenant_id,
+  reason = excluded.reason,
+  purpose = excluded.purpose,
+  operation_class = excluded.operation_class,
+  status = excluded.status,
+  starts_at = excluded.starts_at,
+  expires_at = excluded.expires_at,
+  request_id = excluded.request_id,
+  updated_at = now();
+
+insert into public.audit_logs (id, tenant_id, actor_type, action, entity_type, entity_id, result, after_state, request_id, created_at, metadata) values
   ('00000000-0000-0000-0000-000000009701', null, 'SYSTEM', 'platform.seeded', 'platform_admin', 'seed', 'SUCCESS', '{"module":"master-admin"}'::jsonb, 'seed-platform-admin', '2026-09-21T09:00:00Z'),
-  ('00000000-0000-0000-0000-000000009702', '00000000-0000-0000-0000-000000000001', 'SYSTEM', 'tenant.subscription_seeded', 'tenant_subscription', '00000000-0000-0000-0000-000000009101', 'SUCCESS', '{"plan":"pro-ai"}'::jsonb, 'seed-platform-admin', '2026-09-21T09:01:00Z')
-on conflict (id) do update set action = excluded.action, entity_type = excluded.entity_type, result = excluded.result, after_state = excluded.after_state, created_at = excluded.created_at;
+  ('00000000-0000-0000-0000-000000009702', '00000000-0000-0000-0000-000000000001', 'SYSTEM', 'SUBSCRIPTION_ASSIGNED', 'tenant_subscription', '00000000-0000-0000-0000-000000009101', 'SUCCESS', '{"plan":"pro-ai"}'::jsonb, 'seed-platform-admin', '2026-09-21T09:01:00Z', '{"source":"seed"}'::jsonb),
+  ('00000000-0000-0000-0000-000000009703', '00000000-0000-0000-0000-000000000003', 'SYSTEM', 'TENANT_RESTRICTED', 'tenant', '00000000-0000-0000-0000-000000000003', 'SUCCESS', '{"lifecycleStatus":"RESTRICTED"}'::jsonb, 'seed-platform-admin', '2026-09-21T09:02:00Z', '{"reason":"past_due_demo"}'::jsonb),
+  ('00000000-0000-0000-0000-000000009704', '00000000-0000-0000-0000-000000000002', 'SYSTEM', 'ENTITLEMENT_OVERRIDE_APPLIED', 'tenant_entitlement_override', '00000000-0000-0000-0000-000000009211', 'SUCCESS', '{"entitlement":"messaging","limit":500}'::jsonb, 'seed-platform-admin', '2026-09-21T09:03:00Z', '{"redaction":"no_secret_payload"}'::jsonb)
+on conflict (id) do update set action = excluded.action, entity_type = excluded.entity_type, result = excluded.result, after_state = excluded.after_state, metadata = excluded.metadata, created_at = excluded.created_at;

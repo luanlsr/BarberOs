@@ -1,4 +1,4 @@
-import type * as React from 'react';
+import * as React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
@@ -21,9 +21,23 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 
 const numberFormatter = new Intl.NumberFormat('pt-BR');
 
-export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
+export type MasterAdminViewState = 'ready' | 'loading' | 'empty' | 'error' | 'permission-denied';
+
+export function MasterAdminView({
+  data,
+  message,
+  state = 'ready',
+}: Readonly<{ data: MasterAdminData; message?: string; state?: MasterAdminViewState }>) {
+  if (state !== 'ready') {
+    return <MasterAdminState state={state} message={message} />;
+  }
+
+  if (!hasOperationalData(data)) {
+    return <MasterAdminState state="empty" message="Nenhum dado operacional encontrado." />;
+  }
+
   return (
-    <main className="master-admin-page">
+    <main className="master-admin-page" data-density="responsive">
       <section className="master-hero">
         <div>
           <p className="eyebrow">Platform Admin</p>
@@ -44,7 +58,10 @@ export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
           ['#tenants', 'Tenants'],
           ['#users', 'Usuários'],
           ['#subscriptions', 'Assinaturas'],
+          ['#invoices', 'Invoices'],
           ['#plans', 'Planos'],
+          ['#entitlements', 'Entitlements'],
+          ['#support', 'Suporte'],
           ['#ai-usage', 'AI Usage'],
           ['#messaging', 'Messaging'],
           ['#incidents', 'Incidentes'],
@@ -103,6 +120,7 @@ export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
                 <span>{tenant.planName}</span>
               </div>
             ))}
+            {!data.tenants.length ? <EmptyMasterState text="Nenhum tenant encontrado." /> : null}
           </div>
         </MasterPanel>
 
@@ -117,6 +135,7 @@ export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
                 <StatusPill value={user.status} />
               </article>
             ))}
+            {!data.users.length ? <EmptyMasterState text="Nenhum usuário listado." /> : null}
           </div>
         </MasterPanel>
 
@@ -133,6 +152,27 @@ export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
                 <StatusPill value={subscription.status} />
               </article>
             ))}
+            {!data.subscriptions.length ? (
+              <EmptyMasterState text="Nenhuma assinatura registrada." />
+            ) : null}
+          </div>
+        </MasterPanel>
+
+        <MasterPanel id="invoices" icon={ReceiptText} title="Invoices">
+          <div className="master-list">
+            {data.invoices.map((invoice) => (
+              <article className="master-list-row" key={invoice.id}>
+                <div>
+                  <strong>{invoice.tenantName}</strong>
+                  <span>
+                    {formatCurrency(invoice.amountCents)}
+                    {invoice.dueAt ? ` · vence ${formatDate(invoice.dueAt)}` : ''}
+                  </span>
+                </div>
+                <StatusPill value={invoice.status} />
+              </article>
+            ))}
+            {!data.invoices.length ? <EmptyMasterState text="Nenhuma invoice recente." /> : null}
           </div>
         </MasterPanel>
 
@@ -148,6 +188,46 @@ export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
                 <StatusPill value={plan.status} />
               </article>
             ))}
+            {!data.plans.length ? <EmptyMasterState text="Nenhum plano configurado." /> : null}
+          </div>
+        </MasterPanel>
+
+        <MasterPanel id="entitlements" icon={ShieldCheck} title="Entitlements">
+          <div className="master-list">
+            {data.entitlements.slice(0, 12).map((entitlement) => (
+              <article className="master-list-row" key={entitlement.id}>
+                <div>
+                  <strong>{entitlement.tenantName}</strong>
+                  <span>
+                    {entitlement.entitlement} · {entitlement.source}
+                    {entitlement.limit !== undefined ? ` · limite ${entitlement.limit}` : ''}
+                  </span>
+                </div>
+                <StatusPill value={entitlement.allowed ? 'ALLOW' : 'DENY'} />
+              </article>
+            ))}
+            {!data.entitlements.length ? (
+              <EmptyMasterState text="Nenhum entitlement resolvido." />
+            ) : null}
+          </div>
+        </MasterPanel>
+
+        <MasterPanel id="support" icon={ShieldCheck} title="Suporte">
+          <div className="master-list">
+            {data.supportScopes.map((scope) => (
+              <article className="master-list-row" key={scope.id}>
+                <div>
+                  <strong>{scope.tenantName}</strong>
+                  <span>
+                    {scope.operationClass} · expira {formatDate(scope.expiresAt)}
+                  </span>
+                </div>
+                <StatusPill value={scope.status} />
+              </article>
+            ))}
+            {!data.supportScopes.length ? (
+              <EmptyMasterState text="Nenhum escopo de suporte ativo." />
+            ) : null}
           </div>
         </MasterPanel>
 
@@ -236,6 +316,61 @@ export function MasterAdminView({ data }: Readonly<{ data: MasterAdminData }>) {
         </MasterPanel>
       </section>
     </main>
+  );
+}
+
+function MasterAdminState({
+  message,
+  state,
+}: Readonly<{ message?: string; state: Exclude<MasterAdminViewState, 'ready'> }>) {
+  const content = {
+    loading: {
+      title: 'Carregando console',
+      body: message ?? 'Buscando dados operacionais da plataforma.',
+    },
+    empty: {
+      title: 'Nenhum dado encontrado',
+      body: message ?? 'A plataforma ainda não possui registros para esta visão.',
+    },
+    error: {
+      title: 'Não foi possível carregar',
+      body: message ?? 'Tente novamente em instantes.',
+    },
+    'permission-denied': {
+      title: 'Acesso restrito',
+      body: message ?? 'Esta visão exige permissão de plataforma.',
+    },
+  }[state];
+
+  return (
+    <main className="master-admin-page" data-density="responsive">
+      <section className="master-hero">
+        <div>
+          <p className="eyebrow">Platform Admin</p>
+          <h1>Super Admin BarberOS</h1>
+          <p>{content.body}</p>
+        </div>
+      </section>
+      <section className="master-state" aria-live={state === 'loading' ? 'polite' : undefined}>
+        <ShieldCheck size={22} aria-hidden="true" />
+        <div>
+          <h2>{content.title}</h2>
+          <p>{content.body}</p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function hasOperationalData(data: MasterAdminData) {
+  return Boolean(
+    data.tenants.length ||
+    data.plans.length ||
+    data.subscriptions.length ||
+    data.invoices.length ||
+    data.entitlements.length ||
+    data.supportScopes.length ||
+    data.audit.length,
   );
 }
 

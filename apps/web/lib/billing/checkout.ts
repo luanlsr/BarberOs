@@ -242,8 +242,8 @@ async function provisionPaidCheckoutSession(
     if (membershipBranchError)
       throw new Error(`MEMBERSHIP_BRANCH_CREATE_FAILED:${membershipBranchError.message}`);
 
-    await copyPlanEntitlements(supabase, text(tenant.id), text(session.plan_id));
     await createTenantSubscription(supabase, session, text(tenant.id), provider.subscriptionId);
+    await projectPlanEntitlements(supabase, text(tenant.id), text(session.plan_id), true);
     await createCredentialsNotification(supabase, {
       tenantId: text(tenant.id),
       branchId: text(branch.id),
@@ -280,21 +280,27 @@ async function provisionPaidCheckoutSession(
   }
 }
 
-async function copyPlanEntitlements(
+async function projectPlanEntitlements(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   tenantId: string,
   planId: string,
+  subscriptionActive: boolean,
 ) {
   const { data } = await supabase
     .from('plan_entitlements')
-    .select('entitlement_code, enabled')
-    .eq('plan_id', planId)
-    .eq('enabled', true);
+    .select('entitlement_code, enabled, limit_value')
+    .eq('plan_id', planId);
 
   const rows = ((data ?? []) as Row[]).map((row) => ({
     tenant_id: tenantId,
     entitlement_code: text(row.entitlement_code),
-    enabled: true,
+    enabled: subscriptionActive && boolean(row.enabled),
+    source: 'PLAN',
+    limit_value: nullableNumber(row.limit_value),
+    reason: subscriptionActive
+      ? 'Projected from active SaaS plan.'
+      : 'Disabled because the billing subscription is not active.',
+    updated_at: new Date().toISOString(),
   }));
   if (!rows.length) return;
   await supabase
@@ -429,11 +435,20 @@ async function syncSubscriptionStatus(
 ) {
   const mapped = status === 'ACTIVE' ? 'ACTIVE' : status === 'INACTIVE' ? 'CANCELLED' : undefined;
   if (!mapped) return;
-  await supabase
+  const { data } = await supabase
     .from('tenant_subscriptions')
     .update({ status: mapped, updated_at: new Date().toISOString() })
     .eq('provider', 'ASAAS')
-    .eq('external_subscription_id', subscriptionId);
+    .eq('external_subscription_id', subscriptionId)
+    .select('tenant_id, plan_id');
+
+  for (const subscription of (data ?? []) as Row[]) {
+    const tenantId = text(subscription.tenant_id);
+    const planId = text(subscription.plan_id);
+    if (tenantId && planId) {
+      await projectPlanEntitlements(supabase, tenantId, planId, mapped === 'ACTIVE');
+    }
+  }
 }
 
 function normalizeCheckoutInput(input: CheckoutLeadInput) {
@@ -474,6 +489,16 @@ function text(value: unknown, fallback = ''): string {
 
 function number(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : Number(value ?? 0) || 0;
+}
+
+function nullableNumber(value: unknown) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function boolean(value: unknown) {
+  return value === true;
 }
 
 function isRecord(value: unknown): value is Row {

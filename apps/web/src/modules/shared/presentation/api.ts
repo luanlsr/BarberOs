@@ -2,7 +2,21 @@ import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import type { CoreOperationsErrorCode } from '@barberos/contracts';
 
-type ApiErrorCode = CoreOperationsErrorCode | 'UNAUTHENTICATED' | 'PERSISTENCE_NOT_CONFIGURED';
+type PlatformAdminErrorCode =
+  | 'PLATFORM_ACCESS_DENIED'
+  | 'PLATFORM_PERMISSION_DENIED'
+  | 'SUPPORT_SCOPE_REQUIRED'
+  | 'PLATFORM_ADMIN_VALIDATION_ERROR'
+  | 'PLATFORM_ADMIN_NOT_FOUND'
+  | 'PLATFORM_ADMIN_INVALID_STATUS'
+  | 'PLATFORM_ADMIN_AUDIT_REQUIRED'
+  | 'PLATFORM_ADMIN_DUPLICATE_CODE';
+
+type ApiErrorCode =
+  | CoreOperationsErrorCode
+  | PlatformAdminErrorCode
+  | 'UNAUTHENTICATED'
+  | 'PERSISTENCE_NOT_CONFIGURED';
 
 const safePublicMessages: Partial<Record<ApiErrorCode, string>> = {
   CORE_PERMISSION_DENIED: 'Permission denied.',
@@ -61,6 +75,14 @@ const safePublicMessages: Partial<Record<ApiErrorCode, string>> = {
   INVENTORY_INSUFFICIENT_STOCK: 'Insufficient stock for this product and branch.',
   INVENTORY_IDEMPOTENCY_CONFLICT: 'Inventory request conflicts with an existing idempotency key.',
   INVENTORY_IMMUTABLE_MOVEMENT: 'Inventory history cannot be changed destructively.',
+  PLATFORM_ACCESS_DENIED: 'Platform access is required.',
+  PLATFORM_PERMISSION_DENIED: 'Permission denied.',
+  SUPPORT_SCOPE_REQUIRED: 'A valid support scope is required.',
+  PLATFORM_ADMIN_VALIDATION_ERROR: 'Platform admin request payload is invalid.',
+  PLATFORM_ADMIN_NOT_FOUND: 'Platform admin record was not found.',
+  PLATFORM_ADMIN_INVALID_STATUS: 'Platform admin record status does not allow this operation.',
+  PLATFORM_ADMIN_AUDIT_REQUIRED: 'Platform admin audit metadata is required.',
+  PLATFORM_ADMIN_DUPLICATE_CODE: 'Platform admin code already exists.',
 };
 
 export function jsonError(code: ApiErrorCode, message: string, status: number, requestId?: string) {
@@ -86,6 +108,9 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'CORE_PERMISSION_DENIED':
     case 'CORE_ENTITLEMENT_DENIED':
     case 'CORE_BRANCH_SCOPE_DENIED':
+    case 'PLATFORM_ACCESS_DENIED':
+    case 'PLATFORM_PERMISSION_DENIED':
+    case 'SUPPORT_SCOPE_REQUIRED':
       return jsonError(code, getPublicErrorMessage(error, code), 403, requestId);
     case 'PERMISSION_DENIED':
       return jsonError(
@@ -125,6 +150,7 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'PAYOUT_NOT_FOUND':
     case 'CATALOG_NOT_FOUND':
     case 'INVENTORY_NOT_FOUND':
+    case 'PLATFORM_ADMIN_NOT_FOUND':
       return jsonError(code, getPublicErrorMessage(error, code), 404, requestId);
     case 'APPOINTMENT_CONFLICT':
     case 'ORDER_ALREADY_OPEN_FOR_APPOINTMENT':
@@ -143,6 +169,8 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'CATALOG_IDEMPOTENCY_CONFLICT':
     case 'INVENTORY_IDEMPOTENCY_CONFLICT':
     case 'INVENTORY_IMMUTABLE_MOVEMENT':
+    case 'PLATFORM_ADMIN_INVALID_STATUS':
+    case 'PLATFORM_ADMIN_DUPLICATE_CODE':
       return jsonError(code, getPublicErrorMessage(error, code), 409, requestId);
     case 'ORDER_PERMISSION_DENIED':
     case 'ORDER_BRANCH_SCOPE_DENIED':
@@ -187,6 +215,8 @@ export function jsonFromError(error: unknown, requestId?: string) {
     case 'INVENTORY_VALIDATION_ERROR':
     case 'INVENTORY_PRODUCT_UNAVAILABLE':
     case 'INVENTORY_INSUFFICIENT_STOCK':
+    case 'PLATFORM_ADMIN_VALIDATION_ERROR':
+    case 'PLATFORM_ADMIN_AUDIT_REQUIRED':
       return jsonError(code, getPublicErrorMessage(error, code), 400, requestId);
     default:
       return jsonError('CORE_VALIDATION_ERROR', 'Request could not be processed.', 400, requestId);

@@ -8047,6 +8047,34 @@ html[data-theme='dark'] {
   padding: 14px;
 }
 
+.master-state {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  min-height: 9rem;
+  padding: 1.25rem;
+}
+
+.master-state svg {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.master-state h2,
+.master-state p {
+  margin: 0;
+}
+
+.master-state p {
+  color: var(--foreground-muted);
+  margin-top: 0.25rem;
+}
+
 @media (max-width: 1280px) {
   .master-kpi-grid,
   .master-card-grid {

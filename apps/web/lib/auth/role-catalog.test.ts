@@ -56,10 +56,51 @@ describe('BarberOS role catalog', () => {
       expect.arrayContaining(['memberships.manage', 'finance.write', 'inventory.write']),
     );
     expect(rolePermissions.PLATFORM_MASTER).toEqual(
-      expect.arrayContaining(['audit.read', 'memberships.manage', 'finance.read']),
+      expect.arrayContaining([
+        'audit.read',
+        'memberships.manage',
+        'finance.read',
+        'platform.tenants.read',
+        'platform.tenants.manage',
+        'platform.plans.manage',
+        'platform.billing.read',
+        'platform.billing.manage',
+        'platform.support.manage',
+        'platform.audit.read',
+      ]),
     );
     expect(roleEntitlements.PLATFORM_MASTER).toEqual(
       expect.arrayContaining(['core.operations', 'finance', 'inventory', 'ai']),
     );
+  });
+
+  it('keeps platform permissions exclusive to platform roles', () => {
+    const platformPermissions = [
+      'platform.tenants.read',
+      'platform.tenants.manage',
+      'platform.plans.manage',
+      'platform.billing.read',
+      'platform.billing.manage',
+      'platform.support.manage',
+      'platform.audit.read',
+    ];
+
+    expect(rolePermissions.PLATFORM_SUPPORT).toEqual(
+      expect.arrayContaining([
+        'platform.tenants.read',
+        'platform.billing.read',
+        'platform.support.manage',
+        'platform.audit.read',
+      ]),
+    );
+    expect(rolePermissions.PLATFORM_SUPPORT).not.toContain('platform.tenants.manage');
+    expect(rolePermissions.PLATFORM_SUPPORT).not.toContain('platform.plans.manage');
+    expect(rolePermissions.PLATFORM_SUPPORT).not.toContain('platform.billing.manage');
+
+    for (const role of ['OWNER', 'MANAGER', 'FINANCE', 'RECEPTIONIST', 'PROFESSIONAL'] as const) {
+      for (const permission of platformPermissions) {
+        expect(rolePermissions[role]).not.toContain(permission);
+      }
+    }
   });
 });

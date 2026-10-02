@@ -85,21 +85,25 @@ const operationalPermissions = [
   'audit.read',
 ] as const satisfies readonly Permission[];
 
+const platformPermissions = [
+  'platform.tenants.read',
+  'platform.tenants.manage',
+  'platform.plans.manage',
+  'platform.billing.read',
+  'platform.billing.manage',
+  'platform.support.manage',
+  'platform.audit.read',
+] as const satisfies readonly Permission[];
+
 export const rolePermissions: Record<Role, readonly Permission[]> = {
-  PLATFORM_MASTER: operationalPermissions,
+  PLATFORM_MASTER: [...operationalPermissions, ...platformPermissions],
   PLATFORM_SUPPORT: [
-    'dashboard.read',
-    'appointments.read',
-    'professionals.read',
-    'services.read',
-    'schedules.read',
-    'customers.read',
-    'settings.read',
-    'audit.read',
     'worker.failures.read',
     'notifications.status.read',
-    'messaging.read',
-    'campaigns.read',
+    'platform.tenants.read',
+    'platform.billing.read',
+    'platform.support.manage',
+    'platform.audit.read',
   ],
   OWNER: operationalPermissions,
   MANAGER: [

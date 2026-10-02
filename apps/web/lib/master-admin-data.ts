@@ -1,5 +1,33 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type {
+  BillingInvoiceSummary,
+  Entitlement,
+  EntitlementDecision,
+  PlatformAuditEntry,
+  PlatformTenantSummary,
+  SaasPlan,
+  SessionContext,
+  SupportScope,
+  TenantSubscription,
+} from '@barberos/contracts';
 import { createSupabaseServerClient } from './auth/server';
+import {
+  EntitlementResolutionService,
+  PlatformAuditService,
+  SaasPlanService,
+  SubscriptionBillingService,
+  SupportScopeService,
+  TenantOverviewService,
+} from '../src/modules/platform-admin/application';
+import type { PlatformRequestContext } from '../src/modules/platform-admin/domain';
+import {
+  SupabasePlatformAuditSink,
+  SupabasePlatformAuditRepository,
+  SupabasePlatformBillingRepository,
+  SupabasePlatformEntitlementRepository,
+  SupabasePlatformPlanRepository,
+  SupabasePlatformSupportScopeRepository,
+  SupabasePlatformTenantRepository,
+} from '../src/modules/platform-admin/infrastructure';
 
 type Row = Record<string, unknown>;
 
@@ -96,6 +124,26 @@ export type MasterAuditRow = {
   createdAt?: string;
 };
 
+export type MasterEntitlementRow = {
+  id: string;
+  tenantName: string;
+  entitlement: string;
+  allowed: boolean;
+  source: string;
+  limit?: number;
+  reason?: string;
+};
+
+export type MasterSupportScopeRow = {
+  id: string;
+  tenantName: string;
+  actorUserId: string;
+  purpose: string;
+  operationClass: string;
+  status: string;
+  expiresAt: string;
+};
+
 export type MasterAdminData = {
   generatedAt: string;
   tenants: MasterTenantRow[];
@@ -107,6 +155,8 @@ export type MasterAdminData = {
   messaging: MasterMessagingRow[];
   incidents: MasterIncidentRow[];
   featureFlags: MasterFeatureFlagRow[];
+  entitlements: MasterEntitlementRow[];
+  supportScopes: MasterSupportScopeRow[];
   audit: MasterAuditRow[];
   totals: {
     tenants: number;
@@ -119,58 +169,224 @@ export type MasterAdminData = {
   };
 };
 
-export async function getMasterAdminData(): Promise<MasterAdminData> {
+export async function getMasterAdminData(
+  session: Pick<SessionContext, 'userId' | 'role' | 'permissions'>,
+): Promise<MasterAdminData> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return buildDemoMasterData();
 
-  const [
-    tenants,
-    branches,
-    memberships,
-    platformMemberships,
-    plans,
-    subscriptions,
-    invoices,
-    aiUsage,
-    messaging,
-    incidents,
-    featureFlags,
-    audit,
-  ] = await Promise.all([
-    selectTable(supabase, 'tenants'),
-    selectTable(supabase, 'branches'),
-    selectTable(supabase, 'memberships'),
-    selectTable(supabase, 'platform_memberships'),
-    selectTable(supabase, 'saas_plans'),
-    selectTable(supabase, 'tenant_subscriptions'),
-    selectTable(supabase, 'billing_invoices'),
-    selectTable(supabase, 'ai_usage'),
-    selectTable(supabase, 'messaging_connections'),
-    selectTable(supabase, 'platform_incidents'),
-    selectTable(supabase, 'platform_feature_flags'),
-    selectTable(supabase, 'audit_logs'),
-  ]);
+  const context = toPlatformRequestContext(session);
+  const tenantRepository = new SupabasePlatformTenantRepository(supabase);
+  const planRepository = new SupabasePlatformPlanRepository(supabase);
+  const billingRepository = new SupabasePlatformBillingRepository(supabase);
+  const entitlementRepository = new SupabasePlatformEntitlementRepository(supabase);
+  const supportRepository = new SupabasePlatformSupportScopeRepository(supabase);
+  const auditRepository = new SupabasePlatformAuditRepository(supabase);
+  const auditSink = new SupabasePlatformAuditSink(supabase);
 
-  return normalizeMasterData({
-    tenants,
-    branches,
-    memberships,
-    platformMemberships,
-    plans,
-    subscriptions,
-    invoices,
-    aiUsage,
-    messaging,
-    incidents,
-    featureFlags,
-    audit,
+  const tenants = new TenantOverviewService(tenantRepository);
+  const plans = new SaasPlanService({ repository: planRepository, auditSink });
+  const billing = new SubscriptionBillingService({ repository: billingRepository, auditSink });
+  const entitlements = new EntitlementResolutionService({
+    repository: entitlementRepository,
+    auditSink,
   });
+  const support = new SupportScopeService({ repository: supportRepository, auditSink });
+  const audit = new PlatformAuditService(auditRepository);
+
+  try {
+    const [tenantSummaries, saasPlans, subscriptionResults, invoices, supportScopes, auditEntries] =
+      await Promise.all([
+        tenants.listTenants(context, { limit: 100 }),
+        plans.listPlans(context),
+        billing.listSubscriptions(context),
+        billing.listInvoices(context),
+        support.listSupportScopes(context),
+        audit.listAuditEntries(context, { limit: 50 }),
+      ]);
+    const entitlementDecisions = await resolveMasterEntitlements(
+      entitlements,
+      context,
+      tenantSummaries,
+    );
+
+    return normalizePlatformAdminData({
+      tenantSummaries,
+      plans: saasPlans,
+      subscriptions: subscriptionResults.map((result) => result.subscription),
+      invoices,
+      entitlementDecisions,
+      supportScopes,
+      auditEntries,
+      fallback: buildDemoMasterData(),
+    });
+  } catch (error) {
+    console.error('[BarberOS master] Falling back to demo platform admin data:', error);
+    return buildDemoMasterData();
+  }
 }
 
-async function selectTable(client: SupabaseClient, table: string): Promise<Row[]> {
-  const { data, error } = await client.from(table).select('*').limit(500);
-  if (error) return [];
-  return (data ?? []) as Row[];
+function toPlatformRequestContext(
+  session: Pick<SessionContext, 'userId' | 'role' | 'permissions'>,
+): PlatformRequestContext {
+  return {
+    requestId: crypto.randomUUID(),
+    userId: session.userId,
+    role: session.role,
+    permissions: [...session.permissions],
+  };
+}
+
+function normalizePlatformAdminData(source: {
+  tenantSummaries: PlatformTenantSummary[];
+  plans: SaasPlan[];
+  subscriptions: TenantSubscription[];
+  invoices: BillingInvoiceSummary[];
+  entitlementDecisions: EntitlementDecision[];
+  supportScopes: SupportScope[];
+  auditEntries: PlatformAuditEntry[];
+  fallback: MasterAdminData;
+}): MasterAdminData {
+  const tenantNames = new Map(
+    source.tenantSummaries.map((tenant) => [tenant.tenantId, tenant.tenantName]),
+  );
+  const plansById = new Map(source.plans.map((plan) => [plan.id, plan]));
+
+  const tenants = source.tenantSummaries.map((tenant) => ({
+    id: tenant.tenantId,
+    name: tenant.tenantName,
+    status: tenant.lifecycleStatus,
+    createdAt: tenant.createdAt,
+    branchCount: tenant.branchCount,
+    userCount: tenant.userCount,
+    subscriptionStatus: tenant.subscriptionStatus ?? 'SEM_ASSINATURA',
+    planName: tenant.planName ?? 'Sem plano',
+    monthlyValueCents: tenant.planId ? monthlyValueForPlan(plansById.get(tenant.planId)) : 0,
+  }));
+
+  const plans = source.plans.map((plan) => ({
+    id: plan.id,
+    code: plan.code,
+    name: plan.name,
+    description: plan.description,
+    priceAmountCents: plan.priceAmountCents,
+    billingInterval: plan.billingInterval,
+    status: plan.status,
+  }));
+
+  const subscriptions = source.subscriptions.map((subscription) => {
+    const plan = plansById.get(subscription.planId);
+    return {
+      id: subscription.id,
+      tenantName: tenantNames.get(subscription.tenantId) ?? 'Tenant',
+      planName: plan?.name ?? 'Sem plano',
+      status: subscription.status,
+      currentPeriodEnd:
+        subscription.currentPeriodEnd ?? subscription.updatedAt ?? new Date().toISOString(),
+      monthlyValueCents: monthlyValueForPlan(plan),
+    };
+  });
+
+  const invoices = source.invoices.map((invoice) => ({
+    id: invoice.id,
+    tenantName: tenantNames.get(invoice.tenantId) ?? 'Tenant',
+    status: invoice.status,
+    amountCents: invoice.amountCents,
+    dueAt: invoice.dueDate,
+    paidAt: invoice.paidAt,
+  }));
+
+  const entitlements = source.entitlementDecisions.map((decision) => ({
+    id: `${decision.tenantId}:${decision.entitlement}`,
+    tenantName: tenantNames.get(decision.tenantId) ?? 'Tenant',
+    entitlement: decision.entitlement,
+    allowed: decision.allowed,
+    source: decision.source,
+    limit: decision.limit,
+    reason: decision.reason,
+  }));
+
+  const supportScopes = source.supportScopes.map((scope) => ({
+    id: scope.id,
+    tenantName: tenantNames.get(scope.tenantId) ?? 'Tenant',
+    actorUserId: scope.actorUserId,
+    purpose: scope.purpose,
+    operationClass: scope.operationClass,
+    status: scope.status,
+    expiresAt: scope.expiresAt,
+  }));
+
+  const audit = source.auditEntries.map((entry) => ({
+    id: entry.id,
+    tenantName: entry.tenantId ? (tenantNames.get(entry.tenantId) ?? 'Tenant') : 'Plataforma',
+    action: entry.action,
+    entityType: entry.targetType,
+    createdAt: entry.createdAt,
+  }));
+
+  const aiUsage = source.fallback.aiUsage;
+  const messaging = source.fallback.messaging;
+  const incidents = source.fallback.incidents;
+  const featureFlags = source.fallback.featureFlags;
+  const users = source.fallback.users;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    tenants,
+    users,
+    plans,
+    subscriptions,
+    invoices,
+    aiUsage,
+    messaging,
+    incidents,
+    featureFlags,
+    entitlements,
+    supportScopes,
+    audit,
+    totals: {
+      tenants: tenants.length,
+      activeTenants: tenants.filter((tenant) => tenant.status === 'ACTIVE').length,
+      platformUsers: users.filter((user) => user.scope === 'platform' && user.status === 'ACTIVE')
+        .length,
+      mrrCents: subscriptions
+        .filter(
+          (subscription) => subscription.status === 'ACTIVE' || subscription.status === 'TRIALING',
+        )
+        .reduce((total, subscription) => total + subscription.monthlyValueCents, 0),
+      openInvoicesCents: invoices
+        .filter((invoice) => invoice.status === 'OPEN')
+        .reduce((total, invoice) => total + invoice.amountCents, 0),
+      aiRequests: aiUsage
+        .filter((usage) => usage.metric === 'AI_REQUESTS')
+        .reduce((total, usage) => total + usage.quantity, 0),
+      incidentsOpen: incidents.filter((incident) => incident.status !== 'RESOLVED').length,
+    },
+  };
+}
+
+function monthlyValueForPlan(plan?: SaasPlan) {
+  if (!plan) return 0;
+  return plan.billingInterval === 'YEARLY'
+    ? Math.round(plan.priceAmountCents / 12)
+    : plan.priceAmountCents;
+}
+
+async function resolveMasterEntitlements(
+  service: EntitlementResolutionService,
+  context: PlatformRequestContext,
+  tenants: readonly PlatformTenantSummary[],
+) {
+  const visibleTenants = tenants.slice(0, 12);
+  const entitlements: Entitlement[] = ['core.operations', 'finance', 'ai'];
+  const decisions = await Promise.all(
+    visibleTenants.flatMap((tenant) =>
+      entitlements.map((entitlement) =>
+        service.resolveEntitlement(context, { tenantId: tenant.tenantId, entitlement }),
+      ),
+    ),
+  );
+  return decisions;
 }
 
 function normalizeMasterData(source: {
@@ -308,6 +524,32 @@ function normalizeMasterData(source: {
     createdAt: optionalText(row.created_at),
   }));
 
+  const entitlements = source.subscriptions.flatMap((subscription) => {
+    const tenantId = text(subscription.tenant_id);
+    const planId = text(subscription.plan_id);
+    const planName = planNames.get(planId) ?? 'Sem plano';
+    return ['core.operations', 'finance', 'ai'].map((entitlement) => ({
+      id: `${tenantId}:${entitlement}`,
+      tenantName: tenantNames.get(tenantId) ?? 'Tenant',
+      entitlement,
+      allowed: text(subscription.status) === 'ACTIVE' || text(subscription.status) === 'TRIALING',
+      source: 'PLAN',
+      limit: entitlement === 'ai' && planName.toLowerCase().includes('ai') ? 1000 : undefined,
+    }));
+  });
+
+  const supportScopes: MasterSupportScopeRow[] = [
+    {
+      id: 'support-demo-1',
+      tenantName: 'Barbearia Modelo',
+      actorUserId: 'platform-user-demo',
+      purpose: 'Verificação de cobrança e saúde do tenant',
+      operationClass: 'BILLING_SUPPORT',
+      status: 'ACTIVE',
+      expiresAt: '2026-10-02T18:00:00.000Z',
+    },
+  ];
+
   return {
     generatedAt: new Date().toISOString(),
     tenants,
@@ -319,6 +561,8 @@ function normalizeMasterData(source: {
     messaging,
     incidents,
     featureFlags,
+    entitlements,
+    supportScopes,
     audit,
     totals: {
       tenants: tenants.length,

@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { redirect } from 'next/navigation';
 import { MasterAdminView } from '../../components/master-admin-view';
 import { getSessionContext } from '../../lib/auth/server';
@@ -7,7 +8,7 @@ export default async function MasterAdminPage() {
   const session = await getSessionContext();
   if (!session) redirect('/');
   if (session.role !== 'PLATFORM_MASTER') redirect('/forbidden');
-  const data = await getMasterAdminData();
+  const data = await getMasterAdminData(session);
 
   return <MasterAdminView data={data} />;
 }

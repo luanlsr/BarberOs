@@ -55,7 +55,14 @@ export type Permission =
   | 'settings.read'
   | 'memberships.read'
   | 'memberships.manage'
-  | 'audit.read';
+  | 'audit.read'
+  | 'platform.tenants.read'
+  | 'platform.tenants.manage'
+  | 'platform.plans.manage'
+  | 'platform.billing.read'
+  | 'platform.billing.manage'
+  | 'platform.support.manage'
+  | 'platform.audit.read';
 
 export type Entitlement =
   | 'core.operations'
@@ -158,6 +165,13 @@ export const permissionSchema = z.enum([
   'memberships.read',
   'memberships.manage',
   'audit.read',
+  'platform.tenants.read',
+  'platform.tenants.manage',
+  'platform.plans.manage',
+  'platform.billing.read',
+  'platform.billing.manage',
+  'platform.support.manage',
+  'platform.audit.read',
 ]);
 
 export const entitlementSchema = z.enum([
@@ -2668,3 +2682,306 @@ export type BranchScopedAuthorizationRequirement = z.infer<
 export function hasBranchAccess(context: Pick<RequestContext, 'branchScope'>, branchId: string) {
   return context.branchScope.includes(branchId);
 }
+
+export const platformTenantLifecycleStatusSchema = z.enum([
+  'TRIALING',
+  'ACTIVE',
+  'RESTRICTED',
+  'SUSPENDED',
+  'CANCELLED',
+]);
+export type PlatformTenantLifecycleStatus = z.infer<typeof platformTenantLifecycleStatusSchema>;
+
+export const saasPlanStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']);
+export type SaasPlanStatus = z.infer<typeof saasPlanStatusSchema>;
+
+export const billingIntervalSchema = z.enum(['MONTHLY', 'YEARLY']);
+export type BillingInterval = z.infer<typeof billingIntervalSchema>;
+
+export const tenantSubscriptionStatusSchema = z.enum([
+  'TRIALING',
+  'ACTIVE',
+  'PAST_DUE',
+  'UNPAID',
+  'CANCELLED',
+  'EXPIRED',
+]);
+export type TenantSubscriptionStatus = z.infer<typeof tenantSubscriptionStatusSchema>;
+
+export const billingInvoiceStatusSchema = z.enum([
+  'OPEN',
+  'PAID',
+  'OVERDUE',
+  'VOID',
+  'UNCOLLECTIBLE',
+]);
+export type BillingInvoiceStatus = z.infer<typeof billingInvoiceStatusSchema>;
+
+export const supportOperationClassSchema = z.enum([
+  'METADATA_ONLY',
+  'TENANT_HEALTH',
+  'PRIVATE_OPERATIONAL_READ',
+  'BILLING_SUPPORT',
+]);
+export type SupportOperationClass = z.infer<typeof supportOperationClassSchema>;
+
+export const supportScopeStatusSchema = z.enum(['ACTIVE', 'EXPIRED', 'REVOKED']);
+export type SupportScopeStatus = z.infer<typeof supportScopeStatusSchema>;
+
+export const entitlementDecisionSourceSchema = z.enum([
+  'PLAN',
+  'OVERRIDE',
+  'LEGACY_TENANT_ENTITLEMENT',
+  'MISSING',
+]);
+export type EntitlementDecisionSource = z.infer<typeof entitlementDecisionSourceSchema>;
+
+export const platformHealthStatusSchema = z.enum(['OK', 'ATTENTION', 'CRITICAL']);
+export type PlatformHealthStatus = z.infer<typeof platformHealthStatusSchema>;
+
+export const platformTenantSummarySchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  tenantName: z.string().trim().min(1).max(160),
+  lifecycleStatus: platformTenantLifecycleStatusSchema,
+  branchCount: z.number().int().min(0),
+  userCount: z.number().int().min(0),
+  planId: nonEmptyIdSchema.optional(),
+  planCode: z.string().trim().min(1).max(80).optional(),
+  planName: z.string().trim().min(1).max(160).optional(),
+  subscriptionStatus: tenantSubscriptionStatusSchema.optional(),
+  openBillingExposureCents: moneyCentsSchema.default(0),
+  usage: z.record(z.string(), z.number().int().min(0)).default({}),
+  health: platformHealthStatusSchema.default('OK'),
+  healthSignals: z.array(z.string().trim().min(1).max(160)).default([]),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type PlatformTenantSummary = z.infer<typeof platformTenantSummarySchema>;
+
+export const tenantLifecycleActionSchema = z.enum(['SUSPEND', 'RESTRICT', 'REACTIVATE']);
+export type TenantLifecycleAction = z.infer<typeof tenantLifecycleActionSchema>;
+
+export const tenantLifecycleActionCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  action: tenantLifecycleActionSchema,
+  reason: z.string().trim().min(3).max(500),
+  requestId: nonEmptyIdSchema.optional(),
+});
+export type TenantLifecycleActionCommand = z.input<typeof tenantLifecycleActionCommandSchema>;
+
+export const planEntitlementSchema = z.object({
+  id: nonEmptyIdSchema.optional(),
+  planId: nonEmptyIdSchema.optional(),
+  entitlement: entitlementSchema,
+  enabled: z.boolean().default(true),
+  limit: z.number().int().min(0).optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+});
+export type PlanEntitlement = z.infer<typeof planEntitlementSchema>;
+
+export const saasPlanSchema = z.object({
+  id: nonEmptyIdSchema,
+  code: z.string().trim().min(2).max(80),
+  name: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(500).optional(),
+  priceAmountCents: moneyCentsSchema,
+  billingInterval: billingIntervalSchema,
+  status: saasPlanStatusSchema,
+  entitlements: z.array(planEntitlementSchema).default([]),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type SaasPlan = z.infer<typeof saasPlanSchema>;
+
+const saasPlanCommandBaseSchema = z.object({
+  code: z.string().trim().min(2).max(80),
+  name: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(500).optional(),
+  priceAmountCents: moneyCentsSchema,
+  billingInterval: billingIntervalSchema,
+  status: saasPlanStatusSchema.default('ACTIVE'),
+  entitlements: z.array(planEntitlementSchema.omit({ planId: true })).default([]),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const createSaasPlanCommandSchema = saasPlanCommandBaseSchema;
+export type CreateSaasPlanCommand = z.input<typeof createSaasPlanCommandSchema>;
+
+export const updateSaasPlanCommandSchema = saasPlanCommandBaseSchema
+  .partial()
+  .extend({ id: nonEmptyIdSchema })
+  .refine(
+    (value) =>
+      value.code !== undefined ||
+      value.name !== undefined ||
+      value.description !== undefined ||
+      value.priceAmountCents !== undefined ||
+      value.billingInterval !== undefined ||
+      value.status !== undefined ||
+      value.entitlements !== undefined ||
+      value.metadata !== undefined,
+    {
+      message: 'At least one SaaS plan field must be provided.',
+      path: ['id'],
+    },
+  );
+export type UpdateSaasPlanCommand = z.input<typeof updateSaasPlanCommandSchema>;
+
+export const tenantSubscriptionSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  planId: nonEmptyIdSchema,
+  provider: z.string().trim().min(2).max(80),
+  externalReference: z.string().trim().min(1).max(160).optional(),
+  status: tenantSubscriptionStatusSchema,
+  currentPeriodStart: z.string().date().optional(),
+  currentPeriodEnd: z.string().date().optional(),
+  trialStartsOn: z.string().date().optional(),
+  trialEndsOn: z.string().date().optional(),
+  cancelledAt: isoDateTimeSchema.optional(),
+  cancellationReason: z.string().trim().max(500).optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type TenantSubscription = z.infer<typeof tenantSubscriptionSchema>;
+
+export const assignTenantSubscriptionCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  planId: nonEmptyIdSchema,
+  provider: z.string().trim().min(2).max(80),
+  externalReference: z.string().trim().min(1).max(160).optional(),
+  status: tenantSubscriptionStatusSchema.default('ACTIVE'),
+  currentPeriodStart: z.string().date().optional(),
+  currentPeriodEnd: z.string().date().optional(),
+  reason: z.string().trim().min(3).max(500),
+});
+export type AssignTenantSubscriptionCommand = z.input<typeof assignTenantSubscriptionCommandSchema>;
+
+export const billingInvoiceSummarySchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  subscriptionId: nonEmptyIdSchema.optional(),
+  provider: z.string().trim().min(2).max(80),
+  externalReference: z.string().trim().min(1).max(160).optional(),
+  status: billingInvoiceStatusSchema,
+  amountCents: moneyCentsSchema,
+  dueDate: z.string().date().optional(),
+  paidAt: isoDateTimeSchema.optional(),
+  createdAt: isoDateTimeSchema,
+});
+export type BillingInvoiceSummary = z.infer<typeof billingInvoiceSummarySchema>;
+
+export const entitlementDecisionSchema = z
+  .object({
+    tenantId: nonEmptyIdSchema,
+    entitlement: entitlementSchema,
+    allowed: z.boolean(),
+    source: entitlementDecisionSourceSchema,
+    limit: z.number().int().min(0).optional(),
+    planId: nonEmptyIdSchema.optional(),
+    overrideId: nonEmptyIdSchema.optional(),
+    reason: z.string().trim().min(1).max(500).optional(),
+    resolvedAt: isoDateTimeSchema,
+  })
+  .refine((value) => value.source !== 'PLAN' || Boolean(value.planId), {
+    message: 'Plan entitlement decisions require a plan id.',
+    path: ['planId'],
+  })
+  .refine((value) => value.source !== 'OVERRIDE' || Boolean(value.overrideId), {
+    message: 'Override entitlement decisions require an override id.',
+    path: ['overrideId'],
+  })
+  .refine((value) => value.source !== 'MISSING' || !value.allowed, {
+    message: 'Missing entitlement decisions cannot allow access.',
+    path: ['allowed'],
+  });
+export type EntitlementDecision = z.infer<typeof entitlementDecisionSchema>;
+
+export const entitlementOverrideCommandSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  entitlement: entitlementSchema,
+  enabled: z.boolean(),
+  limit: z.number().int().min(0).optional(),
+  reason: z.string().trim().min(3).max(500),
+  expiresAt: isoDateTimeSchema.optional(),
+});
+export type EntitlementOverrideCommand = z.input<typeof entitlementOverrideCommandSchema>;
+
+export const supportScopeSchema = z.object({
+  id: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema,
+  actorUserId: nonEmptyIdSchema,
+  purpose: z.string().trim().min(3).max(500),
+  operationClass: supportOperationClassSchema,
+  status: supportScopeStatusSchema,
+  expiresAt: isoDateTimeSchema,
+  createdAt: isoDateTimeSchema,
+  revokedAt: isoDateTimeSchema.optional(),
+});
+export type SupportScope = z.infer<typeof supportScopeSchema>;
+
+export const createSupportScopeCommandSchema = z
+  .object({
+    tenantId: nonEmptyIdSchema,
+    actorUserId: nonEmptyIdSchema,
+    purpose: z.string().trim().min(3).max(500),
+    operationClass: supportOperationClassSchema,
+    expiresAt: isoDateTimeSchema,
+  })
+  .refine((value) => Date.parse(value.expiresAt) > Date.now(), {
+    message: 'Support scope expiration must be in the future.',
+    path: ['expiresAt'],
+  });
+export type CreateSupportScopeCommand = z.input<typeof createSupportScopeCommandSchema>;
+
+export const platformAuditActionSchema = z.enum([
+  'TENANT_SUSPENDED',
+  'TENANT_RESTRICTED',
+  'TENANT_REACTIVATED',
+  'PLAN_CREATED',
+  'PLAN_UPDATED',
+  'PLAN_ARCHIVED',
+  'SUBSCRIPTION_ASSIGNED',
+  'SUBSCRIPTION_STATUS_CHANGED',
+  'ENTITLEMENT_OVERRIDE_APPLIED',
+  'SUPPORT_SCOPE_CREATED',
+  'SUPPORT_SCOPE_DENIED',
+  'SENSITIVE_ACTION_DENIED',
+]);
+export type PlatformAuditAction = z.infer<typeof platformAuditActionSchema>;
+
+export const platformAuditEntrySchema = z.object({
+  id: nonEmptyIdSchema,
+  action: platformAuditActionSchema,
+  actorUserId: nonEmptyIdSchema,
+  tenantId: nonEmptyIdSchema.optional(),
+  targetType: z.string().trim().min(1).max(120),
+  targetId: nonEmptyIdSchema.optional(),
+  result: z.enum(['SUCCESS', 'DENIED', 'FAILED']),
+  requestId: nonEmptyIdSchema.optional(),
+  reason: z.string().trim().max(500).optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  createdAt: isoDateTimeSchema,
+});
+export type PlatformAuditEntry = z.infer<typeof platformAuditEntrySchema>;
+
+export const platformAuditFilterSchema = z
+  .object({
+    tenantId: nonEmptyIdSchema.optional(),
+    actorUserId: nonEmptyIdSchema.optional(),
+    action: platformAuditActionSchema.optional(),
+    startsAt: isoDateTimeSchema.optional(),
+    endsAt: isoDateTimeSchema.optional(),
+    limit: z.number().int().min(1).max(100).default(25),
+    cursor: z.string().trim().min(1).optional(),
+  })
+  .refine(
+    (value) =>
+      !value.startsAt || !value.endsAt || Date.parse(value.startsAt) <= Date.parse(value.endsAt),
+    {
+      message: 'Audit filter start must be before end.',
+      path: ['endsAt'],
+    },
+  );
+export type PlatformAuditFilter = z.input<typeof platformAuditFilterSchema>;
