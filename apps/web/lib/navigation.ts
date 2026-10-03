@@ -207,7 +207,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/master',
     label: 'Master Admin',
     icon: 'layout',
-    permission: 'audit.read',
+    permission: 'platform.tenants.read',
     roles: ['PLATFORM_MASTER'],
     group: 'Sistema',
   },

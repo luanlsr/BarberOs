@@ -7,7 +7,12 @@ import { getMasterAdminData } from '../../lib/master-admin-data';
 export default async function MasterAdminPage() {
   const session = await getSessionContext();
   if (!session) redirect('/');
-  if (session.role !== 'PLATFORM_MASTER') redirect('/forbidden');
+  if (
+    session.role !== 'PLATFORM_MASTER' ||
+    !session.permissions.includes('platform.tenants.read')
+  ) {
+    redirect('/forbidden');
+  }
   const data = await getMasterAdminData(session);
 
   return <MasterAdminView data={data} />;

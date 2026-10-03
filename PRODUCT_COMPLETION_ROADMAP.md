@@ -4,18 +4,22 @@ Este arquivo organiza os proximos passos depois do PRD para transformar o Barber
 
 ## Estado atual
 
-Ultimo change concluido: whatsapp-messaging-campaigns (56 de 56 tarefas; validado com npx openspec validate whatsapp-messaging-campaigns --strict e npm run validate em 2026-09-30).
+Status da Fase 1 / MVP funcional: concluido com `master-admin-billing`; proximo epic e hardening de producao, observabilidade, seguranca operacional e deploy.
+
+Ultimo change concluido: master-admin-billing (36 de 36 tarefas; validado com npx openspec validate master-admin-billing --strict e npm run validate em 2026-10-02).
+
+Ultimo change concluido anterior: whatsapp-messaging-campaigns (56 de 56 tarefas; validado com npx openspec validate whatsapp-messaging-campaigns --strict e npm run validate em 2026-09-30).
 
 Ultimo change concluido anterior: worker-outbox-notifications (38 de 38 tarefas; validado com npm run validate em 2026-09-23).
 
 Ultimo change arquivado: inventory-products (47 de 47 tarefas; archive OpenSpec em 2026-09-18).
 
-Proximo change planejado: barber-ai-tool-gateway, cobrindo Barber AI, Tool Gateway, autorizacao de tools, confirmacoes, auditoria e contratos de execucao.
+Proximo change planejado: production-hardening-observability, cobrindo validacao final de qualidade, seguranca, observabilidade, runbooks e prontidao de deploy.
 
-Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas; worker-outbox-notifications concluido com 38 de 38 tarefas; whatsapp-messaging-campaigns concluido com 56 de 56 tarefas.
-Progresso estimado do PRD: 78%.
+Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas; worker-outbox-notifications concluido com 38 de 38 tarefas; whatsapp-messaging-campaigns concluido com 56 de 56 tarefas; barber-ai-tool-gateway concluido; master-admin-billing concluido com 36 de 36 tarefas.
+Progresso estimado do PRD: 90%.
 
-O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in, telas iniciais de Clientes, Equipe e Servicos com estados operacionais, pagamentos, caixa, financeiro, comissoes, estoque, catalogo, transactional outbox, worker persistente, jobs, retries, dead-letter, notificacoes provider-agnostic e visibilidade operacional de falhas assincronas.
+O recorte atual cobre a fundacao operacional: contratos, permissoes, migrations de Core Operations e Comandas, servicos de aplicacao, APIs de profissionais, servicos, clientes, agenda, bloqueios, disponibilidade, agendamentos, check-in transacional, Order/OrderItem, historico/auditoria de Comanda, shell/navegacao, tela responsiva de Agenda, AppointmentCard, detalhes do agendamento com historico e acoes por permissao, fluxo inicial de novo agendamento com cliente rapido, tela responsiva de Comanda, gestao basica de itens, fluxo walk-in, telas iniciais de Clientes, Equipe e Servicos com estados operacionais, pagamentos, caixa, financeiro, comissoes, estoque, catalogo, transactional outbox, worker persistente, jobs, retries, dead-letter, notificacoes provider-agnostic, visibilidade operacional de falhas assincronas, WhatsApp/campanhas, Barber AI/Tool Gateway, Master Admin, planos, billing, escopos de suporte, auditoria de plataforma e entitlements server-side.
 
 ## Sequencia macro
 

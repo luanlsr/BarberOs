@@ -122,4 +122,14 @@ describe('MasterAdminPage', () => {
     await expect(MasterAdminPage()).rejects.toThrow('NEXT_REDIRECT:/forbidden');
     expect(mocks.getMasterAdminData).not.toHaveBeenCalled();
   });
+
+  it('redirects platform users without platform tenant permission', async () => {
+    mocks.getSessionContext.mockResolvedValueOnce({
+      ...platformSession,
+      permissions: ['audit.read'],
+    });
+
+    await expect(MasterAdminPage()).rejects.toThrow('NEXT_REDIRECT:/forbidden');
+    expect(mocks.getMasterAdminData).not.toHaveBeenCalled();
+  });
 });

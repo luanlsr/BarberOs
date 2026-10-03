@@ -122,6 +122,7 @@ export type MasterAuditRow = {
   action: string;
   entityType?: string;
   createdAt?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type MasterEntitlementRow = {
@@ -322,6 +323,7 @@ function normalizePlatformAdminData(source: {
     action: entry.action,
     entityType: entry.targetType,
     createdAt: entry.createdAt,
+    metadata: entry.metadata,
   }));
 
   const aiUsage = source.fallback.aiUsage;
@@ -522,6 +524,7 @@ function normalizeMasterData(source: {
     action: text(row.action),
     entityType: optionalText(row.entity_type),
     createdAt: optionalText(row.created_at),
+    metadata: isRecord(row.metadata) ? row.metadata : undefined,
   }));
 
   const entitlements = source.subscriptions.flatMap((subscription) => {
@@ -754,4 +757,8 @@ function number(value: unknown) {
   if (typeof value === 'bigint') return Number(value);
   if (typeof value === 'string') return Number(value) || 0;
   return 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }

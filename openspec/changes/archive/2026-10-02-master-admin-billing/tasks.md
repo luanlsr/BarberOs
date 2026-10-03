@@ -36,18 +36,18 @@
 
 - [x] 5.1 Replace direct `/master` demo aggregation with the new platform-admin data service while preserving demo fallback for missing persistence, and verify page rendering tests pass for platform and forbidden users.
 - [x] 5.2 Upgrade `MasterAdminView` with responsive sections for tenants, plans, subscriptions, invoices, entitlements, support scopes and audit, and verify component tests cover loading, empty, error, permission denied and mobile-friendly states.
-- [ ] 5.3 Add action flows for tenant suspend/reactivate/restrict with reason capture and modal confirmation, and verify component tests cover outside-click modal close, disabled states and success/error feedback.
-- [ ] 5.4 Add plan and entitlement management forms using the shared form modal pattern, and verify component tests cover validation, limits and archived-plan UI.
-- [ ] 5.5 Add billing and subscription detail panels with invoice status totals and tenant tags, and verify UI tests cover active, trialing, past-due and cancelled states.
-- [ ] 5.6 Add support-scope and audit views with search/filter controls and redacted metadata display, and verify component tests cover expired scopes and redaction labels.
-- [ ] 5.7 Update navigation/protected route rules so `/master` and platform APIs are visible only to platform roles, and verify navigation/protected-area tests pass.
+- [x] 5.3 Add action flows for tenant suspend/reactivate/restrict with reason capture and modal confirmation, and verify component tests cover outside-click modal close, disabled states and success/error feedback.
+- [x] 5.4 Add plan and entitlement management forms using the shared form modal pattern, and verify component tests cover validation, limits and archived-plan UI.
+- [x] 5.5 Add billing and subscription detail panels with invoice status totals and tenant tags, and verify UI tests cover active, trialing, past-due and cancelled states.
+- [x] 5.6 Add support-scope and audit views with search/filter controls and redacted metadata display, and verify component tests cover expired scopes and redaction labels.
+- [x] 5.7 Update navigation/protected route rules so `/master` and platform APIs are visible only to platform roles, and verify navigation/protected-area tests pass.
 
 ## 6. Quality and Validation
 
-- [ ] 6.1 Add focused tenant/platform isolation tests proving tenant users cannot list or mutate platform records and platform summary APIs do not leak tenant-private data.
-- [ ] 6.2 Add focused entitlement enforcement tests across at least one existing feature gate to prove active plan entitlements and overrides affect server-side access.
-- [ ] 6.3 Run platform-admin focused unit/component/route tests and verify all pass.
-- [ ] 6.4 Run `npm run typecheck --workspace @barberos/web` and verify TypeScript passes.
-- [ ] 6.5 Run `npx openspec validate master-admin-billing --strict` and fix any planning/spec issues.
-- [ ] 6.6 Run the repo validation command required by this change scope and confirm format, lint, typecheck, tests and build pass.
-- [ ] 6.7 Update `PRODUCT_COMPLETION_ROADMAP.md` to show Phase 1 in progress/completed status and the next MVP hardening epic after implementation.
+- [x] 6.1 Add focused tenant/platform isolation tests proving tenant users cannot list or mutate platform records and platform summary APIs do not leak tenant-private data.
+- [x] 6.2 Add focused entitlement enforcement tests across at least one existing feature gate to prove active plan entitlements and overrides affect server-side access.
+- [x] 6.3 Run platform-admin focused unit/component/route tests and verify all pass.
+- [x] 6.4 Run `npm run typecheck --workspace @barberos/web` and verify TypeScript passes.
+- [x] 6.5 Run `npx openspec validate master-admin-billing --strict` and fix any planning/spec issues.
+- [x] 6.6 Run the repo validation command required by this change scope and confirm format, lint, typecheck, tests and build pass.
+- [x] 6.7 Update `PRODUCT_COMPLETION_ROADMAP.md` to show Phase 1 in progress/completed status and the next MVP hardening epic after implementation.

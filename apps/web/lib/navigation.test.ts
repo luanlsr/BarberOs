@@ -143,7 +143,7 @@ describe('filterNavigation', () => {
     expect(
       navFor(
         'PLATFORM_MASTER',
-        ['audit.read', 'worker.failures.read', 'settings.read'],
+        ['platform.tenants.read', 'worker.failures.read', 'settings.read'],
         ['worker.operations'],
       ),
     ).toEqual(['/master', '/operacoes/worker', '/configuracoes']);
@@ -234,6 +234,13 @@ describe('filterNavigation', () => {
       '/servicos',
       '/minha-carteira',
     ]);
+  });
+
+  it('keeps Master Admin visible only to platform master with platform permissions', () => {
+    expect(navFor('OWNER', ['audit.read'], [])).toEqual([]);
+    expect(navFor('PLATFORM_SUPPORT', ['platform.tenants.read'], [])).toEqual([]);
+    expect(navFor('PLATFORM_MASTER', ['audit.read'], [])).toEqual([]);
+    expect(navFor('PLATFORM_MASTER', ['platform.tenants.read'], [])).toEqual(['/master']);
   });
 });
 
