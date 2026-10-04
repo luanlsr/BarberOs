@@ -506,7 +506,7 @@ function actionsFor(
     {
       id: 'messaging.open-conversations',
       label: 'Ver conversas',
-      href: '/mensagens?tab=conversas',
+      href: '/mensagens#messaging-conversation-list-title',
       enabled: base.canRead && state === 'ready',
       reason: actionReason(base.canRead, stateReason, 'Sem permissão para conversas.'),
     },

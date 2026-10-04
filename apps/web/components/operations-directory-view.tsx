@@ -4,17 +4,28 @@ import * as React from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
+  BadgeCheck,
+  Brush,
+  Crown,
+  Droplets,
   ImageIcon,
   LockKeyhole,
   Pencil,
   Plus,
   RefreshCw,
   Scissors,
+  ScissorsLineDashed,
   Search,
+  Smile,
   Sparkles,
+  SprayCan,
+  Star,
   Trash2,
+  UserRound,
+  Waves,
   X,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button, IconButton, StatusBadge } from '@barberos/ui';
 import type { Customer, Professional, Service } from '@barberos/contracts';
 import type {
@@ -34,6 +45,21 @@ type DirectoryDialogState = {
   values: DraftValues;
 } | null;
 type ApiRecord = Customer | Professional | Service;
+
+const serviceIconOptions = [
+  { key: 'scissors', label: 'Corte', icon: Scissors },
+  { key: 'beard', label: 'Barba', icon: UserRound },
+  { key: 'finish', label: 'Acabamento', icon: ScissorsLineDashed },
+  { key: 'eyebrow', label: 'Sobrancelha', icon: Smile },
+  { key: 'wash', label: 'Lavagem', icon: Droplets },
+  { key: 'treatment', label: 'Tratamento', icon: Sparkles },
+  { key: 'color', label: 'Coloração', icon: Brush },
+  { key: 'styling', label: 'Finalização', icon: SprayCan },
+  { key: 'premium', label: 'Premium', icon: Crown },
+  { key: 'package', label: 'Pacote', icon: Star },
+  { key: 'hydration', label: 'Hidratação', icon: Waves },
+  { key: 'standard', label: 'Clássico', icon: BadgeCheck },
+] satisfies ReadonlyArray<{ key: string; label: string; icon: LucideIcon }>;
 
 export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsDirectoryModel }>) {
   const shouldFetchServerRecords = model.state === 'default' && model.canRead;
@@ -528,6 +554,17 @@ function DirectoryDetailsDialog({
 
 function serviceIconForKey(iconKey?: string) {
   const normalized = iconKey?.toLowerCase() ?? '';
+  if (normalized.includes('beard') || normalized.includes('barba')) return UserRound;
+  if (normalized.includes('finish') || normalized.includes('acab')) return ScissorsLineDashed;
+  if (normalized.includes('eyebrow') || normalized.includes('sobr')) return Smile;
+  if (normalized.includes('wash') || normalized.includes('lav')) return Droplets;
+  if (normalized.includes('treatment') || normalized.includes('trat')) return Sparkles;
+  if (normalized.includes('color') || normalized.includes('pigment')) return Brush;
+  if (normalized.includes('style') || normalized.includes('final')) return SprayCan;
+  if (normalized.includes('premium')) return Crown;
+  if (normalized.includes('package') || normalized.includes('pacote')) return Star;
+  if (normalized.includes('hydration') || normalized.includes('hidrat')) return Waves;
+  if (normalized.includes('standard') || normalized.includes('classic')) return BadgeCheck;
   if (normalized.includes('spark') || normalized.includes('star')) return Sparkles;
   if (normalized.includes('image') || normalized.includes('photo') || normalized.includes('foto'))
     return ImageIcon;
@@ -626,6 +663,33 @@ function DirectoryField({
   onChange: (value: string) => void;
   value: string;
 }>) {
+  if (field.type === 'icon') {
+    return (
+      <div className="directory-icon-field">
+        <span>{field.label}</span>
+        <div className="directory-icon-picker" role="group" aria-label="Ícone do serviço">
+          {serviceIconOptions.map((option) => {
+            const Icon = option.icon;
+            const selected = value === option.key || (!value && option.key === 'scissors');
+            return (
+              <button
+                aria-pressed={selected}
+                disabled={disabled}
+                key={option.key}
+                onClick={() => onChange(option.key)}
+                type="button"
+              >
+                <Icon size={18} aria-hidden="true" />
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {error ? <small className="form-field-error">{error}</small> : null}
+      </div>
+    );
+  }
+
   return (
     <label>
       <span>{field.label}</span>
@@ -953,7 +1017,7 @@ function buildCommandPayload(
     durationMinutes: toInteger(values.duration),
     priceCents: toMoneyCents(values.price),
     imageUrl: values.imageUrl,
-    iconKey: values.iconKey,
+    iconKey: values.iconKey || 'scissors',
     colorHex: values.colorHex,
     enabledProfessionalIds: [],
   });

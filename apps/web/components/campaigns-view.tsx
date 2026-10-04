@@ -23,9 +23,26 @@ import type {
 import { SummaryTile } from './product-view';
 
 export function CampaignsView({ model }: Readonly<{ model: CampaignsViewModel }>) {
+  const [campaigns, setCampaigns] = React.useState(() => [...model.campaigns]);
   const [selectedId, setSelectedId] = React.useState(model.selectedCampaign?.id);
   const selected =
-    model.campaigns.find((campaign) => campaign.id === selectedId) ?? model.selectedCampaign;
+    campaigns.find((campaign) => campaign.id === selectedId) ?? model.selectedCampaign;
+
+  function createDraftCampaign() {
+    const draft = buildDraftCampaign(model);
+    setCampaigns((current) => [draft, ...current]);
+    setSelectedId(draft.id);
+  }
+
+  function patchCampaign(campaignId: string, changes: Partial<CampaignItemModel>) {
+    setCampaigns((current) =>
+      current.map((campaign) =>
+        campaign.id === campaignId
+          ? normalizeCampaign({ ...campaign, ...changes }, model)
+          : campaign,
+      ),
+    );
+  }
 
   if (model.state === 'permission-denied') return <CampaignBoundaryState model={model} />;
   if (model.state === 'error') return <CampaignBoundaryState model={model} />;
@@ -40,7 +57,7 @@ export function CampaignsView({ model }: Readonly<{ model: CampaignsViewModel }>
             {model.branchName} · {model.description}
           </p>
         </div>
-        <CampaignActions actions={model.allowedActions} />
+        <CampaignActions actions={model.allowedActions} onCreate={createDraftCampaign} />
       </header>
 
       <CampaignInlineState model={model} />
@@ -63,15 +80,15 @@ export function CampaignsView({ model }: Readonly<{ model: CampaignsViewModel }>
           <div className="campaigns-workspace" aria-label="Campanhas responsivas">
             <main className="campaigns-primary" aria-label="Lista e editor">
               <CampaignList
-                campaigns={model.campaigns}
+                campaigns={campaigns}
                 selectedId={selected?.id}
                 onSelect={setSelectedId}
               />
-              <CampaignEditor model={model} selected={selected} />
+              <CampaignEditor model={model} selected={selected} onPatch={patchCampaign} />
             </main>
             <aside className="campaigns-side" aria-label="Prévia e resultado">
               <AudiencePreview selected={selected} />
-              <CampaignLifecycle selected={selected} />
+              <CampaignLifecycle selected={selected} onPatch={patchCampaign} />
               <CampaignResults selected={selected} />
             </aside>
           </div>
@@ -81,7 +98,10 @@ export function CampaignsView({ model }: Readonly<{ model: CampaignsViewModel }>
   );
 }
 
-function CampaignActions({ actions }: Readonly<{ actions: readonly CampaignActionModel[] }>) {
+function CampaignActions({
+  actions,
+  onCreate,
+}: Readonly<{ actions: readonly CampaignActionModel[]; onCreate: () => void }>) {
   return (
     <div className="inventory-heading-actions" aria-label="Ações de campanhas">
       {actions.map((action) => (
@@ -95,6 +115,7 @@ function CampaignActions({ actions }: Readonly<{ actions: readonly CampaignActio
           type="button"
           onClick={() => {
             if (action.id === 'campaigns.refresh') window.location.reload();
+            if (action.id === 'campaigns.create' && action.enabled) onCreate();
           }}
         >
           {action.id === 'campaigns.create' ? (
@@ -107,6 +128,70 @@ function CampaignActions({ actions }: Readonly<{ actions: readonly CampaignActio
       ))}
     </div>
   );
+}
+
+function buildDraftCampaign(model: CampaignsViewModel): CampaignItemModel {
+  const now = new Date();
+  return {
+    id: 'draft-' + now.getTime(),
+    name: 'Nova campanha',
+    status: 'DRAFT',
+    statusLabel: 'Rascunho',
+    statusTone: 'neutral',
+    branchName: model.branchName,
+    templateKey: 'retorno-cliente',
+    bodyPreview: 'Olá, {{nome}}! Temos horários disponíveis esta semana.',
+    updatedAtLabel: 'Agora',
+    audiencePreview: {
+      audienceSize: 0,
+      eligibleCount: 0,
+      excludedCount: 0,
+      unknownContactCount: 0,
+      exclusionReasons: [],
+    },
+    resultMetrics: [],
+    canEdit: model.canCreate,
+    canSubmitForReview: model.canCreate,
+    canApprove: false,
+    canSchedule: false,
+    canSend: false,
+    canCancel: true,
+    disabledReason: model.canCreate ? undefined : 'Sem permissão para criar campanhas.',
+  };
+}
+
+function normalizeCampaign(campaign: CampaignItemModel, model: CampaignsViewModel) {
+  const statusLabels = {
+    DRAFT: 'Rascunho',
+    READY_FOR_REVIEW: 'Em revisão',
+    APPROVED: 'Aprovada',
+    SCHEDULED: 'Agendada',
+    SENDING: 'Enviando',
+    SENT: 'Enviada',
+    PARTIALLY_FAILED: 'Falha parcial',
+    CANCELLED: 'Cancelada',
+  } as const;
+  const statusTone =
+    campaign.status === 'SENT' || campaign.status === 'APPROVED'
+      ? 'success'
+      : campaign.status === 'PARTIALLY_FAILED'
+        ? 'danger'
+        : campaign.status === 'CANCELLED'
+          ? 'neutral'
+          : 'warning';
+  return {
+    ...campaign,
+    statusLabel: statusLabels[campaign.status],
+    statusTone,
+    updatedAtLabel: 'Agora',
+    canEdit: model.canCreate && campaign.status === 'DRAFT',
+    canSubmitForReview: model.canCreate && campaign.status === 'DRAFT',
+    canApprove: model.canApprove && campaign.status === 'READY_FOR_REVIEW',
+    canSchedule: model.canApprove && campaign.status === 'APPROVED',
+    canSend: model.canSend && ['APPROVED', 'SCHEDULED'].includes(campaign.status),
+    canCancel:
+      model.canApprove && !['SENT', 'PARTIALLY_FAILED', 'CANCELLED'].includes(campaign.status),
+  } satisfies CampaignItemModel;
 }
 
 function CampaignInlineState({ model }: Readonly<{ model: CampaignsViewModel }>) {
@@ -176,8 +261,13 @@ function CampaignList({
 
 function CampaignEditor({
   model,
+  onPatch,
   selected,
-}: Readonly<{ model: CampaignsViewModel; selected?: CampaignItemModel }>) {
+}: Readonly<{
+  model: CampaignsViewModel;
+  onPatch: (campaignId: string, changes: Partial<CampaignItemModel>) => void;
+  selected?: CampaignItemModel;
+}>) {
   if (!selected) {
     return (
       <section className="campaigns-panel">
@@ -227,6 +317,7 @@ function CampaignEditor({
           disabled={!selected.canSubmitForReview}
           title={selected.disabledReason}
           type="button"
+          onClick={() => onPatch(selected.id, { status: 'READY_FOR_REVIEW' })}
         >
           <ClipboardCheck size={16} aria-hidden="true" />
           Enviar para revisão
@@ -236,6 +327,7 @@ function CampaignEditor({
           disabled={!model.canCreate || !selected.canEdit}
           title={selected.disabledReason}
           type="button"
+          onClick={() => onPatch(selected.id, { updatedAtLabel: 'Agora' })}
         >
           <CheckCircle2 size={16} aria-hidden="true" />
           Salvar rascunho
@@ -293,7 +385,13 @@ function AudiencePreview({ selected }: Readonly<{ selected?: CampaignItemModel }
   );
 }
 
-function CampaignLifecycle({ selected }: Readonly<{ selected?: CampaignItemModel }>) {
+function CampaignLifecycle({
+  onPatch,
+  selected,
+}: Readonly<{
+  onPatch: (campaignId: string, changes: Partial<CampaignItemModel>) => void;
+  selected?: CampaignItemModel;
+}>) {
   return (
     <section className="campaigns-panel" aria-labelledby="campaign-lifecycle-title">
       <div className="inventory-panel-heading">
@@ -321,6 +419,7 @@ function CampaignLifecycle({ selected }: Readonly<{ selected?: CampaignItemModel
               disabled={!selected.canApprove}
               title={selected.disabledReason}
               type="button"
+              onClick={() => onPatch(selected.id, { status: 'APPROVED' })}
             >
               <ClipboardCheck size={16} aria-hidden="true" />
               Aprovar
@@ -330,6 +429,12 @@ function CampaignLifecycle({ selected }: Readonly<{ selected?: CampaignItemModel
               disabled={!selected.canSchedule}
               title={selected.disabledReason}
               type="button"
+              onClick={() =>
+                onPatch(selected.id, {
+                  status: 'SCHEDULED',
+                  scheduledForLabel: 'Agendada para o próximo horário selecionado',
+                })
+              }
             >
               <CalendarClock size={16} aria-hidden="true" />
               Agendar
@@ -339,6 +444,19 @@ function CampaignLifecycle({ selected }: Readonly<{ selected?: CampaignItemModel
               disabled={!selected.canSend}
               title={selected.disabledReason}
               type="button"
+              onClick={() =>
+                onPatch(selected.id, {
+                  status: 'SENT',
+                  resultMetrics: [
+                    {
+                      label: 'Enviadas',
+                      value: String(selected.audiencePreview.eligibleCount),
+                      tone: 'success',
+                    },
+                    { label: 'Falhas', value: '0', tone: 'neutral' },
+                  ],
+                })
+              }
             >
               <Send size={16} aria-hidden="true" />
               Enviar agora

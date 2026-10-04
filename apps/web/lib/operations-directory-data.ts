@@ -12,7 +12,7 @@ export type OperationsDirectoryField = {
   min?: number;
   minLength?: number;
   placeholder: string;
-  type: 'text' | 'tel' | 'email' | 'number' | 'select' | 'url' | 'color';
+  type: 'text' | 'tel' | 'email' | 'number' | 'select' | 'url' | 'color' | 'icon';
   options?: readonly string[];
 };
 
@@ -323,7 +323,7 @@ const fields: Record<OperationsDirectoryArea, OperationsDirectoryField[]> = {
       placeholder: 'https://...',
       type: 'url',
     },
-    { id: 'iconKey', label: 'Ícone', maxLength: 40, placeholder: 'scissors', type: 'text' },
+    { id: 'iconKey', label: 'Ícone', maxLength: 40, placeholder: 'scissors', type: 'icon' },
     { id: 'colorHex', label: 'Cor', placeholder: '#A45A36', type: 'color' },
   ],
 };

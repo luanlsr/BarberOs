@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { AppShell } from '../components/app-shell';
 import { ThemeProvider } from '../components/theme-provider';
 import { getSessionContext } from '../lib/auth/server';
+import type { BrandThemePreferences } from '../lib/brand-theme';
+import { getTenantVisualPreferences } from '../lib/settings-preferences';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -69,16 +71,51 @@ const themeInitScript = `
 })();
 `;
 
+function createBrandThemeInitScript(preferences: BrandThemePreferences | null | undefined) {
+  const serialized = JSON.stringify(preferences ?? null).replace(/</g, '\\u003c');
+  return `
+(function () {
+  try {
+    var serverPreferences = ${serialized};
+    var stored = window.localStorage.getItem('barberos-brand-preferences');
+    var preferences = stored ? JSON.parse(stored) : serverPreferences;
+    if (!preferences) return;
+    var root = document.documentElement;
+    if (preferences.fontColorHex) {
+      root.style.setProperty('--foreground', preferences.fontColorHex);
+      root.style.setProperty('--color-foreground', preferences.fontColorHex);
+    }
+    if (preferences.accentColorHex) {
+      var accent = preferences.accentColorHex;
+      root.style.setProperty('--accent', accent);
+      root.style.setProperty('--color-accent', accent);
+      root.style.setProperty('--accent-strong', 'color-mix(in srgb, ' + accent + ' 82%, var(--foreground))');
+      root.style.setProperty('--accent-soft', 'color-mix(in srgb, ' + accent + ' 14%, var(--surface))');
+      root.style.setProperty('--accent-gradient', 'linear-gradient(135deg, ' + accent + ' 0%, color-mix(in srgb, ' + accent + ' 72%, #ffffff) 100%)');
+    }
+  } catch (_) {}
+})();
+`;
+}
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getSessionContext();
+  const tenantVisualPreferences = session
+    ? await getTenantVisualPreferences(session.tenantId).catch(() => null)
+    : null;
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: browserDiagnosticsScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: createBrandThemeInitScript(tenantVisualPreferences),
+          }}
+        />
       </head>
       <body suppressHydrationWarning>
-        <ThemeProvider>
+        <ThemeProvider initialBrandPreferences={tenantVisualPreferences}>
           <AppShell session={session}>{children}</AppShell>
         </ThemeProvider>
       </body>

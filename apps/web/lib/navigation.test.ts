@@ -146,7 +146,21 @@ describe('filterNavigation', () => {
         ['platform.tenants.read', 'worker.failures.read', 'settings.read'],
         ['worker.operations'],
       ),
-    ).toEqual(['/master', '/operacoes/worker', '/configuracoes']);
+    ).toEqual(['/master', '/operacoes/worker']);
+    expect(
+      navFor(
+        'PLATFORM_MASTER',
+        [
+          'platform.tenants.read',
+          'worker.failures.read',
+          'messaging.read',
+          'campaigns.read',
+          'notifications.status.read',
+          'settings.read',
+        ],
+        ['worker.operations', 'messaging', 'campaigns', 'notifications'],
+      ),
+    ).toEqual(['/master', '/operacoes/worker']);
 
     expect(
       navFor(
@@ -178,7 +192,6 @@ describe('filterNavigation', () => {
       '/estoque',
       '/financeiro',
       '/caixa',
-      '/operacoes/worker',
       '/configuracoes',
     ]);
 

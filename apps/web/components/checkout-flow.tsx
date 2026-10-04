@@ -169,18 +169,16 @@ export function CheckoutFlow({ plans, selectedPlan, marketingParams = {} }: Chec
             <h2>Escolha o plano</h2>
             <div className="checkout-plan-options">
               {plans.map((item) => (
-                <label key={item.code} className={item.code === form.planCode ? 'is-selected' : ''}>
-                  <input
-                    type="radio"
-                    name="plan"
-                    value={item.code}
-                    checked={item.code === form.planCode}
-                    onChange={() => update('planCode', item.code)}
-                  />
+                <button
+                  aria-pressed={item.code === form.planCode}
+                  key={item.code}
+                  onClick={() => update('planCode', item.code)}
+                  type="button"
+                >
                   <span>{item.name}</span>
                   <strong>{formatCurrency(item.priceAmountCents)}/mês</strong>
                   <small>{item.description}</small>
-                </label>
+                </button>
               ))}
             </div>
           </div>

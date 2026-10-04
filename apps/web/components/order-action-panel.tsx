@@ -695,37 +695,35 @@ function WalkInOrderForm({
       <form className="order-form" onSubmit={handleSubmit} aria-describedby={feedbackId}>
         <fieldset disabled={disabled}>
           <div className="order-branch-pill">Unidade: {branchName}</div>
-          <fieldset className="order-client-mode">
-            <legend>Cliente</legend>
-            <label>
-              <input
-                checked={mode === 'casual'}
-                onChange={() => setMode('casual')}
-                type="radio"
-                name="walk-in-client-mode"
-              />
-              Consumidor avulso
-            </label>
-            <label>
-              <input
-                checked={mode === 'existing'}
-                onChange={() => setMode('existing')}
-                type="radio"
-                name="walk-in-client-mode"
-              />
-              Cliente existente
-            </label>
-            <label aria-disabled={!canQuickCreateCustomer}>
-              <input
-                checked={mode === 'quick'}
+          <div className="order-client-block">
+            <div className="order-field-head">
+              <span>Cliente</span>
+            </div>
+            <div className="order-client-mode" role="group" aria-label="Tipo de cliente">
+              <button
+                aria-pressed={mode === 'casual'}
+                onClick={() => setMode('casual')}
+                type="button"
+              >
+                Consumidor avulso
+              </button>
+              <button
+                aria-pressed={mode === 'existing'}
+                onClick={() => setMode('existing')}
+                type="button"
+              >
+                Cliente existente
+              </button>
+              <button
+                aria-pressed={mode === 'quick'}
                 disabled={!canQuickCreateCustomer}
-                onChange={() => setMode('quick')}
-                type="radio"
-                name="walk-in-client-mode"
-              />
-              Cadastro rápido
-            </label>
-          </fieldset>
+                onClick={() => setMode('quick')}
+                type="button"
+              >
+                Cadastro rápido
+              </button>
+            </div>
+          </div>
           {mode === 'existing' ? (
             <label>
               Cliente existente

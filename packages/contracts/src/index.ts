@@ -53,6 +53,7 @@ export type Permission =
   | 'campaigns.approve'
   | 'campaigns.send'
   | 'settings.read'
+  | 'settings.manage'
   | 'memberships.read'
   | 'memberships.manage'
   | 'audit.read'
@@ -162,6 +163,7 @@ export const permissionSchema = z.enum([
   'campaigns.approve',
   'campaigns.send',
   'settings.read',
+  'settings.manage',
   'memberships.read',
   'memberships.manage',
   'audit.read',
@@ -197,6 +199,63 @@ export const isoDateTimeSchema = z.string().datetime({ offset: true });
 export const localTimeSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:mm in 24-hour format.');
+
+export const themePreferenceSchema = z.enum(['light', 'dark', 'system']);
+export type ThemePreference = z.infer<typeof themePreferenceSchema>;
+
+export const tenantVisualPreferencesSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  logoUrl: optionalUrlSchema.nullish(),
+  fontColorHex: colorHexSchema,
+  accentColorHex: colorHexSchema,
+  updatedBy: nonEmptyIdSchema.optional(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type TenantVisualPreferences = z.infer<typeof tenantVisualPreferencesSchema>;
+
+export const updateTenantVisualPreferencesCommandSchema = z
+  .object({
+    logoUrl: optionalUrlSchema.nullish(),
+    fontColorHex: colorHexSchema.optional(),
+    accentColorHex: colorHexSchema.optional(),
+  })
+  .refine(
+    (value) =>
+      value.logoUrl !== undefined ||
+      value.fontColorHex !== undefined ||
+      value.accentColorHex !== undefined,
+    {
+      message: 'At least one tenant visual preference must be provided.',
+      path: ['fontColorHex'],
+    },
+  );
+export type UpdateTenantVisualPreferencesCommand = z.input<
+  typeof updateTenantVisualPreferencesCommandSchema
+>;
+
+export const userInterfacePreferencesSchema = z.object({
+  tenantId: nonEmptyIdSchema,
+  userId: nonEmptyIdSchema,
+  theme: themePreferenceSchema,
+  notificationPreferences: z.record(z.string(), z.boolean()).default({}),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type UserInterfacePreferences = z.infer<typeof userInterfacePreferencesSchema>;
+
+export const updateUserInterfacePreferencesCommandSchema = z
+  .object({
+    theme: themePreferenceSchema.optional(),
+    notificationPreferences: z.record(z.string(), z.boolean()).optional(),
+  })
+  .refine((value) => value.theme !== undefined || value.notificationPreferences !== undefined, {
+    message: 'At least one user interface preference must be provided.',
+    path: ['theme'],
+  });
+export type UpdateUserInterfacePreferencesCommand = z.input<
+  typeof updateUserInterfacePreferencesCommandSchema
+>;
 
 export const directoryStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']);
 export type DirectoryStatus = z.infer<typeof directoryStatusSchema>;

@@ -80,6 +80,7 @@ const operationalPermissions = [
   'campaigns.approve',
   'campaigns.send',
   'settings.read',
+  'settings.manage',
   'memberships.read',
   'memberships.manage',
   'audit.read',
@@ -142,6 +143,7 @@ export const rolePermissions: Record<Role, readonly Permission[]> = {
     'campaigns.approve',
     'campaigns.send',
     'settings.read',
+    'settings.manage',
   ],
   FINANCE: [
     'dashboard.read',

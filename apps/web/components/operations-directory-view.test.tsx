@@ -49,4 +49,14 @@ describe('OperationsDirectoryView', () => {
     expect(disabledHtml).toContain('Formulario bloqueado');
     expect(offlineHtml).toContain('Ações de escrita ficam indisponíveis');
   });
+
+  test('uses an icon picker contract for service icons instead of a typed icon field', () => {
+    const model = getOperationsDirectoryModel(developmentSession, 'servicos', {
+      state: 'disabled',
+    });
+    const iconField = model.fields.find((field) => field.id === 'iconKey');
+
+    expect(iconField?.type).toBe('icon');
+    expect(iconField?.placeholder).toBe('scissors');
+  });
 });

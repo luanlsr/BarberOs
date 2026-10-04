@@ -254,33 +254,29 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
       </header>
 
       <form className="new-appointment-form" onSubmit={handleSubmit}>
-        <fieldset className="new-appointment-mode" aria-label="Tipo de cliente">
-          <label>
-            <input
-              checked={customerMode === 'existing'}
-              name="customerMode"
-              onChange={() => setCustomerMode('existing')}
-              type="radio"
-              value="existing"
-            />
-            Cliente existente
-          </label>
-          <label aria-disabled={!model.canCreateCustomer}>
-            <input
-              checked={customerMode === 'quick'}
-              disabled={!model.canCreateCustomer}
-              name="customerMode"
-              onChange={() => setCustomerMode('quick')}
-              type="radio"
-              value="quick"
-            />
-            Novo cliente
-          </label>
-        </fieldset>
-
-        {customerMode === 'existing' ? (
-          <label>
+        <div className="new-appointment-customer-block">
+          <div className="new-appointment-field-head">
             <span>Cliente</span>
+            <div className="new-appointment-mode" role="group" aria-label="Tipo de cliente">
+              <button
+                aria-pressed={customerMode === 'existing'}
+                onClick={() => setCustomerMode('existing')}
+                type="button"
+              >
+                Existente
+              </button>
+              <button
+                aria-pressed={customerMode === 'quick'}
+                disabled={!model.canCreateCustomer}
+                onClick={() => setCustomerMode('quick')}
+                type="button"
+              >
+                Novo
+              </button>
+            </div>
+          </div>
+
+          {customerMode === 'existing' ? (
             <RelatedSelect
               emptyLabel="Nenhum cliente cadastrado"
               onChange={setCustomerId}
@@ -290,32 +286,32 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
               searchPlaceholder="Buscar cliente"
               value={customerId}
             />
-          </label>
-        ) : (
-          <div className="new-appointment-inline-fields">
-            <label>
-              <span>Nome do cliente</span>
-              <input
-                maxLength={120}
-                minLength={3}
-                onChange={(event) => setQuickCustomerName(event.target.value)}
-                placeholder="Nome completo"
-                value={quickCustomerName}
-              />
-            </label>
-            <label>
-              <span>Telefone</span>
-              <PhoneInput
-                onValueChange={setQuickCustomerPhone}
-                placeholder="(11) 99999-9999"
-                required
-                value={quickCustomerPhone}
-              />
-            </label>
-          </div>
-        )}
+          ) : (
+            <div className="new-appointment-inline-fields">
+              <label>
+                <span>Nome do cliente</span>
+                <input
+                  maxLength={120}
+                  minLength={3}
+                  onChange={(event) => setQuickCustomerName(event.target.value)}
+                  placeholder="Nome completo"
+                  value={quickCustomerName}
+                />
+              </label>
+              <label>
+                <span>Telefone</span>
+                <PhoneInput
+                  onValueChange={setQuickCustomerPhone}
+                  placeholder="(11) 99999-9999"
+                  required
+                  value={quickCustomerPhone}
+                />
+              </label>
+            </div>
+          )}
+        </div>
 
-        <div className="new-appointment-inline-fields">
+        <div className="new-appointment-stack">
           <label>
             <span>Profissional</span>
             <RelatedSelect
@@ -598,7 +594,9 @@ function AppointmentDatePicker({
   value: string;
 }>) {
   const [open, setOpen] = React.useState(false);
+  const [calendarStyle, setCalendarStyle] = React.useState<React.CSSProperties>({});
   const [visibleMonthIso, setVisibleMonthIso] = React.useState(() => value.slice(0, 7));
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const titleId = React.useId();
   const weeks = React.useMemo(() => buildCalendarWeeks(visibleMonthIso), [visibleMonthIso]);
   const monthLabel = formatMonthLabel(visibleMonthIso);
@@ -606,6 +604,38 @@ function AppointmentDatePicker({
   React.useEffect(() => {
     setVisibleMonthIso(value.slice(0, 7));
   }, [value]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const triggerElement = trigger;
+
+    function updatePosition() {
+      const rect = triggerElement.getBoundingClientRect();
+      const calendarWidth = Math.min(296, window.innerWidth - 24);
+      const calendarHeight = 330;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const shouldOpenUp = spaceBelow < calendarHeight && rect.top > spaceBelow;
+      const left = Math.min(Math.max(12, rect.left), window.innerWidth - calendarWidth - 12);
+
+      setCalendarStyle({
+        left,
+        top: shouldOpenUp
+          ? Math.max(12, rect.top - calendarHeight - 8)
+          : Math.min(window.innerHeight - calendarHeight - 12, rect.bottom + 8),
+        width: calendarWidth,
+      });
+    }
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open]);
 
   function selectDate(nextDateIso: string) {
     if (nextDateIso < minDateIso) return;
@@ -619,6 +649,7 @@ function AppointmentDatePicker({
         aria-expanded={open}
         aria-haspopup="dialog"
         className="appointment-date-trigger"
+        ref={triggerRef}
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
@@ -626,7 +657,12 @@ function AppointmentDatePicker({
         <span>{formatDateButtonLabel(value)}</span>
       </button>
       {open ? (
-        <div aria-labelledby={titleId} className="appointment-date-calendar" role="dialog">
+        <div
+          aria-labelledby={titleId}
+          className="appointment-date-calendar"
+          role="dialog"
+          style={calendarStyle}
+        >
           <header>
             <button
               aria-label="Mês anterior"

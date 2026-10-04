@@ -182,7 +182,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'message',
     permission: 'messaging.read',
     entitlement: 'messaging',
-    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST'],
     group: 'Crescimento',
   },
   {
@@ -191,7 +191,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'megaphone',
     permission: 'campaigns.read',
     entitlement: 'campaigns',
-    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST'],
     group: 'Crescimento',
   },
   {
@@ -200,7 +200,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'send',
     permission: 'notifications.status.read',
     entitlement: 'notifications',
-    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    roles: ['OWNER', 'MANAGER', 'RECEPTIONIST'],
     group: 'Crescimento',
   },
   {
@@ -217,7 +217,7 @@ export const navigationItems: NavigationItem[] = [
     icon: 'activity',
     permission: 'worker.failures.read',
     entitlement: 'worker.operations',
-    roles: ['OWNER', 'MANAGER', 'PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
+    roles: ['PLATFORM_MASTER', 'PLATFORM_SUPPORT'],
     group: 'Sistema',
   },
   {
@@ -225,6 +225,7 @@ export const navigationItems: NavigationItem[] = [
     label: 'Configurações',
     icon: 'settings',
     permission: 'settings.read',
+    roles: ['OWNER', 'MANAGER'],
     group: 'Sistema',
   },
 ];

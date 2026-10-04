@@ -1,6 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import type { BrandThemePreferences } from '../lib/brand-theme';
+import { applyBrandThemePreferences, readStoredBrandThemePreferences } from '../lib/brand-theme';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -30,7 +32,13 @@ function readStoredTheme(): Theme {
     : 'system';
 }
 
-export function ThemeProvider({ children }: Readonly<{ children: React.ReactNode }>) {
+export function ThemeProvider({
+  children,
+  initialBrandPreferences,
+}: Readonly<{
+  children: React.ReactNode;
+  initialBrandPreferences?: BrandThemePreferences | null;
+}>) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'system';
     return readStoredTheme();
@@ -40,6 +48,7 @@ export function ThemeProvider({ children }: Readonly<{ children: React.ReactNode
     const storedTheme = readStoredTheme();
     setTheme(storedTheme);
     applyTheme(storedTheme);
+    applyBrandThemePreferences(readStoredBrandThemePreferences() ?? initialBrandPreferences);
   }, []);
 
   useEffect(() => {

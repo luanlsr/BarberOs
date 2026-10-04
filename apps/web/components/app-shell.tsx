@@ -323,6 +323,88 @@ function UserControl({ isOnline }: Readonly<{ isOnline: boolean }>) {
   );
 }
 
+function HeaderNotifications() {
+  const [open, setOpen] = React.useState(false);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+  const notifications = [
+    {
+      id: 'billing-plan-renewal',
+      title: 'Cobrança do plano',
+      body: 'Próxima cobrança Asaas em preparação. Confirme os dados fiscais em Plano e cobrança.',
+      href: '/configuracoes/plano-cobranca',
+      tone: 'warning',
+      time: 'Hoje',
+    },
+    {
+      id: 'commission-payout',
+      title: 'Pagamento de profissionais',
+      body: 'Há repasses pendentes para conferência antes do fechamento financeiro.',
+      href: '/financeiro/comissoes',
+      tone: 'neutral',
+      time: 'Hoje',
+    },
+    {
+      id: 'low-stock',
+      title: 'Estoque baixo',
+      body: 'Produtos controlados chegaram ao mínimo. Revise entradas de estoque.',
+      href: '/estoque',
+      tone: 'danger',
+      time: 'Agora',
+    },
+  ];
+  const unreadCount = notifications.length;
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!popoverRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open]);
+
+  return (
+    <div className="topbar-notification-menu" ref={popoverRef}>
+      <IconButton label="Notificações" onClick={() => setOpen((current) => !current)} type="button">
+        <Bell size={18} aria-hidden="true" />
+        <span className="notification-count">{unreadCount}</span>
+      </IconButton>
+      <div className={`topbar-notification-popover ${open ? 'is-open' : ''}`} aria-hidden={!open}>
+        <header>
+          <div>
+            <p className="eyebrow">Notificações</p>
+            <h2>Central operacional</h2>
+          </div>
+          <span>{unreadCount} novas</span>
+        </header>
+        <div className="topbar-notification-list">
+          {notifications.map((notification) => (
+            <Link
+              className={'topbar-notification-item ' + notification.tone}
+              href={notification.href}
+              key={notification.id}
+              onClick={() => setOpen(false)}
+            >
+              <span>{notification.time}</span>
+              <strong>{notification.title}</strong>
+              <p>{notification.body}</p>
+            </Link>
+          ))}
+        </div>
+        <Link
+          className="topbar-notification-footer"
+          href="/entregas"
+          onClick={() => setOpen(false)}
+        >
+          Ver status de entregas
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const session = useSessionContext();
@@ -391,9 +473,7 @@ function ShellContent({ children }: Readonly<{ children: React.ReactNode }>) {
             <p>{session.tenantName}</p>
           </div>
           <div className="topbar-actions">
-            <IconButton label="Notificações">
-              <Bell size={18} aria-hidden="true" />
-            </IconButton>
+            <HeaderNotifications />
             <UserControl isOnline={isOnline} />
           </div>
         </header>

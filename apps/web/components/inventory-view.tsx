@@ -346,6 +346,18 @@ function InventoryMovementForm({
   type: Exclude<InventoryModal, null | { type: 'movement'; movement: StockMovementModel }>['type'];
 }>) {
   const disabled = !model.canWrite || model.state === 'offline';
+  const [productId, setProductId] = React.useState(balance?.productId ?? '');
+  const [newProductName, setNewProductName] = React.useState('');
+  const [newProductSku, setNewProductSku] = React.useState('');
+  const productOptions = React.useMemo(
+    () =>
+      [...model.balances].sort((left, right) =>
+        left.productName.localeCompare(right.productName, 'pt-BR'),
+      ),
+    [model.balances],
+  );
+  const creatingProduct = productId === '__new';
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!disabled && type === 'entry') onRecorded();
@@ -356,17 +368,46 @@ function InventoryMovementForm({
       <fieldset disabled={disabled}>
         <label>
           Produto
-          <select defaultValue={balance?.productId ?? ''}>
+          <select value={productId} onChange={(event) => setProductId(event.target.value)}>
             <option value="" disabled>
-              Selecione
+              {productOptions.length ? 'Selecione' : 'Nenhum produto cadastrado'}
             </option>
-            {model.balances.map((item) => (
+            {productOptions.map((item) => (
               <option key={item.productId} value={item.productId}>
                 {item.productName}
               </option>
             ))}
+            {type === 'entry' ? <option value="__new">+ Cadastrar novo produto</option> : null}
           </select>
         </label>
+        {creatingProduct ? (
+          <div className="inventory-quick-create">
+            <div className="inventory-form-grid">
+              <label>
+                Novo produto
+                <input
+                  maxLength={160}
+                  placeholder="Ex.: Pomada matte 80g"
+                  value={newProductName}
+                  onChange={(event) => setNewProductName(event.target.value)}
+                />
+              </label>
+              <label>
+                SKU
+                <input
+                  maxLength={80}
+                  placeholder="Opcional"
+                  value={newProductSku}
+                  onChange={(event) => setNewProductSku(event.target.value)}
+                />
+              </label>
+            </div>
+            <p>
+              O produto entra como rascunho operacional desta entrada. Depois você poderá completar
+              preço, categoria e política de estoque no catálogo.
+            </p>
+          </div>
+        ) : null}
         <label>
           Quantidade
           <input inputMode="numeric" type="number" defaultValue="1" />

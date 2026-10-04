@@ -105,6 +105,10 @@ import {
   updateExpenseCommandSchema,
   updateProductCategoryCommandSchema,
   updateProductCommandSchema,
+  tenantVisualPreferencesSchema,
+  updateTenantVisualPreferencesCommandSchema,
+  updateUserInterfacePreferencesCommandSchema,
+  userInterfacePreferencesSchema,
 } from './index';
 
 describe('core operations contracts', () => {
@@ -118,6 +122,7 @@ describe('core operations contracts', () => {
     expect(permissionSchema.parse('cash.close')).toBe('cash.close');
     expect(permissionSchema.parse('worker.failures.read')).toBe('worker.failures.read');
     expect(permissionSchema.parse('notifications.status.read')).toBe('notifications.status.read');
+    expect(permissionSchema.parse('settings.manage')).toBe('settings.manage');
     expect(entitlementSchema.parse('worker.operations')).toBe('worker.operations');
     expect(entitlementSchema.parse('notifications')).toBe('notifications');
     expect(coreOperationsErrorCodeSchema.parse('APPOINTMENT_CONFLICT')).toBe(
@@ -311,6 +316,40 @@ describe('core operations contracts', () => {
     const branchId = requirement.branchId ?? '';
     expect(hasBranchAccess({ branchScope: ['branch-a'] }, branchId)).toBe(true);
     expect(hasBranchAccess({ branchScope: ['branch-b'] }, branchId)).toBe(false);
+  });
+
+  it('validates tenant visual and user interface preferences', () => {
+    const createdAt = '2026-10-04T12:00:00.000Z';
+    const tenantPreferences = tenantVisualPreferencesSchema.parse({
+      tenantId: 'tenant-a',
+      logoUrl: 'https://cdn.example.com/logo.png',
+      fontColorHex: '#17191C',
+      accentColorHex: '#F64C72',
+      updatedBy: 'user-a',
+      createdAt,
+      updatedAt: createdAt,
+    });
+    const userPreferences = userInterfacePreferencesSchema.parse({
+      tenantId: 'tenant-a',
+      userId: 'user-a',
+      theme: 'system',
+      notificationPreferences: { stockAlerts: true },
+      createdAt,
+      updatedAt: createdAt,
+    });
+
+    expect(tenantPreferences.accentColorHex).toBe('#F64C72');
+    expect(userPreferences.notificationPreferences.stockAlerts).toBe(true);
+    expect(
+      updateTenantVisualPreferencesCommandSchema.parse({ accentColorHex: '#377FC7' })
+        .accentColorHex,
+    ).toBe('#377FC7');
+    expect(updateUserInterfacePreferencesCommandSchema.parse({ theme: 'dark' }).theme).toBe('dark');
+    expect(
+      updateTenantVisualPreferencesCommandSchema.safeParse({ accentColorHex: 'pink' }).success,
+    ).toBe(false);
+    expect(updateTenantVisualPreferencesCommandSchema.safeParse({}).success).toBe(false);
+    expect(updateUserInterfacePreferencesCommandSchema.safeParse({}).success).toBe(false);
   });
 
   it('accepts catalog and inventory records with tenant and branch scope', () => {

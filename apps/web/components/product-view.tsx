@@ -421,6 +421,13 @@ function ProductModalView({
 
 function ProductForm({ model }: Readonly<{ model: ProductsViewModel }>) {
   const createAction = model.allowedActions.find((action) => action.id === 'products.create');
+  const [categoryId, setCategoryId] = React.useState('');
+  const [newCategoryName, setNewCategoryName] = React.useState('');
+  const categoryOptions = React.useMemo(
+    () => [...model.categories].sort(compareByName),
+    [model.categories],
+  );
+  const creatingCategory = categoryId === '__new';
   return (
     <form className="inventory-form">
       <fieldset disabled={!createAction?.enabled}>
@@ -431,15 +438,16 @@ function ProductForm({ model }: Readonly<{ model: ProductsViewModel }>) {
         <div className="inventory-form-grid">
           <label>
             Categoria
-            <select defaultValue="">
+            <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
               <option value="" disabled>
-                Selecione
+                {categoryOptions.length ? 'Selecione' : 'Nenhuma categoria cadastrada'}
               </option>
-              {model.categories.map((category) => (
+              {categoryOptions.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
+              <option value="__new">+ Criar nova categoria</option>
             </select>
           </label>
           <label>
@@ -450,6 +458,23 @@ function ProductForm({ model }: Readonly<{ model: ProductsViewModel }>) {
             </select>
           </label>
         </div>
+        {creatingCategory ? (
+          <div className="inventory-quick-create">
+            <label>
+              Nova categoria
+              <input
+                maxLength={120}
+                placeholder="Ex.: Bebidas, finalizadores"
+                value={newCategoryName}
+                onChange={(event) => setNewCategoryName(event.target.value)}
+              />
+            </label>
+            <p>
+              A categoria será usada neste produto ao salvar. A persistência definitiva deve passar
+              pelo cadastro de categorias do catálogo.
+            </p>
+          </div>
+        ) : null}
         <div className="inventory-form-grid">
           <label>
             Venda
@@ -477,6 +502,10 @@ function ProductForm({ model }: Readonly<{ model: ProductsViewModel }>) {
       </div>
     </form>
   );
+}
+
+function compareByName(left: { name: string }, right: { name: string }) {
+  return left.name.localeCompare(right.name, 'pt-BR');
 }
 
 function StockAdjustForm({ product }: Readonly<{ product: ProductItemModel }>) {

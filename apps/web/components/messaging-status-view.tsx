@@ -12,6 +12,7 @@ import {
   Send,
   Settings,
   WifiOff,
+  X,
 } from 'lucide-react';
 import { StatusBadge } from '@barberos/ui';
 import type {
@@ -26,6 +27,7 @@ export function MessagingStatusView({ model }: Readonly<{ model: MessagingStatus
   const [selectedConversationId, setSelectedConversationId] = React.useState(
     model.selectedConversation?.id,
   );
+  const [setupOpen, setSetupOpen] = React.useState(false);
   const selectedConversation =
     model.conversations.find((conversation) => conversation.id === selectedConversationId) ??
     model.selectedConversation;
@@ -43,7 +45,7 @@ export function MessagingStatusView({ model }: Readonly<{ model: MessagingStatus
             {model.branchName} · {model.description}
           </p>
         </div>
-        <MessagingActions actions={model.allowedActions} />
+        <MessagingActions actions={model.allowedActions} onSetup={() => setSetupOpen(true)} />
       </header>
 
       <MessagingInlineState model={model} />
@@ -74,7 +76,7 @@ export function MessagingStatusView({ model }: Readonly<{ model: MessagingStatus
 
           <div className="messaging-workspace" aria-label="Status de mensagens responsivo">
             <main className="messaging-primary" aria-label="Conexão WhatsApp">
-              <ConnectionPanel model={model} />
+              <ConnectionPanel model={model} onSetup={() => setSetupOpen(true)} />
               <ConversationList
                 conversations={model.conversations}
                 selectedId={selectedConversation?.id}
@@ -89,6 +91,7 @@ export function MessagingStatusView({ model }: Readonly<{ model: MessagingStatus
           </div>
         </>
       )}
+      {setupOpen ? <WhatsappSetupDialog model={model} onClose={() => setSetupOpen(false)} /> : null}
     </div>
   );
 }
@@ -196,7 +199,10 @@ function ConversationDetail({
   );
 }
 
-function MessagingActions({ actions }: Readonly<{ actions: readonly MessagingActionModel[] }>) {
+function MessagingActions({
+  actions,
+  onSetup,
+}: Readonly<{ actions: readonly MessagingActionModel[]; onSetup: () => void }>) {
   return (
     <div className="inventory-heading-actions" aria-label="Ações de mensagens">
       {actions.map((action) => {
@@ -224,6 +230,7 @@ function MessagingActions({ actions }: Readonly<{ actions: readonly MessagingAct
             type="button"
             onClick={() => {
               if (action.id === 'messaging.refresh') window.location.reload();
+              if (action.id === 'messaging.setup' && action.enabled) onSetup();
             }}
           >
             {content}
@@ -270,7 +277,10 @@ function MessagingInlineState({ model }: Readonly<{ model: MessagingStatusViewMo
   return null;
 }
 
-function ConnectionPanel({ model }: Readonly<{ model: MessagingStatusViewModel }>) {
+function ConnectionPanel({
+  model,
+  onSetup,
+}: Readonly<{ model: MessagingStatusViewModel; onSetup: () => void }>) {
   const connection = model.connection;
   return (
     <section className="messaging-panel" aria-labelledby="messaging-connection-title">
@@ -320,6 +330,7 @@ function ConnectionPanel({ model }: Readonly<{ model: MessagingStatusViewModel }
                 : 'Sem permissão para gerenciar provider.'
             }
             type="button"
+            onClick={onSetup}
           >
             <PlugZap size={16} aria-hidden="true" />
             Configurar WhatsApp
@@ -327,6 +338,95 @@ function ConnectionPanel({ model }: Readonly<{ model: MessagingStatusViewModel }
         </div>
       )}
     </section>
+  );
+}
+
+function WhatsappSetupDialog({
+  model,
+  onClose,
+}: Readonly<{ model: MessagingStatusViewModel; onClose: () => void }>) {
+  const titleId = React.useId();
+  const descriptionId = React.useId();
+  const [provider, setProvider] = React.useState(model.connection?.providerLabel ?? 'Z-API');
+  const [label, setLabel] = React.useState(model.connection?.label ?? model.branchName);
+  const [credentialRef, setCredentialRef] = React.useState('');
+
+  return (
+    <div className="app-dialog-backdrop" role="presentation" onClick={onClose}>
+      <section
+        aria-describedby={descriptionId}
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="app-dialog messaging-setup-dialog"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="app-dialog-header">
+          <div>
+            <p className="eyebrow">WhatsApp</p>
+            <h2 id={titleId}>Configurar conexão</h2>
+            <p id={descriptionId}>
+              Informe referências seguras do provider. Tokens e segredos continuam somente no
+              servidor.
+            </p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
+        <form className="messaging-setup-form">
+          <fieldset disabled={!model.canManage || model.state === 'offline'}>
+            <div className="campaign-form-grid">
+              <label>
+                Provider
+                <select value={provider} onChange={(event) => setProvider(event.target.value)}>
+                  <option value="Z-API">Z-API</option>
+                  <option value="Meta Cloud API">Meta Cloud API</option>
+                  <option value="Evolution API">Evolution API</option>
+                </select>
+              </label>
+              <label>
+                Nome da conexão
+                <input
+                  maxLength={120}
+                  value={label}
+                  onChange={(event) => setLabel(event.target.value)}
+                />
+              </label>
+            </div>
+            <label>
+              Referência da credencial
+              <input
+                maxLength={160}
+                placeholder="Ex.: secret://barberos/whatsapp/centro"
+                value={credentialRef}
+                onChange={(event) => setCredentialRef(event.target.value)}
+              />
+            </label>
+            <div className="messaging-setup-preview">
+              <span>Unidade</span>
+              <strong>{model.branchName}</strong>
+              <span>Status após salvar</span>
+              <strong>Pronto para validação</strong>
+            </div>
+          </fieldset>
+          <div className="app-dialog-actions">
+            <button className="button button-secondary" type="button" onClick={onClose}>
+              Cancelar
+            </button>
+            <button
+              className="button button-primary"
+              disabled={!model.canManage || model.state === 'offline' || !credentialRef.trim()}
+              type="button"
+              onClick={onClose}
+            >
+              <PlugZap size={16} aria-hidden="true" />
+              Salvar configuração
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
