@@ -2985,3 +2985,95 @@ export const platformAuditFilterSchema = z
     },
   );
 export type PlatformAuditFilter = z.input<typeof platformAuditFilterSchema>;
+
+export type ObservabilityService = 'web' | 'worker' | 'ai';
+export type ObservabilityLevel = 'debug' | 'info' | 'warn' | 'error';
+export type ObservabilityResult = 'SUCCESS' | 'DENIED' | 'FAILED' | 'SKIPPED';
+
+export type ObservabilityError = {
+  code: string;
+  message: string;
+  retryable?: boolean;
+};
+
+export type ObservabilityEventInput = {
+  service: ObservabilityService;
+  environment?: string;
+  level?: ObservabilityLevel;
+  event: string;
+  result?: ObservabilityResult;
+  requestId?: string;
+  correlationId?: string;
+  tenantId?: string;
+  branchId?: string;
+  actorUserId?: string;
+  targetType?: string;
+  targetId?: string;
+  error?: ObservabilityError;
+  metadata?: Record<string, unknown>;
+};
+
+export type ObservabilityEvent = ObservabilityEventInput & {
+  timestamp: string;
+  level: ObservabilityLevel;
+  metadata?: Record<string, unknown>;
+};
+
+const observabilitySensitiveKeyPattern =
+  /(authorization|access[_-]?token|accesstoken|refresh[_-]?token|refreshtoken|token|secret|service[_-]?role|servicerole|password|senha|pix[_-]?key|pixkey|card|cartao|cvv|cvc|pan|provider[_-]?response|providerresponse|raw[_-]?response|rawresponse|message[_-]?body|messagebody|body|content)/i;
+
+const observabilityRedacted = '[REDACTED]';
+
+export function createObservabilityEvent(
+  input: ObservabilityEventInput,
+  now: Date = new Date(),
+): ObservabilityEvent {
+  const sanitizedMetadata = input.metadata ? sanitizeObservabilityValue(input.metadata) : undefined;
+
+  return {
+    ...input,
+    timestamp: now.toISOString(),
+    level: input.level ?? 'info',
+    error: input.error ? sanitizeObservabilityError(input.error) : undefined,
+    metadata:
+      sanitizedMetadata && isRecord(sanitizedMetadata)
+        ? (sanitizedMetadata as Record<string, unknown>)
+        : undefined,
+  };
+}
+
+export function sanitizeObservabilityValue(value: unknown, depth = 0): unknown {
+  if (depth > 8) return '[MAX_DEPTH]';
+  if (value === null || value === undefined) return value;
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map((item) => sanitizeObservabilityValue(item, depth + 1));
+  if (!isRecord(value)) return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entryValue]) => [
+      key,
+      observabilitySensitiveKeyPattern.test(key)
+        ? observabilityRedacted
+        : sanitizeObservabilityValue(entryValue, depth + 1),
+    ]),
+  );
+}
+
+export function sanitizeObservabilityError(error: ObservabilityError): ObservabilityError {
+  return {
+    code: error.code,
+    message: sanitizeObservabilityFreeText(error.message).slice(0, 500),
+    retryable: error.retryable,
+  };
+}
+
+export function sanitizeObservabilityFreeText(value: string) {
+  return value
+    .replace(/bearer\s+[a-z0-9._~+/=-]+/gi, `bearer ${observabilityRedacted}`)
+    .replace(/eyJ[a-z0-9._-]+/gi, observabilityRedacted)
+    .replace(/\b(?:\d[ -]*?){13,19}\b/g, observabilityRedacted);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}

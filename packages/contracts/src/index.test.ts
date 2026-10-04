@@ -3,12 +3,15 @@ import {
   activeAppointmentStatuses,
   apiErrorSchema,
   createNotificationIntentCommandSchema,
+  createObservabilityEvent,
   createOutboxEventCommandSchema,
   createWorkerJobCommandSchema,
   notificationDeliveryAttemptSchema,
   notificationIntentSchema,
   outboxEventSchema,
   recordNotificationDeliveryAttemptCommandSchema,
+  sanitizeObservabilityError,
+  sanitizeObservabilityValue,
   workerErrorCodeSchema,
   workerJobAttemptSchema,
   workerJobSchema,
@@ -1625,5 +1628,91 @@ describe('core operations contracts', () => {
     expect(
       workerSanitizedErrorSchema.safeParse({ code: 'WORKER_SECRET', message: 'Nope' }).success,
     ).toBe(false);
+  });
+});
+
+describe('observability contracts', () => {
+  it('creates structured events with safe metadata and sanitized errors', () => {
+    const event = createObservabilityEvent(
+      {
+        service: 'web',
+        environment: 'production',
+        level: 'error',
+        event: 'payment.webhook.failed',
+        result: 'FAILED',
+        requestId: 'request-1',
+        correlationId: 'correlation-1',
+        tenantId: 'tenant-1',
+        branchId: 'branch-1',
+        error: {
+          code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+          message: 'Provider failed with bearer secret-token and card 4111 1111 1111 1111',
+          retryable: true,
+        },
+        metadata: {
+          amount: 12700,
+          providerResponse: { accessToken: 'provider-secret' },
+          customer: { messageBody: 'private message' },
+        },
+      },
+      new Date('2026-10-03T12:00:00.000Z'),
+    );
+
+    expect(event).toEqual({
+      timestamp: '2026-10-03T12:00:00.000Z',
+      service: 'web',
+      environment: 'production',
+      level: 'error',
+      event: 'payment.webhook.failed',
+      result: 'FAILED',
+      requestId: 'request-1',
+      correlationId: 'correlation-1',
+      tenantId: 'tenant-1',
+      branchId: 'branch-1',
+      error: {
+        code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+        message: 'Provider failed with bearer [REDACTED] and card [REDACTED]',
+        retryable: true,
+      },
+      metadata: {
+        amount: 12700,
+        providerResponse: '[REDACTED]',
+        customer: { messageBody: '[REDACTED]' },
+      },
+    });
+  });
+
+  it('redacts sensitive observability values recursively', () => {
+    expect(
+      sanitizeObservabilityValue({
+        service_role: 'server-secret',
+        nested: {
+          refreshToken: 'refresh-secret',
+          safe: 'ok',
+        },
+        messages: [{ body: 'private customer text' }],
+      }),
+    ).toEqual({
+      service_role: '[REDACTED]',
+      nested: {
+        refreshToken: '[REDACTED]',
+        safe: 'ok',
+      },
+      messages: [{ body: '[REDACTED]' }],
+    });
+  });
+
+  it('sanitizes observability error text', () => {
+    expect(
+      sanitizeObservabilityError({
+        code: 'AI_PROVIDER_FAILED',
+        message: 'JWT eyJhbGciOiJIUzI1NiJ9 and bearer secret-token leaked',
+        retryable: false,
+      }),
+    ).toEqual({
+      code: 'AI_PROVIDER_FAILED',
+      message: 'JWT [REDACTED] and bearer [REDACTED] leaked',
+      retryable: false,
+    });
   });
 });

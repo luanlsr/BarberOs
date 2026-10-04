@@ -1,35 +1,95 @@
 import { access, readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL('../apps/web/.next/static/', import.meta.url));
-try {
-  await access(root);
-} catch {
-  console.log('Client bundle check skipped: build output not found.');
-  process.exit(0);
+const repoRoot = fileURLToPath(new URL('../', import.meta.url));
+const clientBundleRoot = join(repoRoot, 'apps/web/.next/static');
+const textRoots = ['docs', '.github/workflows'].map((path) => join(repoRoot, path));
+
+const forbiddenClientMarkers = ['SUPABASE_SERVICE_ROLE_KEY', 'service_role', 'BARBEROS_SECRET'];
+const forbiddenSecretValuePatterns = [
+  /sbp_[A-Za-z0-9_-]{20,}/g,
+  /sk_(live|test)_[A-Za-z0-9_-]{20,}/g,
+  /whsec_[A-Za-z0-9_-]{20,}/g,
+  /EAAG[A-Za-z0-9_-]{20,}/g,
+  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
+  /\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\b/g,
+];
+
+const findings = [];
+
+await scanClientBundle();
+await scanTextRoots();
+
+if (findings.length) {
+  console.error(`Secret boundary check failed:\n${findings.join('\n')}`);
+  process.exit(1);
 }
 
-const forbidden = ['SUPABASE_SERVICE_ROLE_KEY', 'service_role', 'BARBEROS_SECRET'];
-async function scan(directory) {
+console.log('Secret boundary check passed.');
+
+async function scanClientBundle() {
+  try {
+    await access(clientBundleRoot);
+  } catch {
+    console.log('Client bundle check skipped: build output not found.');
+    return;
+  }
+
+  const files = await listFiles(clientBundleRoot);
+  for (const file of files) {
+    const content = await readFile(file, 'utf8');
+    for (const token of forbiddenClientMarkers) {
+      if (content.includes(token))
+        findings.push(`${formatPath(file)}: client bundle marker ${token}`);
+    }
+    scanSecretValues(file, content);
+  }
+  console.log(`Client bundle checked (${files.length} files).`);
+}
+
+async function scanTextRoots() {
+  let checked = 0;
+  for (const root of textRoots) {
+    try {
+      await access(root);
+    } catch {
+      continue;
+    }
+    const files = (await listFiles(root)).filter(isTextFile);
+    checked += files.length;
+    for (const file of files) {
+      const content = await readFile(file, 'utf8');
+      scanSecretValues(file, content);
+    }
+  }
+  console.log(`Docs/workflows secret values checked (${checked} files).`);
+}
+
+function scanSecretValues(file, content) {
+  for (const pattern of forbiddenSecretValuePatterns) {
+    pattern.lastIndex = 0;
+    const matches = content.match(pattern);
+    if (!matches) continue;
+    findings.push(`${formatPath(file)}: possible committed secret value (${matches.length})`);
+  }
+}
+
+async function listFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
     const path = join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...(await scan(path)));
+    if (entry.isDirectory()) files.push(...(await listFiles(path)));
     else files.push(path);
   }
   return files;
 }
 
-const files = await scan(root);
-const findings = [];
-for (const file of files) {
-  const content = await readFile(file, 'utf8');
-  for (const token of forbidden) if (content.includes(token)) findings.push(`${file}: ${token}`);
+function isTextFile(file) {
+  return /\.(md|mdx|ya?ml|json|env|txt|toml|ini)$/i.test(file);
 }
-if (findings.length) {
-  console.error(`Client bundle contains forbidden secret markers:\n${findings.join('\n')}`);
-  process.exit(1);
+
+function formatPath(file) {
+  return relative(repoRoot, file).replaceAll('\\', '/');
 }
-console.log(`Client bundle checked (${files.length} files).`);

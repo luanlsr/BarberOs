@@ -4,7 +4,7 @@ Este arquivo organiza os proximos passos depois do PRD para transformar o Barber
 
 ## Estado atual
 
-Status da Fase 1 / MVP funcional: concluido com `master-admin-billing`; proximo epic e hardening de producao, observabilidade, seguranca operacional e deploy.
+Status da Fase 1 / MVP funcional: concluido com `master-admin-billing`; epic final `production-hardening-observability` em andamento para hardening de producao, observabilidade, seguranca operacional e deploy.
 
 Ultimo change concluido: master-admin-billing (36 de 36 tarefas; validado com npx openspec validate master-admin-billing --strict e npm run validate em 2026-10-02).
 
@@ -14,7 +14,7 @@ Ultimo change concluido anterior: worker-outbox-notifications (38 de 38 tarefas;
 
 Ultimo change arquivado: inventory-products (47 de 47 tarefas; archive OpenSpec em 2026-09-18).
 
-Proximo change planejado: production-hardening-observability, cobrindo validacao final de qualidade, seguranca, observabilidade, runbooks e prontidao de deploy.
+Change em andamento: production-hardening-observability, cobrindo validacao final de qualidade, seguranca, observabilidade, runbooks e prontidao de deploy.
 
 Progresso conhecido: check-in-orders concluido com 25 de 25 tarefas; payments-cash-register concluido com 38 de 38 tarefas; financial-ledger-commissions concluido e arquivado com 49 de 49 tarefas; inventory-products concluido e arquivado com 47 de 47 tarefas; worker-outbox-notifications concluido com 38 de 38 tarefas; whatsapp-messaging-campaigns concluido com 56 de 56 tarefas; barber-ai-tool-gateway concluido; master-admin-billing concluido com 36 de 36 tarefas.
 Progresso estimado do PRD: 90%.

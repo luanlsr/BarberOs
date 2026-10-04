@@ -11,8 +11,8 @@ const contracts = await readFile(
   new URL('../packages/contracts/src/index.ts', import.meta.url),
   'utf8',
 );
-const authServer = await readFile(
-  new URL('../apps/web/lib/auth/server.ts', import.meta.url),
+const roleCatalog = await readFile(
+  new URL('../apps/web/lib/auth/role-catalog.ts', import.meta.url),
   'utf8',
 );
 const devSession = await readFile(
@@ -141,6 +141,19 @@ for (const snippet of requiredContractSnippets) {
 
 function roleBlock(source, role) {
   const match = source.match(new RegExp('  ' + role + ': \\[([\\s\\S]*?)\\n  \\],'));
+  const inlineAlias = source.match(new RegExp('  ' + role + ': (\\w+),'));
+  const block = match?.[1] ?? '';
+  const alias = inlineAlias?.[1] ?? '';
+  const aliases = [
+    alias,
+    ...(block.includes('operationalPermissions') ? ['operationalPermissions'] : []),
+    ...(block.includes('platformPermissions') ? ['platformPermissions'] : []),
+  ].filter(Boolean);
+  return [block, ...aliases.map((item) => constBlock(source, item))].join('\n');
+}
+
+function constBlock(source, name) {
+  const match = source.match(new RegExp('const ' + name + ' = \\[([\\s\\S]*?)\\n\\] as const'));
   return match?.[1] ?? '';
 }
 
@@ -158,6 +171,10 @@ function requireRolePermissions(label, source, role, permissions) {
 }
 
 function requireDevPermissions(permissions) {
+  if (devSession.includes('permissions: rolePermissions.OWNER')) {
+    requireRolePermissions('dev-session rolePermissions.OWNER', roleCatalog, 'OWNER', permissions);
+    return;
+  }
   for (const permission of permissions) {
     if (!devSession.includes("'" + permission + "'")) {
       missing.push('dev-session missing ' + permission);
@@ -165,23 +182,23 @@ function requireDevPermissions(permissions) {
   }
 }
 
-requireRolePermissions('auth-server', authServer, 'PLATFORM_MASTER', [
+requireRolePermissions('role-catalog', roleCatalog, 'PLATFORM_MASTER', [
   'payments.receive',
   'payments.refund',
   'cash.open',
   'cash.withdraw',
   'cash.close',
 ]);
-requireRolePermissions('auth-server', authServer, 'OWNER', [
+requireRolePermissions('role-catalog', roleCatalog, 'OWNER', [
   'payments.receive',
   'payments.refund',
   'cash.open',
   'cash.withdraw',
   'cash.close',
 ]);
-requireRolePermissions('auth-server', authServer, 'MANAGER', ['payments.receive']);
-requireRolePermissions('auth-server', authServer, 'RECEPTIONIST', ['payments.receive']);
-requireRolePermissions('auth-server', authServer, 'FINANCE', [
+requireRolePermissions('role-catalog', roleCatalog, 'MANAGER', ['payments.receive']);
+requireRolePermissions('role-catalog', roleCatalog, 'RECEPTIONIST', ['payments.receive']);
+requireRolePermissions('role-catalog', roleCatalog, 'FINANCE', [
   'finance.read',
   'payments.receive',
   'payments.refund',

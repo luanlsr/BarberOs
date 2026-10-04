@@ -7,8 +7,14 @@ const migration = await readFile(
   'utf8',
 );
 const seed = await readFile(new URL('../supabase/seed.sql', import.meta.url), 'utf8');
-const authServer = await readFile(new URL('../apps/web/lib/auth/server.ts', import.meta.url), 'utf8');
-const devSession = await readFile(new URL('../apps/web/lib/dev-session.ts', import.meta.url), 'utf8');
+const roleCatalog = await readFile(
+  new URL('../apps/web/lib/auth/role-catalog.ts', import.meta.url),
+  'utf8',
+);
+const devSession = await readFile(
+  new URL('../apps/web/lib/dev-session.ts', import.meta.url),
+  'utf8',
+);
 const migrationLower = migration.toLowerCase();
 const seedLower = seed.toLowerCase();
 
@@ -117,6 +123,19 @@ for (const revokedPermission of ['orders.create', 'orders.item.add']) {
 
 function roleBlock(source, role) {
   const match = source.match(new RegExp('  ' + role + ': \\[([\\s\\S]*?)\\n  \\],'));
+  const inlineAlias = source.match(new RegExp('  ' + role + ': (\\w+),'));
+  const block = match?.[1] ?? '';
+  const alias = inlineAlias?.[1] ?? '';
+  const aliases = [
+    alias,
+    ...(block.includes('operationalPermissions') ? ['operationalPermissions'] : []),
+    ...(block.includes('platformPermissions') ? ['platformPermissions'] : []),
+  ].filter(Boolean);
+  return [block, ...aliases.map((item) => constBlock(source, item))].join('\n');
+}
+
+function constBlock(source, name) {
+  const match = source.match(new RegExp('const ' + name + ' = \\[([\\s\\S]*?)\\n\\] as const'));
   return match?.[1] ?? '';
 }
 
@@ -143,6 +162,10 @@ function requireRoleLacksPermissions(label, source, role, permissions) {
 }
 
 function requireDevPermissions(permissions) {
+  if (devSession.includes('permissions: rolePermissions.OWNER')) {
+    requireRolePermissions('dev-session rolePermissions.OWNER', roleCatalog, 'OWNER', permissions);
+    return;
+  }
   for (const permission of permissions) {
     if (!devSession.includes("'" + permission + "'")) {
       missing.push('dev-session missing ' + permission);
@@ -161,10 +184,10 @@ const operationalOrderPermissions = [
 ];
 
 for (const role of ['PLATFORM_MASTER', 'OWNER', 'MANAGER', 'RECEPTIONIST']) {
-  requireRolePermissions('auth-server', authServer, role, operationalOrderPermissions);
+  requireRolePermissions('role-catalog', roleCatalog, role, operationalOrderPermissions);
 }
-requireRolePermissions('auth-server', authServer, 'PROFESSIONAL', ['orders.read']);
-requireRoleLacksPermissions('auth-server', authServer, 'PROFESSIONAL', [
+requireRolePermissions('role-catalog', roleCatalog, 'PROFESSIONAL', ['orders.read']);
+requireRoleLacksPermissions('role-catalog', roleCatalog, 'PROFESSIONAL', [
   'appointments.check_in',
   'orders.create',
   'orders.update',

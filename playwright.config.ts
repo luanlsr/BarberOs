@@ -12,6 +12,12 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev --workspace @barberos/web -- --port 3100',
+    env: {
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+      NEXT_PUBLIC_SUPABASE_URL: '',
+      SUPABASE_ANON_KEY: '',
+      SUPABASE_URL: '',
+    },
     url: 'http://127.0.0.1:3100',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

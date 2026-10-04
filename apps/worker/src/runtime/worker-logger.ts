@@ -1,4 +1,9 @@
-import type { WorkerJob, WorkerSanitizedError } from '@barberos/contracts';
+import {
+  sanitizeObservabilityFreeText,
+  sanitizeObservabilityValue,
+  type WorkerJob,
+  type WorkerSanitizedError,
+} from '@barberos/contracts';
 
 export type WorkerLogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -31,10 +36,6 @@ export type WorkerLogInput = Omit<
   job?: WorkerJob;
   metadata?: Record<string, unknown>;
 };
-
-const REDACTED = '[REDACTED]';
-const SENSITIVE_KEY_PATTERN =
-  /(authorization|access[_-]?token|accesstoken|refresh[_-]?token|refreshtoken|token|secret|service[_-]?role|servicerole|password|senha|pix[_-]?key|pixkey|card|cartao|cvv|cvc|pan|provider[_-]?response|providerresponse|raw[_-]?response|rawresponse|message[_-]?body|messagebody|body|content)/i;
 
 export class WorkerLogger {
   constructor(
@@ -93,24 +94,13 @@ export function createWorkerLogEntry(
 }
 
 export function sanitizeWorkerLogValue(value: unknown, depth = 0): unknown {
-  if (depth > 8) return '[MAX_DEPTH]';
-  if (value === null || value === undefined) return value;
-  if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value)) return value.map((item) => sanitizeWorkerLogValue(item, depth + 1));
-  if (!isRecord(value)) return value;
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entryValue]) => [
-      key,
-      SENSITIVE_KEY_PATTERN.test(key) ? REDACTED : sanitizeWorkerLogValue(entryValue, depth + 1),
-    ]),
-  );
+  return sanitizeObservabilityValue(value, depth);
 }
 
 export function sanitizeWorkerError(error: WorkerSanitizedError): WorkerSanitizedError {
   return {
     code: error.code,
-    message: String(sanitizeFreeText(error.message)).slice(0, 500),
+    message: sanitizeFreeText(error.message),
     retryable: error.retryable,
   };
 }
@@ -160,10 +150,7 @@ function getWorkerJobLogContext(job: WorkerJob) {
 }
 
 function sanitizeFreeText(value: string) {
-  return value
-    .replace(/bearer\s+[a-z0-9._~+/=-]+/gi, `bearer ${REDACTED}`)
-    .replace(/eyJ[a-z0-9._-]+/gi, REDACTED)
-    .replace(/\b(?:\d[ -]*?){13,19}\b/g, REDACTED);
+  return sanitizeObservabilityFreeText(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

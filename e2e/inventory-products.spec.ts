@@ -94,9 +94,11 @@ test('runs walk-in through catalog product payment, stock movement and finance s
   await expect.poll(() => addedProductItem).toBe(true);
   await page.waitForURL('**/comandas?orderId=dev-order-1001');
   await page.waitForTimeout(1200);
-  await page.getByRole('button', { name: /Resumo e pagamento/ }).dispatchEvent('click');
   const paymentDialog = page.getByRole('dialog', { name: 'Resumo e pagamento' });
-  await expect(paymentDialog).toBeVisible();
+  await expect(async () => {
+    await page.getByRole('button', { name: /Resumo e pagamento/ }).dispatchEvent('click');
+    await expect(paymentDialog).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 8000 });
   await paymentDialog.getByRole('button', { name: 'Receber pagamento' }).click();
 
   await page.getByRole('button', { name: 'Confirmar recebimento' }).click();
@@ -113,7 +115,7 @@ test('runs walk-in through catalog product payment, stock movement and finance s
   await page.goto('/financeiro');
   await expect(page.getByRole('heading', { name: 'Financeiro', exact: true })).toBeVisible();
   await expect(page.getByTestId('finance-cash-flow').getByText('Entradas')).toBeVisible();
-  await expect(page.getByText(/lancamentos conciliados no periodo/)).toBeVisible();
+  await expect(page.getByText(/lancamentos conciliados no per.odo/)).toBeVisible();
 });
 
 test('runs low stock product through stock entry and resolved alert state', async ({ page }) => {

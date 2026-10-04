@@ -9,13 +9,16 @@ test('runs cash-paid expense through cash register and finance summary', async (
   await expect(expensesList.getByText('Honorarios contabeis de agosto')).toBeVisible();
   await expect(expensesList.getByText('R$ 650,00')).toBeVisible();
 
-  const paymentMethod = page.getByLabel('Metodo de pagamento');
-  await paymentMethod.selectOption('CASH');
-  await expect(paymentMethod).toHaveValue('CASH');
   await expect(expensesList.getByRole('button', { name: 'Pagar' }).first()).toBeEnabled();
   await expensesList.getByRole('button', { name: 'Pagar' }).first().click();
+  const paymentDialog = page.getByRole('dialog', {
+    name: /Pagar Honorarios contabeis de agosto/,
+  });
+  await expect(paymentDialog).toBeVisible();
+  await paymentDialog.getByLabel('Metodo de pagamento').selectOption('CASH');
+  await paymentDialog.getByRole('button', { name: 'Confirmar pagamento' }).click();
 
-  await page.goto('/caixa');
+  await page.goto('/caixa?state=open');
   await expect(page.getByRole('heading', { name: 'Resumo do caixa' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Movimentos' })).toBeVisible();
   await expect(page.getByText('Despesa paga em dinheiro')).toBeVisible();

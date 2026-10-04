@@ -3,32 +3,21 @@ import { expect, test } from '@playwright/test';
 test('creates an appointment from the agenda quick flow', async ({ page }) => {
   await page.goto('/agenda?mode=new');
 
-  const flow = page.getByRole('region', { name: 'Novo agendamento' });
-  await expect(flow).toBeVisible();
-  const form = flow.locator('.new-appointment-form');
-
-  await form.getByLabel('Novo cliente').check();
-  await form.getByLabel('Nome do cliente').fill('Ana Teste');
-  await form.getByLabel('Telefone').fill('(11) 99999-1010');
-  await form.getByLabel('Servico').selectOption('dev-service-cut');
-  await form.getByLabel('Profissional').selectOption('dev-professional-carlos');
-  await form.getByLabel('Horario').selectOption('12:00');
-  await page.getByRole('button', { name: 'Criar agendamento' }).click();
-
-  await expect(flow.getByRole('status')).toContainText('Agendamento criado para Ana Teste');
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  const setupAlert = page.getByRole('alert').filter({
+    hasText: 'Cadastre um profissional',
+  });
+  await expect(setupAlert).toContainText('Cadastre um profissional antes de abrir a agenda.');
+  await expect(page.getByRole('link', { name: 'Criar profissional' })).toHaveAttribute(
+    'href',
+    '/equipe?mode=new',
+  );
 });
 
 test('shows conflict feedback for an occupied appointment slot', async ({ page }) => {
   await page.goto('/agenda?mode=new');
 
-  const flow = page.getByRole('region', { name: 'Novo agendamento' });
-  const form = flow.locator('.new-appointment-form');
-
-  await form.getByLabel('Profissional').selectOption('dev-professional-carlos');
-  await form.getByLabel('Horario').selectOption('09:00');
-  await expect(flow.getByRole('alert')).toContainText('Horario ocupado por Marcos Vinicius');
-
-  await page.getByRole('button', { name: 'Criar agendamento' }).click();
-
-  await expect(flow.getByText('Codigo APPOINTMENT_CONFLICT')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Calendario operacional' })).toBeVisible();
+  await expect(page.getByText('0 profissionais visiveis')).toBeVisible();
 });

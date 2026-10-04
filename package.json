@@ -32,6 +32,7 @@
     "validate:messaging": "node scripts/validate-messaging-migration.mjs",
     "validate:product-domain": "node scripts/validate-product-domain-migration.mjs",
     "validate:master-admin-billing": "node scripts/validate-master-admin-billing-migration.mjs",
+    "validate:production": "node scripts/validate-production-readiness.mjs",
     "auth:create-dev-user": "node scripts/create-supabase-dev-user.mjs",
     "auth:create-local-users": "node scripts/create-supabase-dev-user.mjs",
     "auth:create-demo-users": "node scripts/seed-demo-tenants.mjs",

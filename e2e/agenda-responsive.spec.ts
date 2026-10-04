@@ -10,17 +10,10 @@ for (const width of agendaViewports) {
     await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
     await expect(page.getByRole('form', { name: 'Filtros da agenda' })).toBeVisible();
 
-    let visibleAgenda = page.locator('.agenda-mobile-timeline');
-    if (width < 700) {
-      await expect(visibleAgenda).toBeVisible();
-    } else if (width < 1100) {
-      visibleAgenda = page.locator('.agenda-tablet-columns');
-      await expect(visibleAgenda).toBeVisible();
-    } else {
-      visibleAgenda = page.locator('.agenda-desktop-grid');
-      await expect(visibleAgenda).toBeVisible();
-    }
-    await expect(visibleAgenda.getByText('Marcos Vinicius').first()).toBeVisible();
+    const operationalCalendar = page.getByRole('region', { name: 'Calendario operacional' });
+    await expect(operationalCalendar).toBeVisible();
+    await expect(operationalCalendar.getByRole('grid')).toBeVisible();
+    await expect(operationalCalendar.getByText('Bloqueado').first()).toBeVisible();
 
     const horizontalOverflow = await page.evaluate(() => ({
       html: document.documentElement.scrollWidth,

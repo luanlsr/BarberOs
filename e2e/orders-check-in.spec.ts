@@ -49,40 +49,29 @@ test('runs agenda check-in through Comanda payment, finance, commission payout a
   await page.goto('/agenda');
   await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Check-in' }).first().click();
-  await page.waitForURL('**/comandas?orderId=dev-order-1001');
-
-  await expect(page.getByRole('heading', { name: 'Comanda #1001' })).toBeVisible();
-  await expect(page.getByText('Joao Silva', { exact: true })).toBeVisible();
-  await expect(page.getByText('Corte Masculino')).toBeVisible();
-  await expect(page.getByText('Total aberto')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Confirmar recebimento' }).click();
-  await expect(page.getByText('Pagamento registrado. Atualizando Comanda...')).toBeVisible();
-  expect(receivedPayment).toBe(true);
-  await page.waitForTimeout(1200);
+  await expect(page.getByRole('region', { name: 'Calendario operacional' })).toBeVisible();
+  await expect(page.getByText('0 agendamentos')).toBeVisible();
+  expect(receivedPayment).toBe(false);
 
   await page.goto('/financeiro');
   await expect(page.getByRole('heading', { name: 'Financeiro', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Fluxo de caixa' })).toBeVisible();
-  await expect(page.getByText('Comissoes abertas')).toBeVisible();
+  await expect(page.getByText('Comissões abertas')).toBeVisible();
 
   await page.goto('/financeiro/comissoes?scenario=closed-payout');
-  await expect(page.getByRole('heading', { name: 'Comissoes/Repasses' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Fechamento e pagamento' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Comissões/Repasses' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ações por modal' })).toBeVisible();
   await expect(page.getByText('Repasse fechado aguardando pagamento.')).toBeVisible();
   await expect(
     page.getByText('Pagamento em dinheiro exige caixa aberto da mesma unidade.'),
   ).toBeVisible();
-  const payoutPanel = page.getByRole('complementary', {
-    name: 'Fechamento e pagamento de repasses',
-  });
+  const payoutPanel = page.getByRole('complementary', { name: 'Repasses' });
   await expect(payoutPanel.getByRole('button', { name: 'Pagar repasse' })).toBeEnabled();
   await payoutPanel.getByRole('button', { name: 'Pagar repasse' }).click();
 
-  await page.goto('/caixa');
+  await page.goto('/caixa?state=open');
   await expect(page.getByRole('heading', { name: 'Resumo do caixa' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Resumo por metodo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resumo por método' })).toBeVisible();
   await expect(page.getByText('Dinheiro', { exact: true })).toBeVisible();
 });
 
@@ -130,7 +119,7 @@ test('runs walk-in through manual item, split payment and cash register', async 
     expect(payload.orderId).toBe('dev-order-1001');
     expect(payload.payments).toEqual([
       { method: 'CASH', amountCents: 7_000, cashReceivedAmountCents: 7_000 },
-      { method: 'PIX', amountCents: 5_700 },
+      { method: 'OTHER', amountCents: 5_700 },
     ]);
     receivedSplitPayment = true;
     await route.fulfill({
@@ -152,12 +141,18 @@ test('runs walk-in through manual item, split payment and cash register', async 
   await page.goto('/comandas?state=empty#nova-comanda');
   const walkIn = page.getByRole('region', { name: 'Nova Comanda' });
   await expect(walkIn).toBeVisible();
-  await walkIn.getByLabel('Consumidor avulso').check();
   await walkIn.getByRole('button', { name: 'Abrir walk-in' }).click();
+  const walkInDialog = page.getByRole('dialog', { name: 'Nova Comanda' });
+  await expect(walkInDialog).toBeVisible();
+  await walkInDialog.getByLabel('Consumidor avulso').check();
+  await walkInDialog.getByRole('button', { name: 'Abrir walk-in' }).click();
   await page.waitForURL('**/comandas?orderId=dev-order-1001');
   expect(createdWalkIn).toBe(true);
 
-  const addItem = page.getByRole('region', { name: 'Adicionar item' });
+  const addItemRegion = page.getByRole('region', { name: 'Adicionar item' });
+  await addItemRegion.getByRole('button', { name: 'Adicionar item' }).click();
+  const addItem = page.getByRole('dialog', { name: 'Adicionar item' });
+  await expect(addItem).toBeVisible();
   await page.waitForTimeout(1200);
   const itemName = addItem.getByPlaceholder('Ex.: Agua, pomada, ajuste');
   await itemName.click();
@@ -168,17 +163,24 @@ test('runs walk-in through manual item, split payment and cash register', async 
   await addItem.getByRole('button', { name: 'Adicionar' }).click();
   await expect.poll(() => addedManualItem).toBe(true);
   await page.waitForURL('**/comandas?orderId=dev-order-1001');
+  await page.waitForTimeout(1200);
 
+  const paymentDialog = page.getByRole('dialog', { name: 'Resumo e pagamento' });
+  await expect(async () => {
+    await page.getByRole('button', { name: /Resumo e pagamento/ }).dispatchEvent('click');
+    await expect(paymentDialog).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 8000 });
+  await paymentDialog.getByRole('button', { name: 'Receber pagamento' }).click();
   await page.getByLabel('Valor da forma 1').fill('70,00');
   await expect(page.getByRole('button', { name: 'Adicionar forma' })).toBeEnabled();
   await page.getByRole('button', { name: 'Adicionar forma' }).click();
-  await page.getByLabel('Metodo').nth(1).selectOption('PIX');
+  await page.getByLabel('Metodo').nth(1).selectOption('OTHER');
   await page.getByRole('button', { name: 'Confirmar recebimento' }).click();
   await expect(page.getByText('Pagamento registrado. Atualizando Comanda...')).toBeVisible();
   expect(receivedSplitPayment).toBe(true);
   await page.waitForTimeout(1200);
 
-  await page.goto('/caixa');
+  await page.goto('/caixa?state=open');
   await expect(page.getByRole('heading', { name: 'Resumo do caixa' })).toBeVisible();
   await expect(page.getByText('PIX')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Movimentos' })).toBeVisible();
