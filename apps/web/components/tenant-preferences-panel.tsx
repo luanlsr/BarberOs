@@ -19,9 +19,6 @@ export function TenantPreferencesPanel({
   canManage,
   initialPreferences,
 }: Readonly<TenantPreferencesPanelProps>) {
-  const [fontColorHex, setFontColorHex] = React.useState(
-    initialPreferences?.fontColorHex ?? '#17191C',
-  );
   const [accentColorHex, setAccentColorHex] = React.useState(
     initialPreferences?.accentColorHex ?? '#F64C72',
   );
@@ -30,9 +27,6 @@ export function TenantPreferencesPanel({
 
   React.useEffect(() => {
     const rootStyles = window.getComputedStyle(document.documentElement);
-    if (!initialPreferences?.fontColorHex) {
-      setFontColorHex(toColorInputValue(rootStyles.getPropertyValue('--foreground'), '#17191C'));
-    }
     if (!initialPreferences?.accentColorHex) {
       setAccentColorHex(toColorInputValue(rootStyles.getPropertyValue('--accent'), '#F64C72'));
     }
@@ -42,7 +36,6 @@ export function TenantPreferencesPanel({
     event.preventDefault();
     const preferences: BrandThemePreferences = {
       accentColorHex,
-      fontColorHex,
       logoUrl: initialPreferences?.logoUrl ?? null,
     };
 
@@ -62,7 +55,6 @@ export function TenantPreferencesPanel({
         body: JSON.stringify({
           tenantPreferences: {
             accentColorHex,
-            fontColorHex,
             logoUrl: initialPreferences?.logoUrl ?? null,
           },
         }),
@@ -76,7 +68,6 @@ export function TenantPreferencesPanel({
       if (saved) {
         const savedPreferences = {
           accentColorHex: saved.accentColorHex,
-          fontColorHex: saved.fontColorHex,
           logoUrl: saved.logoUrl ?? null,
         };
         applyBrandThemePreferences(savedPreferences);
@@ -95,9 +86,8 @@ export function TenantPreferencesPanel({
 
   function restoreCurrentTheme() {
     const rootStyles = window.getComputedStyle(document.documentElement);
-    setFontColorHex(toColorInputValue(rootStyles.getPropertyValue('--foreground'), '#17191C'));
     setAccentColorHex(toColorInputValue(rootStyles.getPropertyValue('--accent'), '#F64C72'));
-    showToast('Cores sincronizadas com o tema atual.');
+    showToast('Cor de destaque sincronizada com o tema atual.');
   }
 
   return (
@@ -107,16 +97,6 @@ export function TenantPreferencesPanel({
           <ImageIcon size={22} aria-hidden="true" />
           <span>Selecionar logomarca</span>
         </div>
-        <label>
-          Cor da fonte
-          <input
-            aria-label="Cor da fonte"
-            disabled={!canManage || saving}
-            onChange={(event) => setFontColorHex(event.target.value)}
-            type="color"
-            value={fontColorHex}
-          />
-        </label>
         <label>
           Cor de destaque
           <input
@@ -130,7 +110,7 @@ export function TenantPreferencesPanel({
         <div className="preferences-preview" aria-label="Prévia das cores escolhidas">
           <Palette size={18} aria-hidden="true" />
           <div>
-            <strong style={{ color: fontColorHex }}>Texto do sistema</strong>
+            <strong>Texto do sistema</strong>
             <span style={{ color: accentColorHex }}>Ação principal</span>
           </div>
         </div>

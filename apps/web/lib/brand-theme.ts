@@ -2,21 +2,17 @@ import type { TenantVisualPreferences } from '@barberos/contracts';
 
 export const BARBEROS_BRAND_PREFERENCES_STORAGE_KEY = 'barberos-brand-preferences';
 
-export type BrandThemePreferences = Pick<
-  TenantVisualPreferences,
-  'accentColorHex' | 'fontColorHex' | 'logoUrl'
->;
+export type BrandThemePreferences = Pick<TenantVisualPreferences, 'accentColorHex' | 'logoUrl'>;
 
 export function normalizeBrandThemePreferences(
   preferences: Partial<BrandThemePreferences> | null | undefined,
 ): BrandThemePreferences | null {
-  if (!preferences?.accentColorHex && !preferences?.fontColorHex && !preferences?.logoUrl) {
+  if (!preferences?.accentColorHex && !preferences?.logoUrl) {
     return null;
   }
 
   return {
     accentColorHex: preferences.accentColorHex ?? '',
-    fontColorHex: preferences.fontColorHex ?? '',
     logoUrl: preferences.logoUrl ?? null,
   };
 }
@@ -27,11 +23,6 @@ export function applyBrandThemePreferences(
 ) {
   const normalized = normalizeBrandThemePreferences(preferences);
   if (!normalized) return;
-
-  if (normalized.fontColorHex) {
-    target.style.setProperty('--foreground', normalized.fontColorHex);
-    target.style.setProperty('--color-foreground', normalized.fontColorHex);
-  }
 
   if (normalized.accentColorHex) {
     target.style.setProperty('--accent', normalized.accentColorHex);

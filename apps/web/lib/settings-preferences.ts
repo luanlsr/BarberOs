@@ -8,7 +8,6 @@ import { createSupabaseServerClient, isDevelopmentAuthEnabled } from './auth/ser
 export const defaultTenantVisualPreferences: TenantVisualPreferences = {
   tenantId: '',
   logoUrl: null,
-  fontColorHex: '#17191C',
   accentColorHex: '#F64C72',
   createdAt: new Date(0).toISOString(),
   updatedAt: new Date(0).toISOString(),
@@ -26,7 +25,6 @@ export const defaultUserInterfacePreferences: UserInterfacePreferences = {
 type TenantVisualPreferencesRow = {
   tenant_id: string;
   logo_url: string | null;
-  font_color_hex: string;
   accent_color_hex: string;
   updated_by: string | null;
   created_at: string;
@@ -53,9 +51,7 @@ export async function getTenantVisualPreferences(tenantId: string) {
 
   const { data, error } = await client
     .from('tenant_visual_preferences')
-    .select(
-      'tenant_id, logo_url, font_color_hex, accent_color_hex, updated_by, created_at, updated_at',
-    )
+    .select('tenant_id, logo_url, accent_color_hex, updated_by, created_at, updated_at')
     .eq('tenant_id', tenantId)
     .maybeSingle();
 
@@ -98,7 +94,6 @@ export function mapTenantVisualPreferences(
   return {
     tenantId: row.tenant_id,
     logoUrl: row.logo_url,
-    fontColorHex: row.font_color_hex,
     accentColorHex: row.accent_color_hex,
     updatedBy: row.updated_by ?? undefined,
     createdAt: row.created_at,

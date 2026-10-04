@@ -1,13 +1,11 @@
 create table if not exists public.tenant_visual_preferences (
   tenant_id uuid primary key references public.tenants(id) on delete cascade,
   logo_url text,
-  font_color_hex text not null default '#17191C',
   accent_color_hex text not null default '#F64C72',
   updated_by uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (logo_url is null or char_length(trim(logo_url)) <= 2048),
-  check (font_color_hex ~ '^#[0-9A-Fa-f]{6}$'),
   check (accent_color_hex ~ '^#[0-9A-Fa-f]{6}$')
 );
 

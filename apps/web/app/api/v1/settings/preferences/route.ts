@@ -150,16 +150,13 @@ async function upsertTenantPreferences(
       {
         tenant_id: tenantId,
         logo_url: parsed.logoUrl ?? null,
-        font_color_hex: parsed.fontColorHex,
-        accent_color_hex: parsed.accentColorHex,
+        accent_color_hex: parsed.accentColorHex ?? '#F64C72',
         updated_by: userId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'tenant_id' },
     )
-    .select(
-      'tenant_id, logo_url, font_color_hex, accent_color_hex, updated_by, created_at, updated_at',
-    )
+    .select('tenant_id, logo_url, accent_color_hex, updated_by, created_at, updated_at')
     .single();
   if (error) throw error;
   return mapTenantVisualPreferences(data);
@@ -215,7 +212,6 @@ function saveDevelopmentPreferences(
     ? {
         ...currentTenant,
         logoUrl: tenantCommand.logoUrl ?? currentTenant.logoUrl,
-        fontColorHex: tenantCommand.fontColorHex ?? currentTenant.fontColorHex,
         accentColorHex: tenantCommand.accentColorHex ?? currentTenant.accentColorHex,
         updatedBy: userId,
         updatedAt: now,

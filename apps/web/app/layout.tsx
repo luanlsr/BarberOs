@@ -81,10 +81,6 @@ function createBrandThemeInitScript(preferences: BrandThemePreferences | null | 
     var preferences = stored ? JSON.parse(stored) : serverPreferences;
     if (!preferences) return;
     var root = document.documentElement;
-    if (preferences.fontColorHex) {
-      root.style.setProperty('--foreground', preferences.fontColorHex);
-      root.style.setProperty('--color-foreground', preferences.fontColorHex);
-    }
     if (preferences.accentColorHex) {
       var accent = preferences.accentColorHex;
       root.style.setProperty('--accent', accent);

@@ -206,7 +206,6 @@ export type ThemePreference = z.infer<typeof themePreferenceSchema>;
 export const tenantVisualPreferencesSchema = z.object({
   tenantId: nonEmptyIdSchema,
   logoUrl: optionalUrlSchema.nullish(),
-  fontColorHex: colorHexSchema,
   accentColorHex: colorHexSchema,
   updatedBy: nonEmptyIdSchema.optional(),
   createdAt: isoDateTimeSchema,
@@ -217,19 +216,12 @@ export type TenantVisualPreferences = z.infer<typeof tenantVisualPreferencesSche
 export const updateTenantVisualPreferencesCommandSchema = z
   .object({
     logoUrl: optionalUrlSchema.nullish(),
-    fontColorHex: colorHexSchema.optional(),
     accentColorHex: colorHexSchema.optional(),
   })
-  .refine(
-    (value) =>
-      value.logoUrl !== undefined ||
-      value.fontColorHex !== undefined ||
-      value.accentColorHex !== undefined,
-    {
-      message: 'At least one tenant visual preference must be provided.',
-      path: ['fontColorHex'],
-    },
-  );
+  .refine((value) => value.logoUrl !== undefined || value.accentColorHex !== undefined, {
+    message: 'At least one tenant visual preference must be provided.',
+    path: ['accentColorHex'],
+  });
 export type UpdateTenantVisualPreferencesCommand = z.input<
   typeof updateTenantVisualPreferencesCommandSchema
 >;

@@ -323,7 +323,6 @@ describe('core operations contracts', () => {
     const tenantPreferences = tenantVisualPreferencesSchema.parse({
       tenantId: 'tenant-a',
       logoUrl: 'https://cdn.example.com/logo.png',
-      fontColorHex: '#17191C',
       accentColorHex: '#F64C72',
       updatedBy: 'user-a',
       createdAt,

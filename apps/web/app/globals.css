@@ -8212,9 +8212,7 @@ html[data-theme='dark'] {
 }
 
 .settings-brand-preview.preferences-panel {
-  grid-template-columns:
-    minmax(180px, 1fr) minmax(130px, 180px) minmax(130px, 180px)
-    minmax(180px, 0.8fr);
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 180px) minmax(180px, 0.8fr);
 }
 
 .settings-logo-drop {
