@@ -2,8 +2,21 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CalendarPlus, CheckCircle2, UserPlus } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CalendarPlus,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  UserPlus,
+} from 'lucide-react';
 import { Button } from '@barberos/ui';
+import {
+  availableTimeOptionsForProfessional,
+  getSaoPauloTodayIso,
+  isFutureAppointmentStart,
+} from '../lib/agenda-availability';
 import type { AgendaNewAppointmentModel, AgendaOccupiedSlot } from '../lib/agenda-data';
 import { PhoneInput, RelatedSelect, isValidBrazilMobilePhone } from './form-controls';
 
@@ -26,21 +39,38 @@ type CreatedCustomer = {
 
 export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppointmentModel }>) {
   const router = useRouter();
+  const todayIso = getSaoPauloTodayIso();
+  const initialDateIso = maxDateIso(model.dateIso, todayIso);
   const [customerMode, setCustomerMode] = React.useState<CustomerMode>('existing');
   const [customerId, setCustomerId] = React.useState(model.customers[0]?.id ?? '');
   const [quickCustomerName, setQuickCustomerName] = React.useState('');
   const [quickCustomerPhone, setQuickCustomerPhone] = React.useState('');
-  const initialServiceId = model.services[0]?.id ?? '';
+  const [professionalId, setProfessionalId] = React.useState(model.defaultProfessionalId);
+  const initialServiceId = firstServiceIdForProfessional(model, model.defaultProfessionalId);
   const [servicePickerId, setServicePickerId] = React.useState(initialServiceId);
   const [selectedServiceIds, setSelectedServiceIds] = React.useState<string[]>(
     initialServiceId ? [initialServiceId] : [],
   );
-  const [professionalId, setProfessionalId] = React.useState(model.defaultProfessionalId);
-  const [dateIso, setDateIso] = React.useState(model.dateIso);
-  const [timeLabel, setTimeLabel] = React.useState(model.defaultTimeLabel);
+  const initialDurationMinutes = serviceDurationForIds(
+    model,
+    initialServiceId ? [initialServiceId] : [],
+  );
+  const [dateIso, setDateIso] = React.useState(initialDateIso);
+  const [timeLabel, setTimeLabel] = React.useState(() =>
+    firstAvailableTimeLabel({
+      dateIso: initialDateIso,
+      durationMinutes: initialDurationMinutes,
+      model,
+      preferredTimeLabel: model.defaultTimeLabel,
+      professionalId: model.defaultProfessionalId,
+    }),
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitState, setSubmitState] = React.useState<SubmitState>({ type: 'idle' });
 
+  const availableServices = model.services.filter((service) =>
+    isServiceEnabledForProfessional(service, professionalId),
+  );
   const selectedCustomer = model.customers.find((customer) => customer.id === customerId);
   const selectedServices = selectedServiceIds
     .map((id) => model.services.find((service) => service.id === id))
@@ -52,13 +82,22 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
   const selectedProfessional = model.professionals.find(
     (professional) => professional.id === professionalId,
   );
+  const availableTimeOptions = availableTimeOptionsForProfessional({
+    appointments: model.appointments,
+    dateIso,
+    durationMinutes: totalDurationMinutes,
+    occupiedSlots: model.occupiedSlots,
+    openingHours: model.openingHours,
+    professionalId,
+    timeOptions: model.timeOptions,
+  });
   const conflict = findConflict(model, model.occupiedSlots, professionalId, dateIso, timeLabel);
   const customerOptions = model.customers.map((customer) => ({
     id: customer.id,
     label: customer.name,
     description: customer.phone,
   }));
-  const serviceOptions = model.services.map((service) => ({
+  const availableServiceOptions = availableServices.map((service) => ({
     id: service.id,
     label: service.name,
     description: service.durationMinutes + ' min',
@@ -67,6 +106,16 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
     id: professional.id,
     label: professional.name,
   }));
+
+  React.useEffect(() => {
+    if (!availableTimeOptions.length) {
+      if (timeLabel) setTimeLabel('');
+      return;
+    }
+    if (!availableTimeOptions.some((time) => time.value === timeLabel)) {
+      setTimeLabel(availableTimeOptions[0]?.value ?? '');
+    }
+  }, [availableTimeOptions, timeLabel]);
 
   if (!model.isOpen) return null;
 
@@ -159,9 +208,27 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
     }
 
     if (!selectedServiceIds.length || !selectedProfessional) {
+      return toLocalError('CORE_VALIDATION_ERROR', 'Selecione profissional, serviço e horário.');
+    }
+
+    if (
+      !timeLabel ||
+      !isFutureAppointmentStart(dateIso, timeLabel) ||
+      !availableTimeOptions.some((time) => time.value === timeLabel)
+    ) {
       return toLocalError(
         'CORE_VALIDATION_ERROR',
-        'Selecione ao menos um serviço, profissional e horário.',
+        'Selecione um horário disponível para este profissional e serviço.',
+      );
+    }
+
+    if (
+      selectedServices.length !== selectedServiceIds.length ||
+      selectedServices.some((service) => !isServiceEnabledForProfessional(service, professionalId))
+    ) {
+      return toLocalError(
+        'CORE_VALIDATION_ERROR',
+        'Selecione apenas serviços habilitados para este profissional.',
       );
     }
 
@@ -181,7 +248,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         <div>
           <p className="eyebrow">Criacao operacional</p>
           <h2 id="new-appointment-title">Novo agendamento</h2>
-          <p>Cliente, serviço, profissional, data e horário em um fluxo rápido.</p>
+          <p>Cliente, profissional, serviços, data e horário em um fluxo rápido.</p>
         </div>
         <CalendarPlus size={22} aria-hidden="true" />
       </header>
@@ -249,14 +316,50 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
         )}
 
         <div className="new-appointment-inline-fields">
+          <label>
+            <span>Profissional</span>
+            <RelatedSelect
+              emptyLabel="Nenhum profissional cadastrado"
+              onChange={(nextProfessionalId) => {
+                setProfessionalId(nextProfessionalId);
+                const nextServiceId = firstServiceIdForProfessional(model, nextProfessionalId);
+                setServicePickerId(nextServiceId);
+                setSelectedServiceIds(nextServiceId ? [nextServiceId] : []);
+                setTimeLabel(
+                  firstAvailableTimeLabel({
+                    dateIso,
+                    durationMinutes: serviceDurationForIds(
+                      model,
+                      nextServiceId ? [nextServiceId] : [],
+                    ),
+                    model,
+                    preferredTimeLabel: timeLabel,
+                    professionalId: nextProfessionalId,
+                  }),
+                );
+              }}
+              options={professionalOptions}
+              placeholder="Selecione um profissional"
+              required
+              searchPlaceholder="Buscar profissional"
+              value={professionalId}
+            />
+          </label>
           <div className="new-appointment-services-field">
             <label>
               <span>Serviços</span>
               <RelatedSelect
-                emptyLabel="Nenhum serviço cadastrado"
+                disabled={!professionalId || !availableServices.length}
+                emptyLabel={
+                  professionalId
+                    ? 'Nenhum serviço habilitado para este profissional'
+                    : 'Selecione um profissional primeiro'
+                }
                 onChange={setServicePickerId}
-                options={serviceOptions}
-                placeholder="Selecione um serviço"
+                options={availableServiceOptions}
+                placeholder={
+                  professionalId ? 'Selecione um serviço' : 'Selecione um profissional primeiro'
+                }
                 required={!selectedServiceIds.length}
                 searchPlaceholder="Buscar serviço"
                 value={servicePickerId}
@@ -297,33 +400,37 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             </div>
             <p className="new-appointment-duration">Duração total: {totalDurationMinutes} min</p>
           </div>
-          <label>
-            <span>Profissional</span>
-            <RelatedSelect
-              emptyLabel="Nenhum profissional cadastrado"
-              onChange={setProfessionalId}
-              options={professionalOptions}
-              placeholder="Selecione um profissional"
-              required
-              searchPlaceholder="Buscar profissional"
-              value={professionalId}
-            />
-          </label>
         </div>
 
         <div className="new-appointment-inline-fields compact">
           <label>
             <span>Data</span>
-            <input
-              type="date"
+            <AppointmentDatePicker
+              minDateIso={todayIso}
+              onChange={(nextDateIso) => {
+                const nextValidDateIso = maxDateIso(nextDateIso, todayIso);
+                setDateIso(nextValidDateIso);
+                setTimeLabel((current) =>
+                  firstAvailableTimeLabel({
+                    dateIso: nextValidDateIso,
+                    durationMinutes: totalDurationMinutes,
+                    model,
+                    preferredTimeLabel: current,
+                    professionalId,
+                  }),
+                );
+              }}
               value={dateIso}
-              onChange={(event) => setDateIso(event.target.value)}
             />
           </label>
           <label>
             <span>Horario</span>
-            <select value={timeLabel} onChange={(event) => setTimeLabel(event.target.value)}>
-              {model.timeOptions.map((time) => {
+            <select
+              disabled={!availableTimeOptions.length}
+              value={timeLabel}
+              onChange={(event) => setTimeLabel(event.target.value)}
+            >
+              {availableTimeOptions.map((time) => {
                 const occupied = findConflict(
                   model,
                   model.occupiedSlots,
@@ -341,6 +448,13 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
             </select>
           </label>
         </div>
+
+        {!availableTimeOptions.length ? (
+          <div className="new-appointment-feedback warning" role="alert">
+            <AlertTriangle size={16} aria-hidden="true" />
+            <span>Não há horários disponíveis para este profissional e serviço nesta data.</span>
+          </div>
+        ) : null}
 
         {conflict ? (
           <div className="new-appointment-feedback warning" role="alert">
@@ -448,8 +562,203 @@ function findConflict(
   dateIso: string,
   timeLabel: string,
 ) {
-  if (dateIso !== model.dateIso) return undefined;
   return occupiedSlots.find(
-    (slot) => slot.professionalId === professionalId && slot.timeLabel === timeLabel,
+    (slot) =>
+      slot.dateIso === dateIso &&
+      slot.professionalId === professionalId &&
+      slot.timeLabel === timeLabel,
   );
+}
+
+function firstServiceIdForProfessional(model: AgendaNewAppointmentModel, professionalId: string) {
+  return (
+    model.services.find((service) => isServiceEnabledForProfessional(service, professionalId))
+      ?.id ?? ''
+  );
+}
+
+function isServiceEnabledForProfessional(
+  service: AgendaNewAppointmentModel['services'][number],
+  professionalId: string,
+) {
+  if (!professionalId) return false;
+  return (
+    service.enabledProfessionalIds.length === 0 ||
+    service.enabledProfessionalIds.includes(professionalId)
+  );
+}
+
+function AppointmentDatePicker({
+  minDateIso,
+  onChange,
+  value,
+}: Readonly<{
+  minDateIso: string;
+  onChange: (value: string) => void;
+  value: string;
+}>) {
+  const [open, setOpen] = React.useState(false);
+  const [visibleMonthIso, setVisibleMonthIso] = React.useState(() => value.slice(0, 7));
+  const titleId = React.useId();
+  const weeks = React.useMemo(() => buildCalendarWeeks(visibleMonthIso), [visibleMonthIso]);
+  const monthLabel = formatMonthLabel(visibleMonthIso);
+
+  React.useEffect(() => {
+    setVisibleMonthIso(value.slice(0, 7));
+  }, [value]);
+
+  function selectDate(nextDateIso: string) {
+    if (nextDateIso < minDateIso) return;
+    onChange(nextDateIso);
+    setOpen(false);
+  }
+
+  return (
+    <div className="appointment-date-picker">
+      <button
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className="appointment-date-trigger"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <CalendarDays size={16} aria-hidden="true" />
+        <span>{formatDateButtonLabel(value)}</span>
+      </button>
+      {open ? (
+        <div aria-labelledby={titleId} className="appointment-date-calendar" role="dialog">
+          <header>
+            <button
+              aria-label="Mês anterior"
+              disabled={previousMonthIso(visibleMonthIso) < minDateIso.slice(0, 7)}
+              onClick={() => setVisibleMonthIso((current) => previousMonthIso(current))}
+              type="button"
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            <strong id={titleId}>{monthLabel}</strong>
+            <button
+              aria-label="Próximo mês"
+              onClick={() => setVisibleMonthIso((current) => nextMonthIso(current))}
+              type="button"
+            >
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </header>
+          <div className="appointment-date-weekdays" aria-hidden="true">
+            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((weekday, index) => (
+              <span key={weekday + index}>{weekday}</span>
+            ))}
+          </div>
+          <div className="appointment-date-days">
+            {weeks.flat().map((day, index) =>
+              day ? (
+                <button
+                  aria-pressed={day.dateIso === value}
+                  className={day.dateIso === value ? 'selected' : undefined}
+                  disabled={day.dateIso < minDateIso}
+                  key={day.dateIso}
+                  onClick={() => selectDate(day.dateIso)}
+                  type="button"
+                >
+                  {day.label}
+                </button>
+              ) : (
+                <span aria-hidden="true" key={`empty-${visibleMonthIso}-${index}`} />
+              ),
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function firstAvailableTimeLabel({
+  dateIso,
+  durationMinutes,
+  model,
+  preferredTimeLabel,
+  professionalId,
+}: {
+  dateIso: string;
+  durationMinutes: number;
+  model: AgendaNewAppointmentModel;
+  preferredTimeLabel?: string;
+  professionalId: string;
+}) {
+  const options = availableTimeOptionsForProfessional({
+    appointments: model.appointments,
+    dateIso,
+    durationMinutes,
+    occupiedSlots: model.occupiedSlots,
+    openingHours: model.openingHours,
+    professionalId,
+    timeOptions: model.timeOptions,
+  });
+  const preferred = options.find((time) => time.value === preferredTimeLabel);
+  return preferred?.value ?? options[0]?.value ?? '';
+}
+
+function maxDateIso(left: string, right: string) {
+  return left >= right ? left : right;
+}
+
+function serviceDurationForIds(model: AgendaNewAppointmentModel, serviceIds: readonly string[]) {
+  return serviceIds.reduce((total, serviceId) => {
+    const service = model.services.find((candidate) => candidate.id === serviceId);
+    return total + (service?.durationMinutes ?? 0);
+  }, 0);
+}
+
+function buildCalendarWeeks(monthIso: string) {
+  const [year, month] = monthIso.split('-').map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const cells: Array<{ dateIso: string; label: string } | null> = [];
+
+  for (let index = 0; index < firstDay.getDay(); index += 1) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push({
+      dateIso: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      label: String(day),
+    });
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const weeks: Array<Array<{ dateIso: string; label: string } | null>> = [];
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7));
+  }
+  return weeks;
+}
+
+function previousMonthIso(monthIso: string) {
+  const [year, month] = monthIso.split('-').map(Number);
+  const date = new Date(year, month - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function nextMonthIso(monthIso: string) {
+  const [year, month] = monthIso.split('-').map(Number);
+  const date = new Date(year, month, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(monthIso: string) {
+  const [year, month] = monthIso.split('-').map(Number);
+  const label = new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, 1));
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatDateButtonLabel(dateIso: string) {
+  const [year, month, day] = dateIso.split('-').map(Number);
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day));
 }

@@ -3,26 +3,41 @@
 import * as React from 'react';
 import { CalendarOff, Clock3, Save } from 'lucide-react';
 import { Button } from '@barberos/ui';
+import { getSaoPauloTodayIso } from '../lib/agenda-availability';
+import type { AgendaProfessional } from '../lib/agenda-data';
 import { getStoreOperationsSettingsStorageKey } from '../lib/store-operations-settings';
 import type { StoreOperationsSettings, StoreScheduleBlock } from '../lib/store-operations-settings';
+import { AppToastRegion, useAppToast } from './app-toast';
+import { RelatedSelect } from './form-controls';
 
 type BusinessHoursSettingsPanelProps = {
   branchName: string;
+  professionals?: readonly AgendaProfessional[];
   settings: StoreOperationsSettings;
 };
 
 export function BusinessHoursSettingsPanel({
   branchName,
+  professionals = [],
   settings,
 }: Readonly<BusinessHoursSettingsPanelProps>) {
   const [startTime, setStartTime] = React.useState(settings.openingHours.startTime);
   const [endTime, setEndTime] = React.useState(settings.openingHours.endTime);
   const [blocks, setBlocks] = React.useState<StoreScheduleBlock[]>(() => [...settings.blocks]);
-  const [blockDate, setBlockDate] = React.useState(settings.blocks[0]?.dateIso ?? '2026-09-05');
+  const [blockDate, setBlockDate] = React.useState(
+    settings.blocks[0]?.dateIso ?? getSaoPauloTodayIso(),
+  );
   const [blockStart, setBlockStart] = React.useState('15:00');
   const [blockEnd, setBlockEnd] = React.useState('15:30');
+  const [blockProfessionalId, setBlockProfessionalId] = React.useState('');
   const [blockReason, setBlockReason] = React.useState('Bloqueio administrativo');
   const [status, setStatus] = React.useState('Configuração atual aplicada na Agenda.');
+  const { dismissToast, showToast, toast } = useAppToast();
+  const professionalOptions = professionals.map((professional) => ({
+    id: professional.id,
+    label: professional.name,
+    description: professional.roleLabel,
+  }));
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem(
@@ -43,29 +58,63 @@ export function BusinessHoursSettingsPanel({
 
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (endTime <= startTime) {
+      setStatus('Informe um intervalo válido de funcionamento.');
+      showToast('Informe um intervalo válido de funcionamento.', 'warning');
+      return;
+    }
+
+    persistSettings({
+      openingHours: {
+        ...settings.openingHours,
+        startTime,
+        endTime,
+      },
+      blocks,
+    });
     setStatus(`Horário atualizado para ${startTime} as ${endTime} nesta sessão.`);
+    showToast('Horário de funcionamento salvo com sucesso.');
   }
 
   function handleAddBlock() {
     const reason = blockReason.trim();
     if (!reason || blockEnd <= blockStart) {
       setStatus('Informe motivo e um intervalo válido para bloquear horário.');
+      showToast('Informe motivo e um intervalo válido para bloquear horário.', 'warning');
       return;
     }
 
-    setBlocks((current) => [
-      ...current,
+    const nextBlocks = [
+      ...blocks,
       {
         id: `local-block-${Date.now()}`,
         branchId: settings.openingHours.branchId,
         dateIso: blockDate,
-        professionalId: null,
+        professionalId: blockProfessionalId || null,
         startTime: blockStart,
         endTime: blockEnd,
         reason,
       },
-    ]);
+    ];
+    setBlocks(nextBlocks);
+    persistSettings({
+      openingHours: {
+        ...settings.openingHours,
+        startTime,
+        endTime,
+      },
+      blocks: nextBlocks,
+    });
     setStatus('Bloqueio adicionado nesta sessão.');
+    showToast('Bloqueio de agenda salvo com sucesso.');
+  }
+
+  function persistSettings(nextSettings: StoreOperationsSettings) {
+    window.localStorage.setItem(
+      getStoreOperationsSettingsStorageKey(settings.openingHours.branchId),
+      JSON.stringify(nextSettings),
+    );
+    window.dispatchEvent(new Event('barberos:store-operations-settings-changed'));
   }
 
   return (
@@ -140,6 +189,17 @@ export function BusinessHoursSettingsPanel({
             />
           </label>
           <label>
+            <span>Profissional</span>
+            <RelatedSelect
+              emptyLabel="Nenhum profissional cadastrado"
+              onChange={setBlockProfessionalId}
+              options={professionalOptions}
+              placeholder="Todos os profissionais"
+              searchPlaceholder="Buscar profissional"
+              value={blockProfessionalId}
+            />
+          </label>
+          <label>
             <span>Motivo</span>
             <input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} />
           </label>
@@ -163,6 +223,8 @@ export function BusinessHoursSettingsPanel({
       <p className="business-hours-status" role="status">
         {status}
       </p>
+
+      <AppToastRegion toast={toast} onDismiss={dismissToast} />
     </section>
   );
 }

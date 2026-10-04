@@ -21,6 +21,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Agend
   const appointmentId = singleValue(params.appointmentId);
   const mode = singleValue(params.mode);
   const view = singleValue(params.view);
+  const panel = singleValue(params.panel);
   const time = singleValue(params.time);
   const agenda = await getAgendaViewModel(session, {
     date,
@@ -28,6 +29,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Agend
     appointmentId,
     mode,
     view,
+    panel,
     time,
   });
 

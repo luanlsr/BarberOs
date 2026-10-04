@@ -36,6 +36,7 @@ export type AgendaProfessional = {
   name: string;
   roleLabel: string;
   branchIds: readonly string[];
+  avatarUrl?: string;
 };
 
 export type AgendaService = {
@@ -43,6 +44,7 @@ export type AgendaService = {
   name: string;
   durationMinutes: number;
   priceCents: number;
+  enabledProfessionalIds: readonly string[];
 };
 
 export type AgendaCustomerOption = {
@@ -58,6 +60,9 @@ export type AgendaTimeOption = {
 
 export type AgendaOccupiedSlot = {
   professionalId: string;
+  dateIso: string;
+  startLabel: string;
+  endLabel: string;
   timeLabel: string;
   customerName: string;
   kind?: 'appointment' | 'block';
@@ -93,6 +98,8 @@ export type AgendaNewAppointmentModel = {
   customers: readonly AgendaCustomerOption[];
   professionals: readonly AgendaProfessional[];
   services: readonly AgendaService[];
+  appointments: readonly AgendaAppointment[];
+  openingHours: AgendaOpeningHours;
   timeOptions: readonly AgendaTimeOption[];
   occupiedSlots: readonly AgendaOccupiedSlot[];
 };
@@ -170,10 +177,12 @@ export type AgendaProfessionalColumn = {
 };
 
 export type AgendaCalendarView = 'month' | 'week' | 'day';
+export type AgendaPanel = 'calendar' | 'availability';
 
 export type AgendaViewModel = {
   dateIso: string;
   calendarView: AgendaCalendarView;
+  agendaPanel: AgendaPanel;
   dateLabel: string;
   branchId: string;
   branchName: string;
@@ -266,6 +275,7 @@ export async function getAgendaViewModel(
     appointmentId?: string;
     mode?: string;
     view?: string;
+    panel?: string;
     time?: string;
   } = {},
 ): Promise<AgendaViewModel> {
@@ -287,6 +297,7 @@ export function buildAgendaViewModel({
   appointmentId,
   mode,
   view,
+  panel,
   time,
   data = emptyAgendaDataSource,
 }: {
@@ -296,6 +307,7 @@ export function buildAgendaViewModel({
   appointmentId?: string;
   mode?: string;
   view?: string;
+  panel?: string;
   time?: string;
   data?: AgendaDataSource;
 }): AgendaViewModel {
@@ -315,6 +327,7 @@ export function buildAgendaViewModel({
       : 'all';
   const dateIso = normalizeDate(date);
   const calendarView = normalizeCalendarView(view);
+  const agendaPanel = normalizeAgendaPanel(panel);
   const defaultTimeLabel = normalizeTimeLabel(time);
   const operationsSettings = getStoreOperationsSettings(branchId);
   const openingHours = toAgendaOpeningHours(operationsSettings.openingHours);
@@ -372,6 +385,7 @@ export function buildAgendaViewModel({
   return {
     dateIso,
     calendarView,
+    agendaPanel,
     dateLabel: formatDateLabel(dateIso),
     branchId,
     branchName: session.branchName,
@@ -384,9 +398,9 @@ export function buildAgendaViewModel({
     canCreateAppointment,
     newAppointment,
     hasReadPermission,
-    professionals: visibleProfessionals,
-    services: data.services,
-    customers: data.customers,
+    professionals: sortByName(visibleProfessionals),
+    services: sortByName(data.services),
+    customers: sortByName(data.customers),
     openingHours,
     scheduleBlocks,
     appointments,
@@ -661,12 +675,17 @@ function buildKpis(
 }
 function normalizeDate(date?: string) {
   if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-  return '2026-09-05';
+  return currentSaoPauloDateIso();
 }
 
 function normalizeCalendarView(view?: string): AgendaCalendarView {
   if (view === 'month' || view === 'week' || view === 'day') return view;
   return 'day';
+}
+
+function normalizeAgendaPanel(panel?: string): AgendaPanel {
+  if (panel === 'availability') return 'availability';
+  return 'calendar';
 }
 
 function normalizeTimeLabel(time?: string) {
@@ -740,6 +759,10 @@ function buildNewAppointmentModel({
   appointments: readonly AgendaAppointment[];
   selectedProfessionalId: string;
 }): AgendaNewAppointmentModel {
+  const professionals = sortByName(visibleProfessionals);
+  const services = sortByName(visibleServices);
+  const sortedCustomers = sortByName(customers);
+
   return {
     isOpen,
     dateIso,
@@ -748,14 +771,14 @@ function buildNewAppointmentModel({
     canCreateAppointment,
     canCreateCustomer,
     defaultProfessionalId:
-      selectedProfessionalId !== 'all'
-        ? selectedProfessionalId
-        : (visibleProfessionals[0]?.id ?? ''),
-    customers,
-    professionals: visibleProfessionals,
-    services: visibleServices,
+      selectedProfessionalId !== 'all' ? selectedProfessionalId : (professionals[0]?.id ?? ''),
+    customers: sortedCustomers,
+    professionals,
+    services,
+    appointments,
+    openingHours,
     timeOptions: buildTimeOptions(openingHours),
-    occupiedSlots: buildOccupiedSlots(appointments, scheduleBlocks, visibleProfessionals),
+    occupiedSlots: buildOccupiedSlots(appointments, scheduleBlocks, professionals),
   };
 }
 
@@ -779,6 +802,9 @@ function buildOccupiedSlots(
     .filter((appointment) => !['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(appointment.status))
     .map((appointment) => ({
       professionalId: appointment.professionalId,
+      dateIso: appointment.startsAt.slice(0, 10),
+      startLabel: appointment.startLabel,
+      endLabel: appointment.endLabel,
       timeLabel: appointment.startLabel,
       customerName: appointment.customerName,
     }));
@@ -790,6 +816,9 @@ function buildOccupiedSlots(
 
     return professionalsForBlock.map((professional) => ({
       professionalId: professional.id,
+      dateIso: block.startsAt.slice(0, 10),
+      startLabel: block.startLabel,
+      endLabel: block.endLabel,
       timeLabel: block.startLabel,
       customerName: `bloqueio: ${block.reason}`,
       kind: 'block' as const,
@@ -951,6 +980,7 @@ function toAgendaProfessional(professional: Professional): AgendaProfessional {
     name: professional.displayName,
     roleLabel: professional.roleLabel,
     branchIds: professional.branchIds,
+    avatarUrl: professional.avatarUrl,
   };
 }
 
@@ -960,6 +990,7 @@ function toAgendaService(service: Service): AgendaService {
     name: service.name,
     durationMinutes: service.durationMinutes,
     priceCents: service.priceCents,
+    enabledProfessionalIds: service.enabledProfessionalIds,
   };
 }
 
@@ -969,6 +1000,23 @@ function toAgendaCustomerOption(customer: Customer): AgendaCustomerOption {
     name: customer.name,
     phone: customer.phone,
   };
+}
+
+function sortByName<T extends { name: string }>(items: readonly T[]): T[] {
+  return [...items].sort((left, right) =>
+    left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }),
+  );
+}
+
+function currentSaoPauloDateIso() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function toAgendaAppointmentRecord(

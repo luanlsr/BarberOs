@@ -93,15 +93,16 @@ export function RelatedSelect({
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
   const isDisabled = disabled || loading || !options.length;
-  const selectedOption = options.find((option) => option.id === value);
+  const sortedOptions = React.useMemo(() => [...options].sort(compareRelatedOptions), [options]);
+  const selectedOption = sortedOptions.find((option) => option.id === value);
   const normalizedQuery = normalizeSearchText(query);
   const filteredOptions = normalizedQuery
-    ? options.filter((option) =>
+    ? sortedOptions.filter((option) =>
         normalizeSearchText(option.label + ' ' + (option.description ?? '')).includes(
           normalizedQuery,
         ),
       )
-    : options;
+    : sortedOptions;
   const helperLabel = loading ? loadingLabel : options.length ? placeholder : emptyLabel;
 
   function openOptions() {
@@ -198,4 +199,13 @@ function normalizeSearchText(value: string) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+}
+
+function compareRelatedOptions(left: RelatedOption, right: RelatedOption) {
+  const labelOrder = normalizeSearchText(left.label).localeCompare(
+    normalizeSearchText(right.label),
+    'pt-BR',
+  );
+  if (labelOrder !== 0) return labelOrder;
+  return left.id.localeCompare(right.id, 'pt-BR');
 }

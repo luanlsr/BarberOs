@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { BusinessHoursSettingsPanel } from '../../../components/business-hours-settings-panel';
 import { getSessionContext } from '../../../lib/auth/server';
+import { getAgendaViewModel } from '../../../lib/agenda-data';
 import { getStoreOperationsSettings } from '../../../lib/store-operations-settings';
 import {
   canAccessSettingsSection,
@@ -43,6 +44,8 @@ export default async function SettingsSectionPage({
   if (!canAccessSettingsSection(section, session)) redirect('/forbidden');
 
   const Icon = sectionIcons[section.icon];
+  const agendaModel =
+    section.key === 'barbearia-filiais' ? await getAgendaViewModel(session, {}) : null;
 
   return (
     <div className="settings-page settings-section-page">
@@ -83,6 +86,7 @@ export default async function SettingsSectionPage({
           {section.key === 'barbearia-filiais' ? (
             <BusinessHoursSettingsPanel
               branchName={session.branchName}
+              professionals={agendaModel?.professionals ?? []}
               settings={getStoreOperationsSettings(
                 session.activeBranchId ?? session.branchScope[0] ?? '',
               )}

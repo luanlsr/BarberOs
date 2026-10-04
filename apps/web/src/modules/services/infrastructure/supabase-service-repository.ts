@@ -72,6 +72,7 @@ export class SupabaseServiceRepository implements ServiceRepository {
       .filter(
         (service) =>
           !filters.professionalId ||
+          !service.enabledProfessionalIds.length ||
           service.enabledProfessionalIds.includes(filters.professionalId),
       );
   }

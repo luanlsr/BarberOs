@@ -4,7 +4,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
-  CheckCircle2,
   ImageIcon,
   LockKeyhole,
   Pencil,
@@ -24,12 +23,11 @@ import type {
   OperationsDirectoryItem,
   OperationsDirectoryModel,
 } from '../lib/operations-directory-data';
+import { AppToastRegion, useAppToast } from './app-toast';
 import { PhoneInput, isValidBrazilMobilePhone } from './form-controls';
 
 type DraftValues = Record<string, string>;
 type DialogMode = 'create' | 'edit';
-type ToastTone = 'success' | 'warning' | 'danger';
-type ToastState = { id: number; message: string; tone: ToastTone } | null;
 type DirectoryDialogState = {
   mode: DialogMode;
   item?: OperationsDirectoryItem;
@@ -47,7 +45,7 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
   const [dialog, setDialog] = React.useState<DirectoryDialogState>(null);
   const [detailsItem, setDetailsItem] = React.useState<OperationsDirectoryItem | null>(null);
   const [confirming, setConfirming] = React.useState<OperationsDirectoryItem | null>(null);
-  const [toast, setToast] = React.useState<ToastState>(null);
+  const { dismissToast, showToast, toast } = useAppToast();
   const [busy, setBusy] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -90,12 +88,6 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
     };
   }, [model]);
 
-  React.useEffect(() => {
-    if (!toast) return undefined;
-    const timeout = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(timeout);
-  }, [toast]);
-
   const disabled =
     busy || !model.canCreate || model.state === 'disabled' || model.state === 'offline';
   const visibleItems = React.useMemo(() => filterItems(items, query), [items, query]);
@@ -110,10 +102,6 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
   React.useEffect(() => {
     setPage((current) => Math.min(current, totalPages));
   }, [totalPages]);
-
-  function showToast(message: string, tone: ToastTone = 'success') {
-    setToast({ id: Date.now(), message, tone });
-  }
 
   function openCreateDialog() {
     setDialog({ mode: 'create', values: defaultDraft(model.fields) });
@@ -280,7 +268,7 @@ export function OperationsDirectoryView({ model }: Readonly<{ model: OperationsD
         />
       ) : null}
 
-      <ToastRegion toast={toast} onDismiss={() => setToast(null)} />
+      <AppToastRegion toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }
@@ -802,22 +790,6 @@ function ConfirmDialog({
           </button>
         </div>
       </section>
-    </div>
-  );
-}
-
-function ToastRegion({ onDismiss, toast }: Readonly<{ onDismiss: () => void; toast: ToastState }>) {
-  return (
-    <div className="toast-region" aria-live="polite" aria-atomic="true">
-      {toast ? (
-        <div className={`app-toast ${toast.tone}`} role="status">
-          <CheckCircle2 size={17} aria-hidden="true" />
-          <span>{toast.message}</span>
-          <button type="button" onClick={onDismiss} aria-label="Fechar notificação">
-            <X size={15} aria-hidden="true" />
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

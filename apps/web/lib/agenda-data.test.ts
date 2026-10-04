@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { AppointmentStatus, SessionContext } from '@barberos/contracts';
 import { developmentSession } from './dev-session';
 import { buildAgendaViewModel, type AgendaDataSource } from './agenda-data';
@@ -35,10 +35,34 @@ const agendaData: AgendaDataSource = {
     },
   ],
   services: [
-    { id: 'service-cut', name: 'Corte classico', durationMinutes: 45, priceCents: 6000 },
-    { id: 'service-beard', name: 'Barba', durationMinutes: 30, priceCents: 4000 },
-    { id: 'service-combo', name: 'Corte + barba', durationMinutes: 75, priceCents: 9500 },
-    { id: 'service-premium', name: 'Combo completo', durationMinutes: 90, priceCents: 13000 },
+    {
+      id: 'service-cut',
+      name: 'Corte classico',
+      durationMinutes: 45,
+      priceCents: 6000,
+      enabledProfessionalIds: ['professional-carlos', 'professional-joao'],
+    },
+    {
+      id: 'service-beard',
+      name: 'Barba',
+      durationMinutes: 30,
+      priceCents: 4000,
+      enabledProfessionalIds: ['professional-rafael'],
+    },
+    {
+      id: 'service-combo',
+      name: 'Corte + barba',
+      durationMinutes: 75,
+      priceCents: 9500,
+      enabledProfessionalIds: [],
+    },
+    {
+      id: 'service-premium',
+      name: 'Combo completo',
+      durationMinutes: 90,
+      priceCents: 13000,
+      enabledProfessionalIds: ['professional-joao'],
+    },
   ],
   customers: [
     { id: 'customer-marcos', name: 'Marcos Vinicius', phone: '(11) 98800-1100' },
@@ -190,6 +214,10 @@ function buildAgenda(overrides: Parameters<typeof buildAgendaViewModel>[0]) {
 }
 
 describe('agenda data loading layer', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test('builds the branch-scoped agenda view model for the active workspace', () => {
     const model = buildAgenda({ session: developmentSession, date: '2026-09-05' });
 
@@ -208,7 +236,11 @@ describe('agenda data loading layer', () => {
   });
 
   test('filters appointments by professional without exposing other columns', () => {
-    const model = buildAgenda({ session: developmentSession, professionalId: 'professional-joao' });
+    const model = buildAgenda({
+      session: developmentSession,
+      date: '2026-09-05',
+      professionalId: 'professional-joao',
+    });
 
     expect(model.selectedProfessionalLabel).toBe('Joao Pereira');
     expect(model.appointments.map((appointment) => appointment.professionalName)).toEqual([
@@ -230,14 +262,21 @@ describe('agenda data loading layer', () => {
   });
 
   test('limits professional role to its own operational column', () => {
-    const model = buildAgenda({ session: sessionWith({ role: 'PROFESSIONAL' }) });
+    const model = buildAgenda({
+      session: sessionWith({ role: 'PROFESSIONAL' }),
+      date: '2026-09-05',
+    });
 
     expect(model.professionals).toHaveLength(1);
     expect(model.professionalColumns).toHaveLength(1);
   });
 
   test('selects appointment detail with status history and permitted actions', () => {
-    const model = buildAgenda({ session: developmentSession, appointmentId: 'appointment-1530' });
+    const model = buildAgenda({
+      session: developmentSession,
+      date: '2026-09-05',
+      appointmentId: 'appointment-1530',
+    });
 
     expect(model.selectedAppointmentDetail?.appointment.customerName).toBe('Joao Pedro');
     expect(model.selectedAppointmentDetail?.history.map((item) => item.statusLabel)).toEqual([
@@ -258,6 +297,7 @@ describe('agenda data loading layer', () => {
         permissions: ['appointments.read', 'customers.read'],
         entitlements: ['core.operations'],
       }),
+      date: '2026-09-05',
       appointmentId: 'appointment-1530',
     });
 
@@ -270,6 +310,7 @@ describe('agenda data loading layer', () => {
         permissions: ['appointments.read'],
         entitlements: ['core.operations'],
       }),
+      date: '2026-09-05',
       appointmentId: 'appointment-1530',
     });
 
@@ -279,6 +320,7 @@ describe('agenda data loading layer', () => {
   test('only exposes check-in for eligible statuses and complete permissions', () => {
     const checkedInModel = buildAgenda({
       session: developmentSession,
+      date: '2026-09-05',
       appointmentId: 'appointment-1130',
     });
 
@@ -293,6 +335,7 @@ describe('agenda data loading layer', () => {
         permissions: ['appointments.read', 'appointments.update', 'orders.create', 'orders.read'],
         entitlements: ['core.operations'],
       }),
+      date: '2026-09-05',
       appointmentId: 'appointment-1530',
     });
 
@@ -308,6 +351,7 @@ describe('agenda data loading layer', () => {
         permissions: ['appointments.read', 'appointments.check_in'],
         entitlements: ['core.operations'],
       }),
+      date: '2026-09-05',
       appointmentId: 'appointment-1530',
     });
 
@@ -315,7 +359,7 @@ describe('agenda data loading layer', () => {
   });
 
   test('builds new appointment flow data with occupied slot feedback inputs', () => {
-    const model = buildAgenda({ session: developmentSession, mode: 'new' });
+    const model = buildAgenda({ session: developmentSession, date: '2026-09-05', mode: 'new' });
 
     expect(model.newAppointment.isOpen).toBe(true);
     expect(model.newAppointment.canCreateAppointment).toBe(true);
@@ -324,10 +368,50 @@ describe('agenda data loading layer', () => {
       'Marcos Vinicius',
     );
     expect(model.newAppointment.timeOptions.map((time) => time.value)).toContain('12:00');
-    expect(model.newAppointment.occupiedSlots).toContainEqual({
-      professionalId: 'professional-carlos',
-      timeLabel: '09:00',
-      customerName: 'Marcos Vinicius',
-    });
+    expect(model.newAppointment.occupiedSlots).toContainEqual(
+      expect.objectContaining({
+        professionalId: 'professional-carlos',
+        timeLabel: '09:00',
+        customerName: 'Marcos Vinicius',
+      }),
+    );
+  });
+
+  test('sorts new appointment selects alphabetically and preserves service eligibility', () => {
+    const model = buildAgenda({ session: developmentSession, date: '2026-09-05', mode: 'new' });
+
+    expect(model.newAppointment.customers.map((customer) => customer.name)).toEqual([
+      'Bruno Martins',
+      'Felipe Nunes',
+      'Joao Pedro',
+      'Marcos Vinicius',
+      'Rafael Alves',
+      'Thiago Martins',
+    ]);
+    expect(model.newAppointment.professionals.map((professional) => professional.name)).toEqual([
+      'Carlos Mendes',
+      'Joao Pereira',
+      'Rafael Lima',
+    ]);
+    expect(model.newAppointment.services.map((service) => service.name)).toEqual([
+      'Barba',
+      'Combo completo',
+      'Corte + barba',
+      'Corte classico',
+    ]);
+    expect(
+      model.newAppointment.services.find((service) => service.id === 'service-beard')
+        ?.enabledProfessionalIds,
+    ).toEqual(['professional-rafael']);
+  });
+
+  test('defaults agenda date to the current Sao Paulo day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-04T14:30:00-03:00'));
+
+    const model = buildAgenda({ session: developmentSession });
+
+    expect(model.dateIso).toBe('2026-10-04');
+    expect(model.newAppointment.dateIso).toBe('2026-10-04');
   });
 });
