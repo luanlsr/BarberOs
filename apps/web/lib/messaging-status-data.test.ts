@@ -44,8 +44,10 @@ describe('getDevelopmentMessagingStatusViewModel', () => {
     expect(model.connection).toMatchObject({
       label: 'WhatsApp Centro',
       providerLabel: 'Local/noop',
+      phoneLabel: '(11) 99999-0101',
       statusLabel: 'Ativa',
     });
+    expect(model.connection?.phoneLabel).not.toContain('+55');
     expect(JSON.stringify(model)).not.toContain('credentialReference');
     expect(JSON.stringify(model)).not.toContain('webhookSecretReference');
     expect(model.deliveryMetrics.find((metric) => metric.id === 'DELIVERED')?.count).toBe(112);

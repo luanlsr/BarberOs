@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 import { StatusBadge } from '@barberos/ui';
 import { CheckInActionButton } from './check-in-action-button';
 import type { AgendaAppointmentAction, AgendaAppointmentDetail } from '../lib/agenda-data';
+import { formatPhoneForDisplay } from '../lib/phone-format';
 
 type AppointmentDetailSurfaceProps = Readonly<{
   detail?: AgendaAppointmentDetail;
@@ -66,7 +67,7 @@ export function AppointmentDetailSurface({ detail }: AppointmentDetailSurfacePro
         <dl className="appointment-detail-list">
           <div>
             <dt>Telefone</dt>
-            <dd>{detail.customer.phone}</dd>
+            <dd>{formatPhoneForDisplay(detail.customer.phone)}</dd>
           </div>
           <div>
             <dt>Relacionamento</dt>

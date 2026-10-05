@@ -34,6 +34,7 @@ import type {
   OperationsDirectoryItem,
   OperationsDirectoryModel,
 } from '../lib/operations-directory-data';
+import { formatPhoneForDisplay } from '../lib/phone-format';
 import { AppToastRegion, useAppToast } from './app-toast';
 import { PhoneInput, isValidBrazilMobilePhone } from './form-controls';
 
@@ -1041,7 +1042,7 @@ function apiRecordToItem(
     return {
       id: customer.id,
       title: customer.name,
-      subtitle: customer.phone,
+      subtitle: formatPhoneForDisplay(customer.phone),
       statusLabel:
         customer.status === 'AT_RISK' ? 'Em risco' : customer.status === 'NEW' ? 'Novo' : 'Ativo',
       statusTone:
@@ -1051,7 +1052,7 @@ function apiRecordToItem(
             ? 'neutral'
             : 'success',
       metrics: [
-        { label: 'Telefone', value: customer.phone },
+        { label: 'Telefone', value: formatPhoneForDisplay(customer.phone) },
         { label: 'Email', value: customer.email ?? '-' },
         { label: 'Origem', value: customer.source ?? '-' },
       ],
@@ -1080,7 +1081,7 @@ function apiRecordToItem(
       metrics: [
         { label: 'Papel', value: professional.roleLabel },
         { label: 'Filiais', value: String(professional.branchIds.length) },
-        { label: 'Telefone', value: professional.phone ?? '-' },
+        { label: 'Telefone', value: formatPhoneForDisplay(professional.phone) || '-' },
       ],
       tags: [professional.email ?? 'Sem email', professional.status],
       imageUrl: professional.avatarUrl,
@@ -1159,7 +1160,7 @@ function itemFromDraft(
 ): OperationsDirectoryItem {
   const title = values.name || values.displayName || existing?.title || 'Novo registro';
   const subtitle =
-    values.phone ||
+    (values.phone ? formatPhoneForDisplay(values.phone) : '') ||
     values.roleLabel ||
     values.category ||
     values.email ||
@@ -1192,6 +1193,7 @@ function itemFromDraft(
 
 function formatFieldValue(field: OperationsDirectoryField, value: string) {
   if (!value.trim()) return '-';
+  if (field.type === 'tel') return formatPhoneForDisplay(value) || '-';
   if (field.id === 'price') return formatCurrency(toMoneyCents(value));
   if (field.id === 'duration') return `${toInteger(value)} min`;
   return value;

@@ -18,6 +18,7 @@ import {
   isFutureAppointmentStart,
 } from '../lib/agenda-availability';
 import type { AgendaNewAppointmentModel, AgendaOccupiedSlot } from '../lib/agenda-data';
+import { formatPhoneForDisplay } from '../lib/phone-format';
 import { PhoneInput, RelatedSelect, isValidBrazilMobilePhone } from './form-controls';
 
 type CustomerMode = 'existing' | 'quick';
@@ -95,7 +96,7 @@ export function NewAppointmentFlow({ model }: Readonly<{ model: AgendaNewAppoint
   const customerOptions = model.customers.map((customer) => ({
     id: customer.id,
     label: customer.name,
-    description: customer.phone,
+    description: formatPhoneForDisplay(customer.phone),
   }));
   const availableServiceOptions = availableServices.map((service) => ({
     id: service.id,

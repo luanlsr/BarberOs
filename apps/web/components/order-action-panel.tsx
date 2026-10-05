@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { IconButton } from '@barberos/ui';
 import type { ComandaItemModel, ComandaItemSuggestionModel } from '../lib/order-data';
+import { formatPhoneForDisplay } from '../lib/phone-format';
 import type { ProductPickerItemModel, ProductPickerViewModel } from '../lib/product-picker-data';
 import {
   PhoneInput,
@@ -1065,7 +1066,7 @@ async function fetchCustomers(branchId: string): Promise<RelatedOption[]> {
   return (payload.data ?? []).map((customer) => ({
     id: customer.id,
     label: customer.name,
-    description: customer.phone ?? undefined,
+    description: formatPhoneForDisplay(customer.phone) || undefined,
   }));
 }
 

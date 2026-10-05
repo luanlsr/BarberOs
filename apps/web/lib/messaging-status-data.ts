@@ -5,6 +5,7 @@ import type {
   Permission,
   SessionContext,
 } from '@barberos/contracts';
+import { formatPhoneForDisplay } from './phone-format';
 
 export type MessagingStatusViewState =
   'loading' | 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline' | 'inactive-provider';
@@ -457,7 +458,7 @@ function toConnectionModel(
     id: connection.id,
     label: connection.displayName,
     providerLabel: connection.provider === 'LOCAL' ? 'Local/noop' : 'Meta WhatsApp Cloud',
-    phoneLabel: maskPhone(connection.displayPhoneNumber),
+    phoneLabel: formatPhoneForDisplay(connection.displayPhoneNumber),
     branchLabel: connection.branchId ? branchName : 'Todas as unidades autorizadas',
     statusLabel: connection.status === 'ACTIVE' ? 'Ativa' : connection.status,
     statusTone:
@@ -598,12 +599,6 @@ function branchNameFor(session: SessionContext, branchId: string) {
 
 function hasPermission(session: SessionContext, permission: Permission) {
   return session.permissions.includes(permission);
-}
-
-function maskPhone(value: string) {
-  const digits = value.replace(/\D/g, '');
-  if (digits.length < 12) return value;
-  return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9, 13)}`;
 }
 
 function formatDateTime(value: string) {

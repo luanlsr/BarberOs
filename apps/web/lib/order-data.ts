@@ -23,6 +23,7 @@ import {
   getDevelopmentProductPickerViewModel,
   type ProductPickerViewModel,
 } from './product-picker-data';
+import { formatPhoneForDisplay } from './phone-format';
 
 export type OrderTone = 'neutral' | 'success' | 'warning' | 'danger';
 
@@ -706,7 +707,7 @@ function toComandaDetailModel(
     customerName:
       labels.customerName ??
       (order.customerId ? 'Cliente ' + shortOrderId(order.customerId) : 'Consumidor avulso'),
-    customerPhone: labels.customerPhone ?? undefined,
+    customerPhone: formatPhoneForDisplay(labels.customerPhone) || undefined,
     professionalName:
       labels.professionalName ??
       (order.professionalId

@@ -23,6 +23,7 @@ describe('Comanda data loading layer', () => {
     expect(model.order).toMatchObject({
       title: 'Comanda #1001',
       customerName: 'João Silva',
+      customerPhone: '(11) 98888-0301',
       professionalName: 'Carlos Andrade',
       originLabel: 'Agendamento',
       subtotalLabel: 'R$\u00a0137,00',

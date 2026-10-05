@@ -21,6 +21,7 @@ import {
   toFullCalendarSlotTime,
   type StoreScheduleBlock,
 } from './store-operations-settings';
+import { formatPhoneForDisplay } from './phone-format';
 
 export type AgendaTone = 'neutral' | 'success' | 'warning' | 'danger';
 
@@ -321,6 +322,7 @@ export function buildAgendaViewModel({
   );
   const visibleProfessionals =
     session.role === 'PROFESSIONAL' ? scopedProfessionals.slice(0, 1) : scopedProfessionals;
+  const customers = data.customers.map(toDisplayAgendaCustomerOption);
   const selectedProfessionalId =
     professionalId && visibleProfessionals.some((item) => item.id === professionalId)
       ? professionalId
@@ -375,7 +377,7 @@ export function buildAgendaViewModel({
     canCreateCustomer: hasPermission(session, 'customers.create'),
     professionals: visibleProfessionals,
     services: data.services,
-    customers: data.customers,
+    customers,
     appointments,
     scheduleBlocks,
     openingHours,
@@ -400,7 +402,7 @@ export function buildAgendaViewModel({
     hasReadPermission,
     professionals: sortByName(visibleProfessionals),
     services: sortByName(data.services),
-    customers: sortByName(data.customers),
+    customers: sortByName(customers),
     openingHours,
     scheduleBlocks,
     appointments,
@@ -439,7 +441,7 @@ function toAgendaAppointment(record: AgendaAppointmentRecord): AgendaAppointment
     id: record.id,
     branchId: record.branchId,
     customerName: record.customerName,
-    customerPhone: record.customerPhone,
+    customerPhone: formatPhoneForDisplay(record.customerPhone),
     professionalId: record.professionalId,
     professionalName: record.professionalName,
     serviceNames: record.serviceNames,
@@ -995,10 +997,18 @@ function toAgendaService(service: Service): AgendaService {
 }
 
 function toAgendaCustomerOption(customer: Customer): AgendaCustomerOption {
-  return {
+  return toDisplayAgendaCustomerOption({
     id: customer.id,
     name: customer.name,
     phone: customer.phone,
+  });
+}
+
+function toDisplayAgendaCustomerOption(customer: AgendaCustomerOption): AgendaCustomerOption {
+  return {
+    id: customer.id,
+    name: customer.name,
+    phone: formatPhoneForDisplay(customer.phone),
   };
 }
 
@@ -1032,7 +1042,7 @@ function toAgendaAppointmentRecord(
     branchId: appointment.branchId,
     customerId: appointment.customerId,
     customerName: customer?.name ?? 'Cliente',
-    customerPhone: customer?.phone ?? '',
+    customerPhone: formatPhoneForDisplay(customer?.phone),
     professionalId: appointment.professionalId,
     professionalName: professional?.displayName ?? 'Profissional',
     serviceNames: appointment.services.map((service) => service.serviceName),

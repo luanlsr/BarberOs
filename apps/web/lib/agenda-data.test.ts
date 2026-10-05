@@ -65,7 +65,7 @@ const agendaData: AgendaDataSource = {
     },
   ],
   customers: [
-    { id: 'customer-marcos', name: 'Marcos Vinicius', phone: '(11) 98800-1100' },
+    { id: 'customer-marcos', name: 'Marcos Vinicius', phone: '+5511988001100' },
     { id: 'customer-rafael', name: 'Rafael Alves', phone: '(11) 97700-2211' },
     { id: 'customer-bruno', name: 'Bruno Martins', phone: '(11) 96600-3322' },
     { id: 'customer-thiago', name: 'Thiago Martins', phone: '(11) 95500-4433' },
@@ -77,7 +77,7 @@ const agendaData: AgendaDataSource = {
       'appointment-0900',
       'customer-marcos',
       'Marcos Vinicius',
-      '(11) 98800-1100',
+      '+5511988001100',
       'professional-carlos',
       'Carlos Mendes',
       ['Corte + barba'],
@@ -233,6 +233,12 @@ describe('agenda data loading layer', () => {
         ?.appointments,
     ).toHaveLength(2);
     expect(model.kpis.find((kpi) => kpi.label === 'Receita prevista')?.value).toBe('R$ 480');
+    expect(model.customers.find((customer) => customer.id === 'customer-marcos')?.phone).toBe(
+      '(11) 98800-1100',
+    );
+    expect(
+      model.appointments.find((appointment) => appointment.id === 'appointment-0900'),
+    ).toHaveProperty('customerPhone', '(11) 98800-1100');
   });
 
   test('filters appointments by professional without exposing other columns', () => {
