@@ -1,173 +1,17 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
-import type { SessionContext } from '@barberos/contracts';
 import { ArrowUpRight, CalendarClock, CheckCircle2, CircleAlert, Sparkles } from 'lucide-react';
 import { Button, StatusBadge } from '@barberos/ui';
-
-const ownerAppointments = [
-  { time: '09:00', client: 'Marcos Vinicius', service: 'Corte + barba', status: 'Confirmado' },
-  { time: '10:30', client: 'Rafael Alves', service: 'Corte classico', status: 'Aguardando' },
-  { time: '14:00', client: 'Thiago Martins', service: 'Barba', status: 'Confirmado' },
-  { time: '16:30', client: 'João Pedro', service: 'Combo completo', status: 'Confirmado' },
-];
-
-const receptionistAppointments = [
-  { time: '09:00', client: 'João Silva', service: 'Corte Masculino', status: 'Confirmado' },
-  { time: '09:40', client: 'Pedro Souza', service: 'Barba', status: 'Aguardando' },
-  { time: '10:20', client: 'Marcos Lima', service: 'Corte + Barba', status: 'Confirmado' },
-  { time: '11:30', client: 'Encaixe livre', service: 'Disponivel', status: 'Livre' },
-];
-
-const barberAppointments = [
-  { time: '09:00', client: 'João Silva', service: 'Corte Masculino', status: 'Confirmado' },
-  { time: '11:00', client: 'Rafael Costa', service: 'Barba', status: 'Confirmado' },
-  { time: '14:30', client: 'Pedro Souza', service: 'Corte + Barba', status: 'Aguardando' },
-];
+import type { DashboardViewModel } from '../lib/dashboard-data';
 
 type DashboardViewProps = {
-  session: SessionContext;
+  model: DashboardViewModel;
 };
 
-export function DashboardView({ session }: DashboardViewProps) {
-  if (session.role === 'PROFESSIONAL') return <BarberDashboard session={session} />;
-  if (session.role === 'RECEPTIONIST') return <ReceptionDashboard session={session} />;
-  return <AdminDashboard session={session} />;
-}
-
-function AdminDashboard({ session }: DashboardViewProps) {
-  return (
-    <DashboardFrame
-      eyebrow="Hoje na barbearia"
-      title={`Bom dia, ${firstName(session.userName)}.`}
-      subtitle="Visão executiva da operação, financeiro, equipe e oportunidades de crescimento."
-      actionHref="/agenda?mode=new"
-      actionLabel="Novo agendamento"
-      metrics={[
-        { label: 'Atendimentos hoje', value: '18', note: '3 a mais que ontem', positive: true },
-        {
-          label: 'Faturamento previsto',
-          value: 'R$ 1.240',
-          note: '72% confirmado',
-          positive: true,
-        },
-        { label: 'Lucro estimado', value: 'R$ 684', note: 'Margem de 55%', positive: true },
-        { label: 'Ticket medio', value: 'R$ 86', note: 'R$ 8 acima da media', positive: true },
-      ]}
-      appointments={ownerAppointments}
-      agendaTitle="Agenda de hoje"
-      agendaCaption={`${session.branchName} · toda a equipe`}
-      insightTitle="Barber AI"
-      insightCaption="Sinais que merecem atenção"
-      insights={[
-        {
-          icon: 'alert',
-          title: '12 clientes no período de retorno',
-          body: 'Uma campanha pode preencher os horários livres da próxima semana.',
-        },
-        {
-          icon: 'calendar',
-          title: 'Dois horários vagos hoje',
-          body: 'O intervalo entre 12h e 14h ainda pode ser aproveitado.',
-        },
-      ]}
-      nextTitle="Administração"
-      nextCaption="Equipe, filiais e permissões"
-      nextBody="Gerencie usuários, profissionais, filiais, financeiro, estoque e repasses da barbearia."
-      nextActionLabel="Administrar equipe"
-      nextHref="/equipe"
-    />
-  );
-}
-
-function ReceptionDashboard({ session }: DashboardViewProps) {
-  return (
-    <DashboardFrame
-      eyebrow="Balcão e atendimento"
-      title={`Bom trabalho, ${firstName(session.userName)}.`}
-      subtitle="Atalhos para agenda, comandas, pagamentos, caixa e estoque do dia."
-      actionHref="/comandas?mode=walk-in#nova-comanda"
-      actionLabel="Nova comanda"
-      metrics={[
-        { label: 'Agendamentos hoje', value: '18', note: '4 aguardando chegada' },
-        { label: 'Comandas abertas', value: '05', note: '2 prontas para pagamento' },
-        { label: 'Caixa', value: 'Aberto', note: 'Unidade Centro', positive: true },
-        { label: 'Alertas de estoque', value: '02', note: 'Repor produtos do balcao' },
-      ]}
-      appointments={receptionistAppointments}
-      agendaTitle="Fila operacional"
-      agendaCaption={`${session.branchName} · recepção`}
-      insightTitle="Ações rapidas"
-      insightCaption="Prioridade do turno"
-      insights={[
-        {
-          icon: 'calendar',
-          title: 'Confirmar dois clientes pendentes',
-          body: 'Os horários das 09h40 e 14h30 ainda precisam de confirmacao.',
-        },
-        {
-          icon: 'alert',
-          title: 'Produto com estoque baixo',
-          body: 'Pomada Matte está abaixo do mínimo na Unidade Centro.',
-        },
-      ]}
-      nextTitle="Proximo atendimento"
-      nextCaption="Fluxo Agenda -> Comanda -> Pagamento"
-      nextBody="Use check-in para abrir a comanda com os serviços agendados e finalizar no caixa."
-      nextActionLabel="Abrir agenda"
-      nextHref="/agenda"
-    />
-  );
-}
-
-function BarberDashboard({ session }: DashboardViewProps) {
-  return (
-    <DashboardFrame
-      eyebrow="Minha operação"
-      title={`Sua agenda, ${firstName(session.userName)}.`}
-      subtitle="Acompanhe seus atendimentos, clientes, produção, comissões, gorjetas e repasses."
-      actionHref="/minha-carteira"
-      actionLabel="Minha carteira"
-      metrics={[
-        { label: 'Atendimentos hoje', value: '03', note: '1 aguardando confirmacao' },
-        {
-          label: 'Producao do mes',
-          value: 'R$ 1.450',
-          note: 'Serviços finalizados',
-          positive: true,
-        },
-        {
-          label: 'Comissões abertas',
-          value: 'R$ 725',
-          note: 'Previsto para repasse',
-          positive: true,
-        },
-        { label: 'Repasses pagos', value: 'R$ 300', note: 'Ultimos 7 dias', positive: true },
-      ]}
-      appointments={barberAppointments}
-      agendaTitle="Minha agenda de hoje"
-      agendaCaption={`${session.branchName} · somente seus atendimentos`}
-      insightTitle="Minha performance"
-      insightCaption="Acompanhe seus ganhos"
-      insights={[
-        {
-          icon: 'calendar',
-          title: 'Proximo atendimento as 09h',
-          body: 'Cliente João Silva está confirmado para Corte Masculino.',
-        },
-        {
-          icon: 'alert',
-          title: 'Comissões abertas para conferencia',
-          body: 'Revise sua carteira para acompanhar valores a receber.',
-        },
-      ]}
-      nextTitle="Carteira profissional"
-      nextCaption="Producao, gorjetas e repasses"
-      nextBody="Veja seus cortes realizados, comissões abertas, valores pagos e histórico de repasses."
-      nextActionLabel="Ver carteira"
-      nextHref="/minha-carteira"
-    />
-  );
+export function DashboardView({ model }: DashboardViewProps) {
+  return <DashboardFrame {...model} />;
 }
 
 function DashboardFrame({
@@ -178,6 +22,7 @@ function DashboardFrame({
   actionLabel,
   metrics,
   appointments,
+  emptyAppointmentsMessage,
   agendaTitle,
   agendaCaption,
   insightTitle,
@@ -196,6 +41,7 @@ function DashboardFrame({
   actionLabel: string;
   metrics: readonly MetricProps[];
   appointments: readonly AppointmentItem[];
+  emptyAppointmentsMessage: string;
   agendaTitle: string;
   agendaCaption: string;
   insightTitle: string;
@@ -240,18 +86,22 @@ function DashboardFrame({
             </Link>
           </div>
           <div className="panel-body agenda-list">
-            {appointments.map((appointment) => (
-              <div className="appointment-row" key={`${appointment.time}-${appointment.client}`}>
-                <span className="appointment-time">{appointment.time}</span>
-                <div>
-                  <div className="appointment-client">{appointment.client}</div>
-                  <div className="appointment-service">{appointment.service}</div>
+            {appointments.length ? (
+              appointments.map((appointment) => (
+                <div className="appointment-row" key={`${appointment.time}-${appointment.client}`}>
+                  <span className="appointment-time">{appointment.time}</span>
+                  <div>
+                    <div className="appointment-client">{appointment.client}</div>
+                    <div className="appointment-service">{appointment.service}</div>
+                  </div>
+                  <StatusBadge variant={badgeVariantFor(appointment.status)}>
+                    {appointment.status}
+                  </StatusBadge>
                 </div>
-                <StatusBadge variant={badgeVariantFor(appointment.status)}>
-                  {appointment.status}
-                </StatusBadge>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="section-caption">{emptyAppointmentsMessage}</p>
+            )}
           </div>
         </section>
 
@@ -337,8 +187,4 @@ function Metric({ label, value, note, positive = false }: Readonly<MetricProps>)
 function badgeVariantFor(status: string) {
   if (status === 'Aguardando' || status === 'Livre') return 'warning';
   return 'success';
-}
-
-function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] || 'time';
 }

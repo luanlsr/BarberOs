@@ -77,7 +77,10 @@ test('runs walk-in through catalog product payment, stock movement and finance s
   await page.goto('/comandas?state=empty');
   await page.getByRole('button', { name: 'Abrir walk-in' }).click();
   const walkIn = page.getByRole('dialog', { name: 'Nova Comanda' });
-  await walkIn.getByLabel('Consumidor avulso').check();
+  await expect(walkIn.getByRole('button', { name: 'Consumidor avulso' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await walkIn.getByRole('button', { name: 'Abrir walk-in' }).click();
   await page.waitForURL('**/comandas?orderId=dev-order-1001');
   expect(createdWalkIn).toBe(true);

@@ -135,6 +135,11 @@ const appointmentStatusHistorySelect = `
 
 const activeAppointmentStatuses = ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_SERVICE'] as const;
 
+type AppointmentListQuery = Pick<
+  AvailabilityQuery,
+  'branchId' | 'professionalId' | 'startsOn' | 'endsOn'
+>;
+
 export class SupabaseSchedulingRepository
   implements
     ScheduleRepository,
@@ -229,7 +234,7 @@ export class SupabaseSchedulingRepository
     return (data as { timezone?: string } | null)?.timezone ?? null;
   }
 
-  async list(context: RequestContext, query: AvailabilityQuery) {
+  async list(context: RequestContext, query: AppointmentListQuery) {
     const parsed = normalizeAppointmentListWindow(query);
     let request = this.client
       .from('appointments')
@@ -409,7 +414,7 @@ export class SupabaseSchedulingRepository
   }
 }
 
-function normalizeAppointmentListWindow(query: AvailabilityQuery) {
+function normalizeAppointmentListWindow(query: AppointmentListQuery) {
   return {
     branchId: query.branchId,
     professionalId: query.professionalId,

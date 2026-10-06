@@ -8,6 +8,7 @@ import type {
   PaymentMethod,
   Permission,
   RequestContext,
+  Service,
   SessionContext,
 } from '@barberos/contracts';
 
@@ -20,10 +21,12 @@ import {
 import { calculateAmountDue, calculatePaidAmount } from '../src/modules/payments/application';
 import { SupabasePaymentRepository } from '../src/modules/payments/infrastructure';
 import {
+  getProductPickerViewModel,
   getDevelopmentProductPickerViewModel,
   type ProductPickerViewModel,
 } from './product-picker-data';
 import { formatPhoneForDisplay } from './phone-format';
+import { SupabaseServiceRepository } from '../src/modules/services/infrastructure/supabase-service-repository';
 
 export type OrderTone = 'neutral' | 'success' | 'warning' | 'danger';
 
@@ -487,7 +490,10 @@ export function getDevelopmentComandaViewModel(
   options: { orderId?: string; state?: string } = {},
 ): ComandaViewModel {
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
-  const base = baseModel(session, branchId);
+  const base = baseModel(session, branchId, {
+    itemSuggestions: developmentItemSuggestions,
+    productPicker: getDevelopmentProductPickerViewModel(session, { branchId }),
+  });
 
   if (!base.canRead) {
     return {
@@ -548,9 +554,15 @@ export function getDevelopmentComandaViewModel(
   };
 }
 
+type ComandaBaseExtras = {
+  itemSuggestions?: readonly ComandaItemSuggestionModel[];
+  productPicker?: ProductPickerViewModel;
+};
+
 function baseModel(
   session: SessionContext,
   branchId: string,
+  extras: ComandaBaseExtras = {},
 ): Omit<ComandaViewModel, 'state' | 'openOrders'> {
   const entitlements = session.entitlements ?? [];
   return {
@@ -579,8 +591,31 @@ function baseModel(
       entitlements.includes('core.operations') &&
       session.branchScope.includes(branchId),
     isOnline: true,
-    itemSuggestions: developmentItemSuggestions,
-    productPicker: getDevelopmentProductPickerViewModel(session, { branchId }),
+    itemSuggestions: extras.itemSuggestions ?? [],
+    productPicker: extras.productPicker ?? emptyProductPickerModel(session, branchId),
+  };
+}
+
+function emptyProductPickerModel(
+  session: SessionContext,
+  branchId: string,
+): ProductPickerViewModel {
+  return {
+    state: 'empty',
+    title: 'Adicionar produto',
+    description: 'Nenhum produto encontrado para este filtro.',
+    branchId,
+    branchName: branchNameFor(session, branchId),
+    search: '',
+    canSelectProducts:
+      hasPermission(session, 'orders.item.add') &&
+      hasPermission(session, 'inventory.read') &&
+      (session.entitlements ?? []).includes('core.operations') &&
+      (session.entitlements ?? []).includes('inventory') &&
+      session.branchScope.includes(branchId),
+    categories: [],
+    products: [],
+    commonProducts: [],
   };
 }
 
@@ -595,9 +630,16 @@ async function getPersistentComandaViewModel(
     new SupabaseOrderAuditSink(client),
   );
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
-  const base = baseModel(session, branchId);
-  const openOrders = await service.list(context, { branchId, limit: 12 });
-  const selected = options.orderId ? await service.get(context, options.orderId) : null;
+  const [openOrders, selected, productPicker, services] = await Promise.all([
+    service.list(context, { branchId, limit: 12 }),
+    options.orderId ? service.get(context, options.orderId) : Promise.resolve(null),
+    getProductPickerViewModel(session, { branchId }),
+    new SupabaseServiceRepository(client).list(context, { status: 'ACTIVE' }),
+  ]);
+  const base = baseModel(session, branchId, {
+    productPicker,
+    itemSuggestions: buildPersistentItemSuggestions(productPicker, services),
+  });
 
   if (!selected) {
     if (!openOrders.length) {
@@ -761,6 +803,38 @@ function toComandaItemModel(item: OrderItem): ComandaItemModel {
     professionalName,
     notes: item.notes ?? undefined,
   };
+}
+
+function buildPersistentItemSuggestions(
+  productPicker: ProductPickerViewModel,
+  services: readonly Service[],
+): readonly ComandaItemSuggestionModel[] {
+  const serviceSuggestions = services.slice(0, 6).map((service) => ({
+    id: 'service-' + service.id,
+    name: service.name,
+    sourceType: 'SERVICE' as const,
+    sourceId: service.id,
+    typeLabel: itemTypeLabels.SERVICE,
+    sourceLabel: itemSourceLabels.SERVICE,
+    helperLabel: `${service.durationMinutes} min · serviço ativo`,
+    unitPriceAmountCents: service.priceCents,
+    unitPriceLabel: formatCurrency(service.priceCents),
+  }));
+
+  const productSuggestions = productPicker.commonProducts.map((product) => ({
+    id: 'product-' + product.productId,
+    name: product.name,
+    sourceType: 'PRODUCT' as const,
+    sourceId: product.productId,
+    typeLabel: itemTypeLabels.PRODUCT,
+    sourceLabel: itemSourceLabels.PRODUCT,
+    helperLabel: product.stockLabel,
+    disabledReason: product.available ? undefined : product.disabledReason,
+    unitPriceAmountCents: product.unitPriceAmountCents,
+    unitPriceLabel: product.unitPriceLabel,
+  }));
+
+  return [...serviceSuggestions, ...productSuggestions];
 }
 function toItemBreakdownModel(items: readonly ComandaItemModel[]): ComandaItemBreakdownModel {
   const service = summarizeItemsByType(items, 'SERVICE');

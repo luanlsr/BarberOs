@@ -29,7 +29,7 @@ export function applyBrandThemePreferences(
     target.style.setProperty('--color-accent', normalized.accentColorHex);
     target.style.setProperty(
       '--accent-strong',
-      `color-mix(in srgb, ${normalized.accentColorHex} 82%, var(--foreground))`,
+      `color-mix(in srgb, ${normalized.accentColorHex} 64%, var(--foreground))`,
     );
     target.style.setProperty(
       '--accent-soft',

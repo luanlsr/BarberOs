@@ -13,7 +13,7 @@ for (const width of agendaViewports) {
     const operationalCalendar = page.getByRole('region', { name: 'Calendario operacional' });
     await expect(operationalCalendar).toBeVisible();
     await expect(operationalCalendar.getByRole('grid')).toBeVisible();
-    await expect(operationalCalendar.getByText('Bloqueado').first()).toBeVisible();
+    await expect(operationalCalendar.getByText(/agendamentos/)).toBeVisible();
 
     const horizontalOverflow = await page.evaluate(() => ({
       html: document.documentElement.scrollWidth,

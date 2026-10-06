@@ -934,7 +934,6 @@ async function loadAgendaData(
 
   const appointments = await schedulingRepository.list(context, {
     branchId: options.branchId,
-    serviceId: services[0]?.id ?? 'agenda-list',
     professionalId: options.professionalId === 'all' ? undefined : options.professionalId,
     startsOn: options.dateIso,
     endsOn: options.dateIso,

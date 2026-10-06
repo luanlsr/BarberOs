@@ -4,9 +4,16 @@ import type {
   Product,
   ProductCategory,
   ProductStatus,
+  RequestContext,
   SessionContext,
   StockBalance,
 } from '@barberos/contracts';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
+import { SupabaseCatalogRepository } from '../src/modules/catalog/infrastructure';
 
 export type ProductsViewState =
   'loading' | 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline';
@@ -110,6 +117,13 @@ type ProductsViewOptions = {
 };
 
 type ProductsBaseModel = ReturnType<typeof baseModel>;
+
+type ProductsCatalogData = {
+  products: readonly Product[];
+  categories: readonly ProductCategory[];
+  balances: readonly StockBalance[];
+  alerts: readonly LowStockAlert[];
+};
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -255,13 +269,118 @@ export async function getProductsViewModel(
   session: SessionContext,
   options: ProductsViewOptions = {},
 ): Promise<ProductsViewModel> {
-  return getDevelopmentProductsViewModel(session, {
-    branchId: options.branchId,
-    status: productStatusFrom(options.status),
-    categoryId: options.categoryId,
-    search: options.search,
-    state: developmentStateFrom(options.state),
-  });
+  const branchId =
+    options.branchId ?? session.activeBranchId ?? session.branchScope[0] ?? 'dev-branch';
+  const selectedStatus = productStatusFrom(options.status) ?? 'ALL';
+  const search = options.search?.trim() ?? '';
+  const forcedState = developmentStateFrom(options.state);
+  const base = baseModel(session, branchId, selectedStatus, options.categoryId, search);
+
+  if (!base.canRead) {
+    return buildProductsModel(
+      base,
+      'permission-denied',
+      'Seu perfil não pode visualizar produtos desta unidade.',
+      [],
+      emptyCatalogData(),
+    );
+  }
+
+  if (forcedState === 'loading') {
+    return buildProductsModel(base, 'loading', 'Carregando catálogo de produtos.', [], {
+      products: [],
+      categories: [],
+      balances: [],
+      alerts: [],
+    });
+  }
+
+  if (forcedState === 'error') {
+    return buildProductsModel(
+      base,
+      'error',
+      'Não foi possível carregar produtos agora.',
+      [],
+      emptyCatalogData(),
+      {
+        code: 'CATALOG_VALIDATION_ERROR',
+        message: 'Produtos locais indisponíveis.',
+        requestId: 'local-products-error',
+      },
+    );
+  }
+
+  if (forcedState === 'offline') {
+    return buildProductsModel(
+      base,
+      'offline',
+      'Você está offline. Cadastro e ajustes de produtos ficam pausados.',
+      [],
+      emptyCatalogData(),
+    );
+  }
+
+  if (forcedState === 'empty') {
+    return buildProductsModel(
+      base,
+      'empty',
+      'Nenhum produto cadastrado nesta unidade.',
+      [],
+      emptyCatalogData(),
+    );
+  }
+
+  const client = await createSupabaseServerClient();
+  const context = client
+    ? await getRequestContext(crypto.randomUUID(), session.tenantId, branchId)
+    : null;
+
+  if (!client || !context) {
+    if (!isDevelopmentAuthEnabled()) {
+      return buildProductsModel(
+        base,
+        'empty',
+        'Nenhum produto cadastrado nesta unidade.',
+        [],
+        emptyCatalogData(),
+      );
+    }
+
+    return getDevelopmentProductsViewModel(session, {
+      branchId,
+      status: selectedStatus,
+      categoryId: options.categoryId,
+      search,
+    });
+  }
+
+  try {
+    return await getPersistentProductsViewModel(
+      new SupabaseCatalogRepository(client),
+      context,
+      base,
+      {
+        branchId,
+        status: selectedStatus,
+        categoryId: options.categoryId,
+        search,
+      },
+    );
+  } catch (error) {
+    return buildProductsModel(
+      base,
+      'error',
+      'Não foi possível carregar produtos agora.',
+      [],
+      emptyCatalogData(),
+      {
+        code:
+          error instanceof Error && 'code' in error ? String(error.code) : 'CATALOG_LOAD_FAILED',
+        message: 'Produtos indisponíveis.',
+        requestId: context.requestId,
+      },
+    );
+  }
 }
 
 export function getDevelopmentProductsViewModel(
@@ -280,20 +399,33 @@ export function getDevelopmentProductsViewModel(
       'permission-denied',
       'Seu perfil não pode visualizar produtos desta unidade.',
       [],
-      [],
+      emptyCatalogData(),
     );
   }
 
   if (options.state === 'loading') {
-    return buildProductsModel(base, 'loading', 'Carregando catálogo de produtos.', [], []);
+    return buildProductsModel(
+      base,
+      'loading',
+      'Carregando catálogo de produtos.',
+      [],
+      emptyCatalogData(),
+    );
   }
 
   if (options.state === 'error') {
-    return buildProductsModel(base, 'error', 'Não foi possível carregar produtos agora.', [], [], {
-      code: 'CATALOG_VALIDATION_ERROR',
-      message: 'Produtos locais indisponíveis.',
-      requestId: 'local-products-error',
-    });
+    return buildProductsModel(
+      base,
+      'error',
+      'Não foi possível carregar produtos agora.',
+      [],
+      emptyCatalogData(),
+      {
+        code: 'CATALOG_VALIDATION_ERROR',
+        message: 'Produtos locais indisponíveis.',
+        requestId: 'local-products-error',
+      },
+    );
   }
 
   if (options.state === 'offline') {
@@ -302,12 +434,18 @@ export function getDevelopmentProductsViewModel(
       'offline',
       'Você está offline. Cadastro e ajustes de produtos ficam pausados.',
       [],
-      [],
+      emptyCatalogData(),
     );
   }
 
   if (options.state === 'empty') {
-    return buildProductsModel(base, 'empty', 'Nenhum produto cadastrado nesta unidade.', [], []);
+    return buildProductsModel(
+      base,
+      'empty',
+      'Nenhum produto cadastrado nesta unidade.',
+      [],
+      emptyCatalogData(),
+    );
   }
 
   const branchProducts = developmentProducts.filter((product) =>
@@ -326,7 +464,54 @@ export function getDevelopmentProductsViewModel(
       ? 'Produtos, categorias, precos, custos e política de estoque da unidade.'
       : 'Nenhum produto encontrado para este filtro.',
     visibleProducts,
-    branchProducts,
+    {
+      products: branchProducts,
+      categories: developmentCategories,
+      balances: developmentBalances,
+      alerts: developmentAlerts,
+    },
+  );
+}
+
+async function getPersistentProductsViewModel(
+  repository: SupabaseCatalogRepository,
+  context: RequestContext,
+  base: ProductsBaseModel,
+  filters: {
+    branchId: string;
+    status: ProductStatus | 'ALL';
+    categoryId?: string;
+    search: string;
+  },
+) {
+  const catalog = await repository.listProducts(context, {
+    branchId: filters.branchId,
+    categoryId: filters.categoryId,
+    status: filters.status === 'ALL' ? undefined : filters.status,
+    query: filters.search || undefined,
+    includeArchived: filters.status === 'ARCHIVED',
+    limit: 100,
+  });
+  const catalogData: ProductsCatalogData = {
+    products: catalog.products,
+    categories: catalog.categories,
+    balances: catalog.balances,
+    alerts: catalog.alerts,
+  };
+  const visibleProducts = filterProducts(catalog.products, {
+    status: filters.status,
+    categoryId: filters.categoryId,
+    search: filters.search,
+  });
+
+  return buildProductsModel(
+    base,
+    visibleProducts.length ? 'ready' : 'empty',
+    visibleProducts.length
+      ? 'Produtos, categorias, preços, custos e política de estoque da unidade.'
+      : 'Nenhum produto encontrado para este filtro.',
+    visibleProducts,
+    catalogData,
   );
 }
 
@@ -357,18 +542,20 @@ function buildProductsModel(
   state: ProductsViewState,
   description: string,
   visibleProducts: readonly Product[],
-  branchProducts: readonly Product[],
+  catalog: ProductsCatalogData,
   error?: ProductsViewModel['error'],
 ): ProductsViewModel {
-  const items = visibleProducts.map((product) => toProductItemModel(product, base, state));
+  const items = visibleProducts.map((product) => toProductItemModel(product, base, state, catalog));
   return {
     ...base,
     state,
     description,
     products: items,
     categories:
-      base.canRead && branchProducts.length > 0 ? categoriesFor(base.branchId, branchProducts) : [],
-    statusFilters: statusFiltersFor(branchProducts),
+      base.canRead && catalog.products.length > 0
+        ? categoriesFor(base.branchId, catalog.products, catalog)
+        : [],
+    statusFilters: statusFiltersFor(catalog.products),
     allowedActions: actionsFor(base, state, items),
     error,
   };
@@ -393,12 +580,13 @@ function toProductItemModel(
   product: Product,
   base: ProductsBaseModel,
   state: ProductsViewState,
+  catalog: ProductsCatalogData,
 ): ProductItemModel {
-  const category = developmentCategories.find((item) => item.id === product.categoryId);
-  const balance = developmentBalances.find(
+  const category = catalog.categories.find((item) => item.id === product.categoryId);
+  const balance = catalog.balances.find(
     (item) => item.branchId === base.branchId && item.productId === product.id,
   );
-  const alert = developmentAlerts.find(
+  const alert = catalog.alerts.find(
     (item) =>
       item.branchId === base.branchId && item.productId === product.id && item.state === 'ACTIVE',
   );
@@ -527,8 +715,9 @@ function actionsFor(
 function categoriesFor(
   branchId: string,
   products: readonly Product[],
+  catalog: ProductsCatalogData,
 ): readonly ProductCategoryFilterModel[] {
-  return developmentCategories
+  return catalog.categories
     .filter((category) => category.branchIds.includes(branchId))
     .map((category) => {
       const categoryProducts = products.filter((product) => product.categoryId === category.id);
@@ -539,13 +728,28 @@ function categoriesFor(
         productCount: categoryProducts.length,
         activeCount: categoryProducts.filter((product) => product.status === 'ACTIVE').length,
         lowStockCount: categoryProducts.filter((product) => {
-          const balance = developmentBalances.find(
+          const balance = catalog.balances.find(
             (item) => item.branchId === branchId && item.productId === product.id,
           );
-          return Boolean(balance?.lowStock);
+          const alert = catalog.alerts.find(
+            (item) =>
+              item.branchId === branchId &&
+              item.productId === product.id &&
+              item.state === 'ACTIVE',
+          );
+          return Boolean(balance?.lowStock || alert);
         }).length,
       };
     });
+}
+
+function emptyCatalogData(): ProductsCatalogData {
+  return {
+    products: [],
+    categories: [],
+    balances: [],
+    alerts: [],
+  };
 }
 
 function statusFiltersFor(products: readonly Product[]): readonly ProductStatusFilterModel[] {

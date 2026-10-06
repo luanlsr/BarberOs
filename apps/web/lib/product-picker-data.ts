@@ -3,9 +3,16 @@ import type {
   Product,
   ProductCategory,
   ProductStatus,
+  RequestContext,
   SessionContext,
   StockBalance,
 } from '@barberos/contracts';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
+import { SupabaseCatalogRepository } from '../src/modules/catalog/infrastructure';
 
 export type ProductPickerState = 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline';
 export type ProductPickerTone = 'neutral' | 'success' | 'warning' | 'danger';
@@ -61,6 +68,12 @@ type DevelopmentProductPickerOptions = {
   search?: string;
   categoryId?: string;
   state?: ProductPickerState;
+};
+
+type ProductPickerCatalogData = {
+  products: readonly Product[];
+  categories: readonly ProductCategory[];
+  balances: readonly StockBalance[];
 };
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -196,12 +209,101 @@ export async function getProductPickerViewModel(
   session: SessionContext,
   options: ProductPickerOptions = {},
 ): Promise<ProductPickerViewModel> {
-  return getDevelopmentProductPickerViewModel(session, {
-    branchId: options.branchId,
-    search: options.search,
-    categoryId: options.categoryId,
-    state: pickerStateFrom(options.state),
-  });
+  const branchId =
+    options.branchId ?? session.activeBranchId ?? session.branchScope[0] ?? 'dev-branch';
+  const search = options.search?.trim() ?? '';
+  const selectedCategoryId = options.categoryId;
+  const forcedState = pickerStateFrom(options.state);
+  const base = baseModel(session, branchId, search, selectedCategoryId);
+
+  if (!base.canSelectProducts) {
+    return {
+      ...base,
+      state: 'permission-denied',
+      categories: [],
+      products: [],
+      commonProducts: [],
+    };
+  }
+
+  if (forcedState === 'error') {
+    return {
+      ...base,
+      state: 'error',
+      categories: [],
+      products: [],
+      commonProducts: [],
+      error: {
+        code: 'CATALOG_VALIDATION_ERROR',
+        message: 'Catálogo de produtos indisponível.',
+        requestId: 'local-product-picker-error',
+      },
+    };
+  }
+
+  if (forcedState === 'offline') {
+    return {
+      ...base,
+      state: 'offline',
+      categories: [],
+      products: [],
+      commonProducts: [],
+      description: 'Você está offline. Produtos não podem ser adicionados à Comanda.',
+    };
+  }
+
+  if (forcedState === 'empty') {
+    return { ...base, state: 'empty', categories: [], products: [], commonProducts: [] };
+  }
+
+  const client = await createSupabaseServerClient();
+  const context = client
+    ? await getRequestContext(crypto.randomUUID(), session.tenantId, branchId)
+    : null;
+
+  if (!client || !context) {
+    if (!isDevelopmentAuthEnabled()) {
+      return {
+        ...base,
+        state: 'empty',
+        categories: [],
+        products: [],
+        commonProducts: [],
+        description: 'Nenhum produto encontrado para este filtro.',
+      };
+    }
+
+    return getDevelopmentProductPickerViewModel(session, {
+      branchId,
+      search,
+      categoryId: selectedCategoryId,
+    });
+  }
+
+  try {
+    const catalog = await new SupabaseCatalogRepository(client).listProducts(context, {
+      branchId,
+      categoryId: selectedCategoryId,
+      query: search || undefined,
+      includeArchived: false,
+      limit: 100,
+    });
+    return buildProductPickerModel(base, catalog);
+  } catch (error) {
+    return {
+      ...base,
+      state: 'error',
+      categories: [],
+      products: [],
+      commonProducts: [],
+      error: {
+        code:
+          error instanceof Error && 'code' in error ? String(error.code) : 'CATALOG_LOAD_FAILED',
+        message: 'Catálogo de produtos indisponível.',
+        requestId: context.requestId,
+      },
+    };
+  }
 }
 
 export function getDevelopmentProductPickerViewModel(
@@ -258,14 +360,39 @@ export function getDevelopmentProductPickerViewModel(
     if (!search) return true;
     return normalize(product.name).includes(normalize(search));
   });
-  const items = products.map((product) => toPickerItem(product, branchId));
+  return buildProductPickerModel(base, {
+    products,
+    categories: developmentCategories,
+    balances: developmentBalances,
+  });
+}
+
+function buildProductPickerModel(
+  base: ReturnType<typeof baseModel>,
+  catalog: ProductPickerCatalogData,
+): ProductPickerViewModel {
+  const products = catalog.products.filter((product) => {
+    if (base.selectedCategoryId && product.categoryId !== base.selectedCategoryId) return false;
+    if (!base.search) return true;
+    return normalize(product.name).includes(normalize(base.search));
+  });
+  const commonProductIds = new Set(
+    products
+      .filter((product) => product.status === 'ACTIVE' && product.branchIds.includes(base.branchId))
+      .slice(0, 6)
+      .map((product) => product.id),
+  );
+  const items = products.map((product) =>
+    toPickerItem(product, base.branchId, catalog.categories, catalog.balances, commonProductIds),
+  );
+
   return {
     ...base,
     state: items.length ? 'ready' : 'empty',
     description: items.length
-      ? 'Produtos ativos, favoritos e disponibilidade para adicionar a Comanda.'
+      ? 'Produtos ativos e disponibilidade real para adicionar à Comanda.'
       : 'Nenhum produto encontrado para este filtro.',
-    categories: categoriesFor(branchId),
+    categories: categoriesFor(base.branchId, catalog.categories, catalog.products),
     products: items,
     commonProducts: items.filter((item) => item.common),
   };
@@ -296,9 +423,15 @@ function baseModel(
   };
 }
 
-function toPickerItem(product: Product, branchId: string): ProductPickerItemModel {
-  const category = developmentCategories.find((item) => item.id === product.categoryId);
-  const balance = developmentBalances.find(
+function toPickerItem(
+  product: Product,
+  branchId: string,
+  categories: readonly ProductCategory[],
+  balances: readonly StockBalance[],
+  commonProductIds: ReadonlySet<string>,
+): ProductPickerItemModel {
+  const category = categories.find((item) => item.id === product.categoryId);
+  const balance = balances.find(
     (item) => item.branchId === branchId && item.productId === product.id,
   );
   const branchAvailable = product.branchIds.includes(branchId);
@@ -334,14 +467,17 @@ function disabledReasonFor(product: Product, branchAvailable: boolean, hasStock:
   return undefined;
 }
 
-function categoriesFor(branchId: string) {
-  return developmentCategories
+function categoriesFor(
+  branchId: string,
+  categories: readonly ProductCategory[],
+  products: readonly Product[],
+) {
+  return categories
     .filter((category) => category.branchIds.includes(branchId))
     .map((category) => ({
       id: category.id,
       name: category.name,
-      productCount: developmentProducts.filter((product) => product.categoryId === category.id)
-        .length,
+      productCount: products.filter((product) => product.categoryId === category.id).length,
     }));
 }
 

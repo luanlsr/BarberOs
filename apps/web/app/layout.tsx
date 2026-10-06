@@ -85,7 +85,7 @@ function createBrandThemeInitScript(preferences: BrandThemePreferences | null | 
       var accent = preferences.accentColorHex;
       root.style.setProperty('--accent', accent);
       root.style.setProperty('--color-accent', accent);
-      root.style.setProperty('--accent-strong', 'color-mix(in srgb, ' + accent + ' 82%, var(--foreground))');
+      root.style.setProperty('--accent-strong', 'color-mix(in srgb, ' + accent + ' 64%, var(--foreground))');
       root.style.setProperty('--accent-soft', 'color-mix(in srgb, ' + accent + ' 14%, var(--surface))');
       root.style.setProperty('--accent-gradient', 'linear-gradient(135deg, ' + accent + ' 0%, color-mix(in srgb, ' + accent + ' 72%, #ffffff) 100%)');
     }

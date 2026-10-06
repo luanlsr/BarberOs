@@ -144,7 +144,10 @@ test('runs walk-in through manual item, split payment and cash register', async 
   await walkIn.getByRole('button', { name: 'Abrir walk-in' }).click();
   const walkInDialog = page.getByRole('dialog', { name: 'Nova Comanda' });
   await expect(walkInDialog).toBeVisible();
-  await walkInDialog.getByLabel('Consumidor avulso').check();
+  await expect(walkInDialog.getByRole('button', { name: 'Consumidor avulso' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await walkInDialog.getByRole('button', { name: 'Abrir walk-in' }).click();
   await page.waitForURL('**/comandas?orderId=dev-order-1001');
   expect(createdWalkIn).toBe(true);

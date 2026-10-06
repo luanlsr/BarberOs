@@ -2,11 +2,19 @@ import type {
   LowStockAlert,
   Permission,
   Product,
+  RequestContext,
   SessionContext,
   StockBalance,
   StockMovement,
   StockMovementType,
 } from '@barberos/contracts';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
+import { SupabaseCatalogRepository } from '../src/modules/catalog/infrastructure';
+import { SupabaseInventoryRepository } from '../src/modules/inventory/infrastructure';
 
 export type InventoryViewState =
   'loading' | 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline';
@@ -96,6 +104,13 @@ type DevelopmentInventoryOptions = {
 };
 
 type InventoryBaseModel = ReturnType<typeof baseModel>;
+
+type InventoryDataSet = {
+  products: readonly Product[];
+  balances: readonly StockBalance[];
+  alerts: readonly LowStockAlert[];
+  movements: readonly StockMovement[];
+};
 
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -318,10 +333,103 @@ export async function getInventoryViewModel(
   session: SessionContext,
   options: InventoryOptions = {},
 ): Promise<InventoryViewModel> {
-  return getDevelopmentInventoryViewModel(session, {
-    branchId: options.branchId,
-    state: developmentStateFrom(options.state),
-  });
+  const branchId =
+    options.branchId ?? session.activeBranchId ?? session.branchScope[0] ?? 'dev-branch';
+  const forcedState = developmentStateFrom(options.state);
+  const base = baseModel(session, branchId);
+
+  if (!base.canRead) {
+    return buildInventoryModel(
+      base,
+      'permission-denied',
+      'Seu perfil não pode visualizar estoque.',
+      emptyInventoryDataSet(),
+    );
+  }
+
+  if (forcedState === 'loading') {
+    return buildInventoryModel(
+      base,
+      'loading',
+      'Carregando saldos e alertas de estoque.',
+      emptyInventoryDataSet(),
+    );
+  }
+
+  if (forcedState === 'error') {
+    return buildInventoryModel(
+      base,
+      'error',
+      'Não foi possível carregar estoque agora.',
+      emptyInventoryDataSet(),
+      {
+        code: 'INVENTORY_VALIDATION_ERROR',
+        message: 'Estoque local indisponível.',
+        requestId: 'local-inventory-error',
+      },
+    );
+  }
+
+  if (forcedState === 'offline') {
+    if (!isDevelopmentAuthEnabled()) {
+      return buildInventoryModel(
+        base,
+        'offline',
+        'Você está offline. Entradas, perdas e ajustes ficam pausados.',
+        emptyInventoryDataSet(),
+      );
+    }
+
+    return getDevelopmentInventoryViewModel(session, { branchId, state: forcedState });
+  }
+
+  if (forcedState === 'empty' || forcedState === 'branch-empty') {
+    return buildInventoryModel(
+      base,
+      'empty',
+      'Nenhum saldo de estoque nesta unidade.',
+      emptyInventoryDataSet(),
+    );
+  }
+
+  if (forcedState === 'restocked' && isDevelopmentAuthEnabled()) {
+    return getDevelopmentInventoryViewModel(session, { branchId, state: forcedState });
+  }
+
+  const client = await createSupabaseServerClient();
+  const context = client
+    ? await getRequestContext(crypto.randomUUID(), session.tenantId, branchId)
+    : null;
+
+  if (!client || !context) {
+    if (!isDevelopmentAuthEnabled()) {
+      return buildInventoryModel(
+        base,
+        'empty',
+        'Nenhum saldo de estoque nesta unidade.',
+        emptyInventoryDataSet(),
+      );
+    }
+
+    return getDevelopmentInventoryViewModel(session, { branchId });
+  }
+
+  try {
+    return await getPersistentInventoryViewModel(client, context, base, branchId);
+  } catch (error) {
+    return buildInventoryModel(
+      base,
+      'error',
+      'Não foi possível carregar estoque agora.',
+      emptyInventoryDataSet(),
+      {
+        code:
+          error instanceof Error && 'code' in error ? String(error.code) : 'INVENTORY_LOAD_FAILED',
+        message: 'Estoque indisponível.',
+        requestId: context.requestId,
+      },
+    );
+  }
 }
 
 export function getDevelopmentInventoryViewModel(
@@ -337,9 +445,7 @@ export function getDevelopmentInventoryViewModel(
       base,
       'permission-denied',
       'Seu perfil não pode visualizar estoque.',
-      [],
-      [],
-      [],
+      emptyInventoryDataSet(),
     );
   }
 
@@ -348,9 +454,7 @@ export function getDevelopmentInventoryViewModel(
       base,
       'loading',
       'Carregando saldos e alertas de estoque.',
-      [],
-      [],
-      [],
+      emptyInventoryDataSet(),
     );
   }
 
@@ -359,9 +463,7 @@ export function getDevelopmentInventoryViewModel(
       base,
       'error',
       'Não foi possível carregar estoque agora.',
-      [],
-      [],
-      [],
+      emptyInventoryDataSet(),
       {
         code: 'INVENTORY_VALIDATION_ERROR',
         message: 'Estoque local indisponível.',
@@ -375,14 +477,21 @@ export function getDevelopmentInventoryViewModel(
       base,
       'offline',
       'Você está offline. Entradas, perdas e ajustes ficam pausados.',
-      balancesForBranch(branchId),
-      alertsForBranch(branchId),
-      movementsForBranch(branchId),
+      developmentDataSet({
+        balances: balancesForBranch(branchId),
+        alerts: alertsForBranch(branchId),
+        movements: movementsForBranch(branchId),
+      }),
     );
   }
 
   if (options.state === 'empty' || options.state === 'branch-empty') {
-    return buildInventoryModel(base, 'empty', 'Nenhum saldo de estoque nesta unidade.', [], [], []);
+    return buildInventoryModel(
+      base,
+      'empty',
+      'Nenhum saldo de estoque nesta unidade.',
+      emptyInventoryDataSet(),
+    );
   }
 
   if (options.state === 'restocked') {
@@ -390,9 +499,11 @@ export function getDevelopmentInventoryViewModel(
       base,
       'ready',
       'Entrada registrada e alertas de estoque baixo resolvidos nesta unidade.',
-      restockedBalancesForBranch(branchId),
-      [],
-      restockedMovementsForBranch(branchId),
+      developmentDataSet({
+        balances: restockedBalancesForBranch(branchId),
+        alerts: [],
+        movements: restockedMovementsForBranch(branchId),
+      }),
     );
   }
 
@@ -403,9 +514,43 @@ export function getDevelopmentInventoryViewModel(
     balances.length
       ? 'Saldos, alertas de estoque baixo e histórico recente da unidade.'
       : 'Nenhum saldo de estoque nesta unidade.',
-    balances,
-    alertsForBranch(branchId),
-    movementsForBranch(branchId),
+    developmentDataSet({
+      balances,
+      alerts: alertsForBranch(branchId),
+      movements: movementsForBranch(branchId),
+    }),
+  );
+}
+
+async function getPersistentInventoryViewModel(
+  client: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  context: RequestContext,
+  base: InventoryBaseModel,
+  branchId: string,
+) {
+  const [catalog, movements] = await Promise.all([
+    new SupabaseCatalogRepository(client).listProducts(context, {
+      branchId,
+      status: 'ACTIVE',
+      includeArchived: false,
+      limit: 200,
+    }),
+    new SupabaseInventoryRepository(client).listMovements(context, { branchId, limit: 25 }),
+  ]);
+  const dataSet: InventoryDataSet = {
+    products: catalog.products,
+    balances: catalog.balances,
+    alerts: catalog.alerts.filter((alert) => alert.state === 'ACTIVE'),
+    movements,
+  };
+
+  return buildInventoryModel(
+    base,
+    dataSet.balances.length ? 'ready' : 'empty',
+    dataSet.balances.length
+      ? 'Saldos, alertas de estoque baixo e histórico recente da unidade.'
+      : 'Nenhum saldo de estoque nesta unidade.',
+    dataSet,
   );
 }
 
@@ -426,20 +571,20 @@ function buildInventoryModel(
   base: InventoryBaseModel,
   state: InventoryViewState,
   description: string,
-  balances: readonly StockBalance[],
-  alerts: readonly LowStockAlert[],
-  movements: readonly StockMovement[],
+  dataSet: InventoryDataSet,
   error?: InventoryViewModel['error'],
 ): InventoryViewModel {
-  const balanceItems = balances.map((balance) => toBalanceItemModel(balance, base, state));
-  const alertItems = alerts.map(toLowStockAlertModel);
+  const balanceItems = dataSet.balances.map((balance) =>
+    toBalanceItemModel(balance, base, state, dataSet.products),
+  );
+  const alertItems = dataSet.alerts.map((alert) => toLowStockAlertModel(alert, dataSet.products));
   return {
     ...base,
     state,
     description,
     balances: balanceItems,
     lowStockAlerts: alertItems,
-    movements: movements.map(toMovementModel),
+    movements: dataSet.movements.map((movement) => toMovementModel(movement, dataSet.products)),
     allowedActions: actionsFor(base, state, balanceItems),
     summary: {
       trackedProductCount: balanceItems.length,
@@ -454,8 +599,9 @@ function toBalanceItemModel(
   balance: StockBalance,
   base: InventoryBaseModel,
   state: InventoryViewState,
+  products: readonly Product[],
 ): StockBalanceItemModel {
-  const product = productFor(balance.productId);
+  const product = productFor(balance.productId, products);
   const zeroStock = balance.currentQuantity <= 0;
   const canAdjust = base.canWrite && state === 'ready';
   return {
@@ -476,8 +622,11 @@ function toBalanceItemModel(
   };
 }
 
-function toLowStockAlertModel(alert: LowStockAlert): LowStockAlertModel {
-  const product = productFor(alert.productId);
+function toLowStockAlertModel(
+  alert: LowStockAlert,
+  products: readonly Product[],
+): LowStockAlertModel {
+  const product = productFor(alert.productId, products);
   const zeroStock = alert.currentQuantity <= 0;
   return {
     id: alert.id,
@@ -490,8 +639,11 @@ function toLowStockAlertModel(alert: LowStockAlert): LowStockAlertModel {
   };
 }
 
-function toMovementModel(movement: StockMovement): StockMovementModel {
-  const product = productFor(movement.productId);
+function toMovementModel(
+  movement: StockMovement,
+  products: readonly Product[],
+): StockMovementModel {
+  const product = productFor(movement.productId, products);
   return {
     id: movement.id,
     productId: movement.productId,
@@ -614,8 +766,26 @@ function restockedMovementsForBranch(branchId: string) {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-function productFor(productId: string) {
-  return developmentProducts.find((product) => product.id === productId);
+function productFor(productId: string, products: readonly Product[]) {
+  return products.find((product) => product.id === productId);
+}
+
+function developmentDataSet(
+  overrides: Pick<InventoryDataSet, 'balances' | 'alerts' | 'movements'>,
+): InventoryDataSet {
+  return {
+    products: developmentProducts,
+    ...overrides,
+  };
+}
+
+function emptyInventoryDataSet(): InventoryDataSet {
+  return {
+    products: [],
+    balances: [],
+    alerts: [],
+    movements: [],
+  };
 }
 
 function sourceLabelFor(movement: StockMovement) {

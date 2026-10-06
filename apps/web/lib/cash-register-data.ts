@@ -9,7 +9,11 @@ import type {
   SessionContext,
 } from '@barberos/contracts';
 
-import { createSupabaseServerClient, getRequestContext } from './auth/server';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
 import { CashRegisterApplicationService } from '../src/modules/cash-register/application';
 import { SupabaseCashRegisterRepository } from '../src/modules/cash-register/infrastructure';
 import type { CashRegisterSummary } from '../src/modules/cash-register/domain';
@@ -311,7 +315,11 @@ export async function getCashRegisterViewModel(
     }
   }
 
-  return getDevelopmentCashRegisterViewModel(session, options);
+  if (isDevelopmentAuthEnabled()) {
+    return getDevelopmentCashRegisterViewModel(session, options);
+  }
+
+  return noOpenSessionModel(base);
 }
 
 export function getDevelopmentCashRegisterViewModel(
@@ -355,22 +363,10 @@ export function getDevelopmentCashRegisterViewModel(
   }
 
   if (!options.state || options.state === 'empty' || options.state === 'no-open-session') {
-    return {
-      ...base,
-      state: 'no-open-session',
-      description: 'Nenhum caixa aberto nesta unidade.',
-      methodTotals: paymentMethodTotals([]),
-      movements: [],
-    };
+    return noOpenSessionModel(base);
   }
 
-  return {
-    ...base,
-    state: 'no-open-session',
-    description: 'Nenhum caixa aberto nesta unidade.',
-    methodTotals: paymentMethodTotals([]),
-    movements: [],
-  };
+  return noOpenSessionModel(base);
 }
 
 async function getPersistentCashRegisterViewModel(
@@ -385,13 +381,7 @@ async function getPersistentCashRegisterViewModel(
   const currentSession = await service.getCurrentSession(context, { branchId });
 
   if (!currentSession) {
-    return {
-      ...base,
-      state: 'no-open-session',
-      description: 'Nenhum caixa aberto nesta unidade.',
-      methodTotals: paymentMethodTotals([]),
-      movements: [],
-    };
+    return noOpenSessionModel(base);
   }
 
   const payments = await new SupabasePaymentRepository(client).list(context, {
@@ -419,6 +409,18 @@ function baseModel(
     canWithdraw: hasPermission(session, 'cash.withdraw') && hasFinanceEntitlement && hasBranch,
     canCashIn: hasPermission(session, 'cash.open') && hasFinanceEntitlement && hasBranch,
     canClose: hasPermission(session, 'cash.close') && hasFinanceEntitlement && hasBranch,
+  };
+}
+
+function noOpenSessionModel(
+  base: Omit<CashRegisterViewModel, 'state' | 'methodTotals' | 'movements'>,
+): CashRegisterViewModel {
+  return {
+    ...base,
+    state: 'no-open-session',
+    description: 'Nenhum caixa aberto nesta unidade.',
+    methodTotals: paymentMethodTotals([]),
+    movements: [],
   };
 }
 

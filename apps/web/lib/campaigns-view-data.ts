@@ -1,4 +1,17 @@
-import type { Campaign, CampaignStatus, Permission, SessionContext } from '@barberos/contracts';
+import type {
+  Campaign,
+  CampaignStatus,
+  Permission,
+  RequestContext,
+  SessionContext,
+} from '@barberos/contracts';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
+import { CampaignApplicationService } from '../src/modules/campaigns/application/campaign-service';
+import { SupabaseCampaignRepository } from '../src/modules/campaigns/infrastructure/supabase-campaign-repository';
 
 export type CampaignsViewState =
   'loading' | 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline';
@@ -77,6 +90,8 @@ type DevelopmentCampaignsViewOptions = {
 };
 
 type CampaignsBaseModel = ReturnType<typeof baseModel>;
+
+type CampaignAudiencePreviewById = ReadonlyMap<string, CampaignAudiencePreviewModel>;
 
 const statusLabels: Record<CampaignStatus, string> = {
   DRAFT: 'Rascunho',
@@ -213,11 +228,71 @@ export async function getCampaignsViewModel(
   session: SessionContext,
   options: CampaignsViewOptions = {},
 ): Promise<CampaignsViewModel> {
-  return getDevelopmentCampaignsViewModel(session, {
-    branchId: options.branchId,
-    campaignId: options.campaignId,
-    state: developmentStateFrom(options.state),
-  });
+  const branchId =
+    options.branchId ?? session.activeBranchId ?? session.branchScope[0] ?? 'dev-branch';
+  const base = baseModel(session, branchId);
+
+  if (!base.canRead) {
+    return buildModel(
+      base,
+      'permission-denied',
+      'Seu perfil não pode visualizar campanhas desta unidade.',
+      [],
+      undefined,
+      options.campaignId,
+    );
+  }
+  if (options.state === 'loading') {
+    return buildModel(base, 'loading', 'Carregando campanhas e prévias de audiência.', []);
+  }
+  if (options.state === 'error') {
+    return buildModel(base, 'error', 'Não foi possível carregar campanhas agora.', [], {
+      code: 'CAMPAIGN_VALIDATION_ERROR',
+      message: 'Campanhas indisponíveis.',
+      requestId: 'local-campaigns-error',
+    });
+  }
+
+  const client = await createSupabaseServerClient();
+  const requestContext = client
+    ? await getRequestContext(crypto.randomUUID(), session.tenantId, branchId)
+    : null;
+
+  if (client && requestContext) {
+    try {
+      return await getPersistentCampaignsViewModel(client, requestContext, session, {
+        branchId,
+        campaignId: options.campaignId,
+        state: developmentStateFrom(options.state),
+      });
+    } catch (error) {
+      return buildModel(base, 'error', 'Não foi possível carregar campanhas agora.', [], {
+        code:
+          error instanceof Error && 'code' in error
+            ? String(error.code)
+            : 'CAMPAIGNS_LOAD_FAILED',
+        message: 'Campanhas indisponíveis.',
+        requestId: requestContext.requestId,
+      });
+    }
+  }
+
+  if (isDevelopmentAuthEnabled()) {
+    return getDevelopmentCampaignsViewModel(session, {
+      branchId: options.branchId,
+      campaignId: options.campaignId,
+      state: developmentStateFrom(options.state),
+    });
+  }
+
+  return buildModel(
+    base,
+    'empty',
+    'Nenhuma campanha criada para esta unidade.',
+    [],
+    undefined,
+    options.campaignId,
+  );
 }
 
 export function getDevelopmentCampaignsViewModel(
@@ -285,8 +360,9 @@ function buildModel(
   campaigns: readonly Campaign[],
   error?: CampaignsViewModel['error'],
   campaignId?: string,
+  previewById?: CampaignAudiencePreviewById,
 ): CampaignsViewModel {
-  const items = campaigns.map((campaign) => toCampaignItem(campaign, base, state));
+  const items = campaigns.map((campaign) => toCampaignItem(campaign, base, state, previewById));
   return {
     ...base,
     state,
@@ -303,9 +379,11 @@ function toCampaignItem(
   campaign: Campaign,
   base: CampaignsBaseModel,
   state: CampaignsViewState,
+  previewById?: CampaignAudiencePreviewById,
 ): CampaignItemModel {
   const disabledReason = unavailableReasonForState(state);
-  const previewModel = previewByCampaignId[campaign.id] ?? preview(0, 0, 0, 0);
+  const previewModel =
+    previewById?.get(campaign.id) ?? previewByCampaignId[campaign.id] ?? preview(0, 0, 0, 0);
   const canMutate = state === 'ready';
   return {
     id: campaign.id,
@@ -315,7 +393,7 @@ function toCampaignItem(
     statusTone: statusTones[campaign.status],
     branchName: base.branchName,
     templateKey: campaign.content.templateKey,
-    bodyPreview: campaign.content.bodyPreview,
+    bodyPreview: sanitizeCampaignBody(campaign.content.bodyPreview),
     scheduledForLabel: campaign.scheduledFor ? formatDateTime(campaign.scheduledFor) : undefined,
     updatedAtLabel: formatDateTime(campaign.updatedAt),
     audiencePreview: previewModel,
@@ -360,6 +438,77 @@ function actionsFor(
       ),
     },
   ];
+}
+
+async function getPersistentCampaignsViewModel(
+  client: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  context: RequestContext,
+  session: SessionContext,
+  options: {
+    branchId: string;
+    campaignId?: string;
+    state?: DevelopmentCampaignsViewOptions['state'];
+  },
+): Promise<CampaignsViewModel> {
+  const base = baseModel(session, options.branchId);
+  const repository = new SupabaseCampaignRepository(client);
+  const service = new CampaignApplicationService(repository, repository, repository);
+  const campaigns = await service.list(context, { branchId: options.branchId });
+
+  if (options.state === 'empty') {
+    return buildModel(
+      base,
+      'empty',
+      'Nenhuma campanha criada para esta unidade.',
+      [],
+      undefined,
+      options.campaignId,
+    );
+  }
+
+  const state = options.state === 'offline' ? 'offline' : campaigns.length ? 'ready' : 'empty';
+  const description =
+    state === 'offline'
+      ? 'Você está offline. Edição local pode continuar, mas envio e agendamento ficam bloqueados.'
+      : state === 'empty'
+        ? 'Nenhuma campanha criada para esta unidade.'
+        : 'Campanhas de WhatsApp com audiência, revisão, agenda e resultado operacional.';
+  const previews = await loadPersistentAudiencePreviews(service, context, campaigns, base.canCreate);
+
+  return buildModel(
+    base,
+    state,
+    description,
+    campaigns,
+    undefined,
+    options.campaignId,
+    previews,
+  );
+}
+
+async function loadPersistentAudiencePreviews(
+  service: CampaignApplicationService,
+  context: RequestContext,
+  campaigns: readonly Campaign[],
+  canPreviewAudience: boolean,
+): Promise<CampaignAudiencePreviewById> {
+  if (!canPreviewAudience || campaigns.length === 0) return new Map();
+
+  const entries = await Promise.all(
+    campaigns.map(async (campaign) => {
+      const previewModel = await service.previewAudience(context, campaign.audienceCriteria);
+      return [
+        campaign.id,
+        preview(
+          previewModel.audienceSize,
+          previewModel.eligibleCount,
+          previewModel.excludedCount,
+          previewModel.unknownContactCount,
+        ),
+      ] as const;
+    }),
+  );
+  return new Map(entries);
 }
 
 function summaryFor(items: readonly CampaignItemModel[]): readonly CampaignMetricModel[] {
@@ -440,4 +589,14 @@ function formatDateTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function sanitizeCampaignBody(value: string) {
+  return value
+    .replace(/https?:\/\/\S+/gi, '[link removido]')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email removido]')
+    .replace(/\+?\d[\d\s().-]{8,}\d/g, '[telefone removido]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 220);
 }

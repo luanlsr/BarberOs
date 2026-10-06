@@ -7,9 +7,16 @@ import type {
   FinancialEntry,
   Payout,
   Permission,
+  RequestContext,
   SessionContext,
 } from '@barberos/contracts';
-import { createSupabaseServerClient } from './auth/server';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
+import { SupabaseFinanceRepository } from '../src/modules/finance/infrastructure';
+import { SupabaseCommissionRepository } from '../src/modules/commissions/infrastructure';
 
 export type FinanceViewState =
   'loading' | 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline';
@@ -166,6 +173,13 @@ type FinanceViewOptions = {
   state?: string;
 };
 type FinanceBaseModel = ReturnType<typeof baseModel>;
+type FinanceDataSet = {
+  entries: readonly FinancialEntry[];
+  expenses: readonly Expense[];
+  expenseCategories: readonly ExpenseCategory[];
+  planUsages: readonly DevelopmentPlanServiceUsage[];
+  planBillings: readonly DevelopmentPlanBilling[];
+};
 type DevelopmentPlanServiceUsage = {
   id: string;
   tenantId: string;
@@ -777,13 +791,120 @@ export async function getFinanceViewModel(
   session: SessionContext,
   options: FinanceViewOptions = {},
 ): Promise<FinanceViewModel> {
-  const model = getDevelopmentFinanceViewModel(session, {
-    branchId: options.branchId,
-    state: developmentStateFrom(options.state),
-  });
-  if (model.state !== 'ready') return model;
-  const persistedPlanAnalysis = await loadPersistedPlanAnalysis(session, model).catch(() => null);
-  return persistedPlanAnalysis ? { ...model, planAnalysis: persistedPlanAnalysis } : model;
+  const authorizedBranches = authorizedBranchIds(session);
+  const consolidated = options.branchId === 'all';
+  const branchId = consolidated
+    ? 'all'
+    : (options.branchId ?? session.activeBranchId ?? authorizedBranches[0] ?? 'dev-branch');
+  const selectedBranchIds = consolidated ? authorizedBranches : [branchId];
+  const base = baseModel(session, branchId, selectedBranchIds);
+  const summaryBranchId = consolidated ? undefined : branchId;
+  const empty = emptySummary(session.tenantId, summaryBranchId);
+  const forcedState = developmentStateFrom(options.state);
+
+  if (!base.canRead) {
+    return buildFinanceModel(
+      base,
+      'permission-denied',
+      'Seu perfil não pode visualizar o financeiro desta unidade.',
+      empty,
+      emptyFinanceDataSet(),
+      emptyCommission(),
+    );
+  }
+
+  if (forcedState === 'loading') {
+    return buildFinanceModel(
+      base,
+      'loading',
+      'Carregando resumo financeiro da unidade.',
+      empty,
+      emptyFinanceDataSet(),
+      emptyCommission(),
+    );
+  }
+
+  if (forcedState === 'offline') {
+    return buildFinanceModel(
+      base,
+      'offline',
+      'Você está offline. Ações financeiras ficam pausadas até a conexão voltar.',
+      empty,
+      emptyFinanceDataSet(),
+      emptyCommission(),
+    );
+  }
+
+  if (forcedState === 'error') {
+    return buildFinanceModel(
+      base,
+      'error',
+      'Não foi possível carregar o financeiro.',
+      empty,
+      emptyFinanceDataSet(),
+      emptyCommission(),
+      {
+        code: 'FINANCE_VALIDATION_ERROR',
+        message: 'Financeiro indisponível.',
+        requestId: 'local-finance-error',
+      },
+    );
+  }
+
+  if (forcedState === 'empty') {
+    return buildFinanceModel(
+      base,
+      'empty',
+      'Nenhum lançamento financeiro neste período.',
+      empty,
+      emptyFinanceDataSet(),
+      emptyCommission(),
+    );
+  }
+
+  const client = await createSupabaseServerClient();
+  const context = client
+    ? await getRequestContext(crypto.randomUUID(), session.tenantId, summaryBranchId)
+    : null;
+
+  if (!client || !context) {
+    if (!isDevelopmentAuthEnabled()) {
+      return buildFinanceModel(
+        base,
+        'empty',
+        'Nenhum lançamento financeiro neste período.',
+        empty,
+        emptyFinanceDataSet(),
+        emptyCommission(),
+      );
+    }
+
+    const model = getDevelopmentFinanceViewModel(session, { branchId });
+    const persistedPlanAnalysis = await loadPersistedPlanAnalysis(session, model).catch(() => null);
+    return persistedPlanAnalysis ? { ...model, planAnalysis: persistedPlanAnalysis } : model;
+  }
+
+  try {
+    return await getPersistentFinanceViewModel(client, context, base, {
+      branchId: summaryBranchId,
+      consolidated,
+    });
+  } catch (error) {
+    return buildFinanceModel(
+      base,
+      'error',
+      'Não foi possível carregar o financeiro.',
+      empty,
+      emptyFinanceDataSet(),
+      emptyCommission(),
+      {
+        code:
+          error instanceof Error && 'code' in error ? String(error.code) : 'FINANCE_LOAD_FAILED',
+        message: 'Financeiro indisponível.',
+        requestId: context.requestId,
+      },
+    );
+  }
 }
 
 export function getDevelopmentFinanceViewModel(
@@ -805,7 +926,7 @@ export function getDevelopmentFinanceViewModel(
       'permission-denied',
       'Seu perfil não pode visualizar o financeiro desta unidade.',
       empty,
-      [],
+      emptyFinanceDataSet(),
       emptyCommission(),
     );
   }
@@ -816,7 +937,7 @@ export function getDevelopmentFinanceViewModel(
       'loading',
       'Carregando resumo financeiro da unidade.',
       empty,
-      [],
+      emptyFinanceDataSet(),
       emptyCommission(),
     );
   }
@@ -827,7 +948,7 @@ export function getDevelopmentFinanceViewModel(
       'offline',
       'Você está offline. Ações financeiras ficam pausadas até a conexão voltar.',
       empty,
-      [],
+      emptyFinanceDataSet(),
       emptyCommission(),
     );
   }
@@ -838,11 +959,8 @@ export function getDevelopmentFinanceViewModel(
       'error',
       'Não foi possível carregar o financeiro local.',
       empty,
-      [],
+      emptyFinanceDataSet(),
       emptyCommission(),
-      [],
-      [],
-      [],
       {
         code: 'FINANCE_VALIDATION_ERROR',
         message: 'Financeiro local indisponível.',
@@ -857,7 +975,7 @@ export function getDevelopmentFinanceViewModel(
       'empty',
       'Nenhum lançamento financeiro neste período.',
       empty,
-      [],
+      emptyFinanceDataSet(),
       emptyCommission(),
     );
   }
@@ -898,13 +1016,71 @@ export function getDevelopmentFinanceViewModel(
       ? 'Resumo consolidado de todas as unidades autorizadas.'
       : 'Resumo financeiro local com receitas, despesas, comissões e repasses.',
     summary,
-    expenses.map(toExpenseModel),
+    {
+      entries,
+      expenses,
+      expenseCategories: developmentExpenseCategories,
+      planUsages,
+      planBillings,
+    },
     commission,
-    entries,
-    planUsages,
-    planBillings,
   );
 }
+
+async function getPersistentFinanceViewModel(
+  client: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  context: RequestContext,
+  base: FinanceBaseModel,
+  options: { branchId?: string; consolidated: boolean },
+): Promise<FinanceViewModel> {
+  const financeRepository = new SupabaseFinanceRepository(client);
+  const commissionRepository = new SupabaseCommissionRepository(client);
+  const filters = { periodStart, periodEnd, branchId: options.branchId };
+  const [summary, entries, categories, expensesResponse, commissionSummary] = await Promise.all([
+    financeRepository.getSummary(context, filters),
+    financeRepository.listEntries(context, { ...filters, limit: 1_000 }),
+    financeRepository.listExpenseCategories(context, options.branchId),
+    financeRepository.listExpenses(context, { ...filters, limit: 100 }),
+    commissionRepository.getSummary(context, filters),
+  ]);
+  const dataSet: FinanceDataSet = {
+    entries,
+    expenses: expensesResponse.expenses,
+    expenseCategories: categories,
+    planUsages: [],
+    planBillings: [],
+  };
+  const baseModel = buildFinanceModel(
+    base,
+    summary.entriesCount || dataSet.expenses.length || commissionSummary.accrualCount
+      ? 'ready'
+      : 'empty',
+    options.consolidated
+      ? 'Resumo consolidado de todas as unidades autorizadas.'
+      : 'Resumo financeiro local com receitas, despesas, comissões e repasses.',
+    {
+      ...summary,
+      commissionLiabilityAmountCents: commissionSummary.openAccrualAmountCents,
+      paidPayoutAmountCents: commissionSummary.paidPayoutAmountCents,
+    },
+    dataSet,
+    {
+      openAccrualAmountCents: commissionSummary.openAccrualAmountCents,
+      openAccrualAmountLabel: formatCurrency(commissionSummary.openAccrualAmountCents),
+      paidPayoutAmountCents: commissionSummary.paidPayoutAmountCents,
+      paidPayoutAmountLabel: formatCurrency(commissionSummary.paidPayoutAmountCents),
+      openAccrualCount: commissionSummary.accrualCount,
+      payoutCount: commissionSummary.paidPayoutAmountCents > 0 ? 1 : 0,
+    },
+  );
+  const persistedPlanAnalysis = await loadPersistedPlanAnalysisFromClient(
+    client,
+    context,
+    baseModel,
+  ).catch(() => null);
+  return persistedPlanAnalysis ? { ...baseModel, planAnalysis: persistedPlanAnalysis } : baseModel;
+}
+
 function baseModel(
   session: SessionContext,
   branchId: string,
@@ -945,11 +1121,8 @@ function buildFinanceModel(
   state: FinanceViewState,
   description: string,
   summary: FinanceSummary,
-  expenses: readonly FinanceExpenseModel[],
+  dataSet: FinanceDataSet,
   commission: FinanceCommissionModel,
-  entries: readonly FinancialEntry[] = [],
-  planUsages: readonly DevelopmentPlanServiceUsage[] = [],
-  planBillings: readonly DevelopmentPlanBilling[] = [],
   error?: FinanceViewModel['error'],
 ): FinanceViewModel {
   return {
@@ -958,13 +1131,13 @@ function buildFinanceModel(
     description,
     summary,
     metrics: metricsFor(summary),
-    expenses,
+    expenses: dataSet.expenses.map((expense) => toExpenseModel(expense, dataSet.expenseCategories)),
     commission,
     cashFlow: cashFlowFor(summary),
-    branchBreakdown: branchBreakdownFor(entries, base),
-    categoryBreakdown: categoryBreakdownFor(entries),
-    originBreakdown: originBreakdownFor(entries),
-    planAnalysis: planAnalysisFor(planUsages, planBillings),
+    branchBreakdown: branchBreakdownFor(dataSet.entries, base),
+    categoryBreakdown: categoryBreakdownFor(dataSet.entries, dataSet.expenseCategories),
+    originBreakdown: originBreakdownFor(dataSet.entries),
+    planAnalysis: planAnalysisFor(dataSet.planUsages, dataSet.planBillings),
     allowedActions: actionsFor(base, state, commission),
     error,
   };
@@ -1158,16 +1331,30 @@ async function loadPersistedPlanAnalysis(
 ): Promise<FinancePlanAnalysisModel | null> {
   const client = await createSupabaseServerClient();
   if (!client) return null;
+  const context = await getRequestContext(
+    crypto.randomUUID(),
+    session.tenantId,
+    model.scope === 'tenant' ? undefined : model.branchId,
+  );
+  if (!context) return null;
+  return loadPersistedPlanAnalysisFromClient(client, context, model);
+}
+
+async function loadPersistedPlanAnalysisFromClient(
+  client: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  context: RequestContext,
+  model: FinanceViewModel,
+): Promise<FinancePlanAnalysisModel | null> {
   let request = client
     .from('customer_plan_monthly_performance')
     .select(
       'tenant_id, branch_id, month_start, plan_haircut_count, plan_customer_count, plan_revenue_amount_cents, walk_in_haircut_count, walk_in_customer_count, walk_in_revenue_amount_cents',
     )
-    .eq('tenant_id', session.tenantId)
+    .eq('tenant_id', context.tenantId)
     .eq('month_start', model.periodStart);
 
   if (model.scope === 'tenant') {
-    request = request.in('branch_id', [...session.branchScope]);
+    request = request.in('branch_id', [...context.branchScope]);
   } else {
     request = request.eq('branch_id', model.branchId);
   }
@@ -1377,11 +1564,12 @@ function branchBreakdownFor(
 
 function categoryBreakdownFor(
   entries: readonly FinancialEntry[],
+  categories: readonly ExpenseCategory[],
 ): readonly FinanceCategoryBreakdownModel[] {
   const postedEntries = entries.filter((entry) => entry.status === 'POSTED');
   const totals = new Map<string, FinanceCategoryBreakdownModel>();
   for (const entry of postedEntries) {
-    const category = categoryForEntry(entry);
+    const category = categoryForEntry(entry, categories);
     const current = totals.get(category.id);
     const amountCents = (current?.amountCents ?? 0) + entry.amountCents;
     totals.set(category.id, {
@@ -1445,9 +1633,12 @@ function originBreakdownFor(
 
 type LocalFinanceCategory = { id: string; name: string; color: string };
 
-function categoryForEntry(entry: FinancialEntry): LocalFinanceCategory {
+function categoryForEntry(
+  entry: FinancialEntry,
+  categories: readonly ExpenseCategory[],
+): LocalFinanceCategory {
   if (entry.categoryId) {
-    const category = developmentExpenseCategories.find((item) => item.id === entry.categoryId);
+    const category = categories.find((item) => item.id === entry.categoryId);
     if (category)
       return { id: category.id, name: category.name, color: colorForCategory(category.name) };
   }
@@ -1476,10 +1667,12 @@ function percentOf(value: number, total: number) {
   if (total <= 0) return 0;
   return Math.round((value / total) * 1000) / 10;
 }
-function toExpenseModel(expense: Expense): FinanceExpenseModel {
+function toExpenseModel(
+  expense: Expense,
+  categories: readonly ExpenseCategory[],
+): FinanceExpenseModel {
   const categoryName =
-    developmentExpenseCategories.find((category) => category.id === expense.categoryId)?.name ??
-    'Sem categoria';
+    categories.find((category) => category.id === expense.categoryId)?.name ?? 'Sem categoria';
   return {
     id: expense.id,
     description: expense.description,
@@ -1525,6 +1718,16 @@ function emptyCommission(): FinanceCommissionModel {
     paidPayoutAmountLabel: formatCurrency(0),
     openAccrualCount: 0,
     payoutCount: 0,
+  };
+}
+
+function emptyFinanceDataSet(): FinanceDataSet {
+  return {
+    entries: [],
+    expenses: [],
+    expenseCategories: [],
+    planUsages: [],
+    planBillings: [],
   };
 }
 

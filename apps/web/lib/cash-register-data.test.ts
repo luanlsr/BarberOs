@@ -1,13 +1,30 @@
-import { describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { SessionContext } from '@barberos/contracts';
 import { developmentSession } from './dev-session';
-import { getDevelopmentCashRegisterViewModel } from './cash-register-data';
+import {
+  getCashRegisterViewModel,
+  getDevelopmentCashRegisterViewModel,
+} from './cash-register-data';
+
+const authMocks = vi.hoisted(() => ({
+  createSupabaseServerClient: vi.fn(),
+  getRequestContext: vi.fn(),
+  isDevelopmentAuthEnabled: vi.fn(),
+}));
+
+vi.mock('./auth/server', () => authMocks);
 
 function sessionWith(overrides: Partial<SessionContext>): SessionContext {
   return { ...developmentSession, ...overrides };
 }
 
 describe('Cash register data loading layer', () => {
+  beforeEach(() => {
+    authMocks.createSupabaseServerClient.mockResolvedValue(null);
+    authMocks.getRequestContext.mockResolvedValue(null);
+    authMocks.isDevelopmentAuthEnabled.mockReturnValue(true);
+  });
+
   test('builds an open cash register model with expected cash, method totals and movements', () => {
     const model = getDevelopmentCashRegisterViewModel(developmentSession, { state: 'open' });
 
@@ -135,5 +152,25 @@ describe('Cash register data loading layer', () => {
     expect(model.canCashIn).toBe(false);
     expect(model.canClose).toBe(false);
     expect(model.session).toBeUndefined();
+  });
+
+  test('does not fallback to dev cash sessions when development auth is disabled', async () => {
+    authMocks.isDevelopmentAuthEnabled.mockReturnValue(false);
+
+    const model = await getCashRegisterViewModel(developmentSession, { state: 'open' });
+
+    expect(authMocks.createSupabaseServerClient).toHaveBeenCalled();
+    expect(model.state).toBe('no-open-session');
+    expect(model.session).toBeUndefined();
+    expect(model.methodTotals).toEqual([]);
+    expect(model.movements).toEqual([]);
+  });
+
+  test('keeps explicit dev cash sessions available when development auth is enabled', async () => {
+    const model = await getCashRegisterViewModel(developmentSession, { state: 'open' });
+
+    expect(model.state).toBe('open');
+    expect(model.session?.id).toBe('dev-cash-session-open');
+    expect(model.methodTotals).toHaveLength(3);
   });
 });

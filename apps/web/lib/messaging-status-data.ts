@@ -1,11 +1,21 @@
 import type {
   ConversationStatus,
   MessageDeliveryState,
+  MessagingConversation,
   MessagingConnection,
+  MessagingMessage,
   Permission,
+  RequestContext,
   SessionContext,
 } from '@barberos/contracts';
+import {
+  createSupabaseServerClient,
+  getRequestContext,
+  isDevelopmentAuthEnabled,
+} from './auth/server';
 import { formatPhoneForDisplay } from './phone-format';
+import { MessagingApplicationService } from '../src/modules/messaging/application/messaging-service';
+import { SupabaseMessagingRepository } from '../src/modules/messaging/infrastructure/supabase-messaging-repository';
 
 export type MessagingStatusViewState =
   'loading' | 'ready' | 'empty' | 'permission-denied' | 'error' | 'offline' | 'inactive-provider';
@@ -99,6 +109,12 @@ type DevelopmentMessagingStatusOptions = {
 };
 
 type MessagingStatusBaseModel = ReturnType<typeof baseModel>;
+
+type MessagingStatusDataSet = {
+  conversations: readonly MessagingConversation[];
+  messagesByConversationId: ReadonlyMap<string, readonly MessagingMessage[]>;
+  deliveryCounts: Partial<Record<MessageDeliveryState, number>>;
+};
 
 const deliveryLabelByState: Record<MessageDeliveryState, string> = {
   RECEIVED: 'Recebidas',
@@ -270,11 +286,99 @@ export async function getMessagingStatusViewModel(
   session: SessionContext,
   options: MessagingStatusOptions = {},
 ): Promise<MessagingStatusViewModel> {
-  return getDevelopmentMessagingStatusViewModel(session, {
-    branchId: options.branchId,
-    conversationId: options.conversationId,
-    state: developmentStateFrom(options.state),
-  });
+  const branchId =
+    options.branchId ?? session.activeBranchId ?? session.branchScope[0] ?? 'dev-branch';
+  const base = baseModel(session, branchId);
+
+  if (!base.canRead) {
+    return buildModel(
+      base,
+      'permission-denied',
+      'Seu perfil não pode visualizar mensagens ou configuração de WhatsApp desta unidade.',
+      undefined,
+      undefined,
+      options.conversationId,
+      emptyDataSet(),
+    );
+  }
+
+  if (options.state === 'loading') {
+    return buildModel(
+      base,
+      'loading',
+      'Carregando conexão, conversas e status de entrega.',
+      undefined,
+      undefined,
+      options.conversationId,
+      emptyDataSet(),
+    );
+  }
+
+  if (options.state === 'error') {
+    return buildModel(
+      base,
+      'error',
+      'Não foi possível carregar o status de mensagens agora.',
+      undefined,
+      {
+        code: 'MESSAGING_VALIDATION_ERROR',
+        message: 'Status de mensagens indisponível.',
+        requestId: 'local-messaging-status-error',
+      },
+      options.conversationId,
+      emptyDataSet(),
+    );
+  }
+
+  const client = await createSupabaseServerClient();
+  const requestContext = client
+    ? await getRequestContext(crypto.randomUUID(), session.tenantId, branchId)
+    : null;
+
+  if (client && requestContext) {
+    try {
+      return await getPersistentMessagingStatusViewModel(client, requestContext, session, {
+        branchId,
+        conversationId: options.conversationId,
+        state: developmentStateFrom(options.state),
+      });
+    } catch (error) {
+      return buildModel(
+        base,
+        'error',
+        'Não foi possível carregar o status de mensagens agora.',
+        undefined,
+        {
+          code:
+            error instanceof Error && 'code' in error
+              ? String(error.code)
+              : 'MESSAGING_STATUS_LOAD_FAILED',
+          message: 'Status de mensagens indisponível.',
+          requestId: requestContext.requestId,
+        },
+        options.conversationId,
+        emptyDataSet(),
+      );
+    }
+  }
+
+  if (isDevelopmentAuthEnabled()) {
+    return getDevelopmentMessagingStatusViewModel(session, {
+      branchId: options.branchId,
+      conversationId: options.conversationId,
+      state: developmentStateFrom(options.state),
+    });
+  }
+
+  return buildModel(
+    base,
+    'empty',
+    'Nenhuma conexão WhatsApp ativa nesta unidade.',
+    undefined,
+    undefined,
+    options.conversationId,
+    emptyDataSet(),
+  );
 }
 
 export function getDevelopmentMessagingStatusViewModel(
@@ -378,10 +482,11 @@ function buildModel(
   connection?: MessagingConnection,
   error?: MessagingStatusViewModel['error'],
   conversationId?: string,
+  dataSet?: MessagingStatusDataSet,
 ): MessagingStatusViewModel {
   const conversations =
     base.canRead && (state === 'ready' || state === 'offline')
-      ? conversationsFor(base.branchId, base.branchName)
+      ? conversationsFor(base.branchId, base.branchName, dataSet)
       : [];
   return {
     ...base,
@@ -389,7 +494,9 @@ function buildModel(
     description,
     connection: connection ? toConnectionModel(connection, base.branchName) : undefined,
     deliveryMetrics:
-      base.canReadDeliveryHealth && state !== 'permission-denied' ? deliveryMetricsFor(state) : [],
+      base.canReadDeliveryHealth && state !== 'permission-denied'
+        ? deliveryMetricsFor(state, dataSet)
+        : [],
     conversations,
     selectedConversation:
       conversations.find((conversation) => conversation.id === conversationId) ?? conversations[0],
@@ -402,7 +509,10 @@ function buildModel(
 function conversationsFor(
   branchId: string,
   branchName: string,
+  dataSet?: MessagingStatusDataSet,
 ): readonly MessagingConversationItemModel[] {
+  if (dataSet) return persistentConversationsFor(branchId, branchName, dataSet);
+
   return developmentConversations
     .filter((conversation) => conversation.branchId === branchId)
     .map((conversation) => {
@@ -430,6 +540,161 @@ function conversationsFor(
     });
 }
 
+async function getPersistentMessagingStatusViewModel(
+  client: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  context: RequestContext,
+  session: SessionContext,
+  options: {
+    branchId: string;
+    conversationId?: string;
+    state?: DevelopmentMessagingStatusOptions['state'];
+  },
+): Promise<MessagingStatusViewModel> {
+  const base = baseModel(session, options.branchId);
+  const service = new MessagingApplicationService(new SupabaseMessagingRepository(client));
+  const connections = await service.listConnections(context, { branchId: options.branchId });
+  const activeConnection = activeConnectionFrom(connections, options.branchId);
+  const inactiveConnection = connections.find((connection) => connection.status !== 'ACTIVE');
+  const connection = activeConnection ?? inactiveConnection;
+  const dataSet = await loadMessagingDataSet(service, context, options.branchId, base.canRead);
+  const forcedState = options.state;
+
+  if (forcedState === 'offline') {
+    return buildModel(
+      base,
+      'offline',
+      'Você está offline. Configuração, envio e reagendamento de campanhas ficam pausados.',
+      connection,
+      undefined,
+      options.conversationId,
+      dataSet,
+    );
+  }
+
+  if (forcedState === 'empty') {
+    return buildModel(
+      base,
+      'empty',
+      'Nenhuma conexão WhatsApp ativa nesta unidade. Configure um provider para liberar mensagens.',
+      undefined,
+      undefined,
+      options.conversationId,
+      emptyDataSet(),
+    );
+  }
+
+  if (forcedState === 'inactive-provider') {
+    return buildModel(
+      base,
+      'inactive-provider',
+      'O provider existe, mas está inativo. Reative a conexão antes de enviar mensagens.',
+      inactiveConnection,
+      undefined,
+      options.conversationId,
+      dataSet,
+    );
+  }
+
+  if (!activeConnection) {
+    return buildModel(
+      base,
+      inactiveConnection ? 'inactive-provider' : 'empty',
+      inactiveConnection
+        ? 'O provider existe, mas está inativo. Reative a conexão antes de enviar mensagens.'
+        : 'Nenhuma conexão WhatsApp ativa nesta unidade.',
+      inactiveConnection,
+      undefined,
+      options.conversationId,
+      dataSet,
+    );
+  }
+
+  return buildModel(
+    base,
+    'ready',
+    'Conexão, consentimento e entregas recentes por unidade.',
+    activeConnection,
+    undefined,
+    options.conversationId,
+    dataSet,
+  );
+}
+
+async function loadMessagingDataSet(
+  service: MessagingApplicationService,
+  context: RequestContext,
+  branchId: string,
+  canRead: boolean,
+): Promise<MessagingStatusDataSet> {
+  if (!canRead) return emptyDataSet();
+
+  const conversations = await service.listConversations(context, { branchId, limit: 25 });
+  const messageEntries = await Promise.all(
+    conversations.map(async (conversation) => {
+      const messages = await service.listMessages(context, {
+        conversationId: conversation.id,
+        limit: 10,
+      });
+      return [
+        conversation.id,
+        messages
+          .slice()
+          .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt)),
+      ] as const;
+    }),
+  );
+  const deliveryCounts: Partial<Record<MessageDeliveryState, number>> = {};
+  for (const [, messages] of messageEntries) {
+    for (const message of messages) {
+      deliveryCounts[message.deliveryState] = (deliveryCounts[message.deliveryState] ?? 0) + 1;
+    }
+  }
+
+  return {
+    conversations,
+    messagesByConversationId: new Map(messageEntries),
+    deliveryCounts,
+  };
+}
+
+function persistentConversationsFor(
+  branchId: string,
+  branchName: string,
+  dataSet: MessagingStatusDataSet,
+): readonly MessagingConversationItemModel[] {
+  return dataSet.conversations
+    .filter((conversation) => !conversation.branchId || conversation.branchId === branchId)
+    .map((conversation) => {
+      const messages = (dataSet.messagesByConversationId.get(conversation.id) ?? []).map(
+        (message): MessagingMessageStatusModel => ({
+          id: message.id,
+          directionLabel: message.direction === 'INBOUND' ? 'Cliente' : 'Barbearia',
+          deliveryState: message.deliveryState,
+          deliveryStateLabel: deliveryLabelByState[message.deliveryState],
+          deliveryTone: deliveryToneByState[message.deliveryState],
+          bodyPreview: sanitizeMessageBody(message.bodyPreview ?? 'Mensagem sem prévia.'),
+          createdAtLabel: formatDateTime(message.createdAt),
+        }),
+      );
+      return {
+        id: conversation.id,
+        customerLabel: conversation.customerId
+          ? `Cliente ${shortIdentifier(conversation.customerId)}`
+          : `Contato ${shortIdentifier(conversation.contactPhoneHash)}`,
+        branchName,
+        status: conversation.status,
+        statusLabel: conversationStatusLabels[conversation.status],
+        statusTone: conversationStatusTones[conversation.status],
+        lastMessageAtLabel: formatDateTime(
+          conversation.lastMessageAt ?? conversation.updatedAt ?? conversation.createdAt,
+        ),
+        lastMessagePreview: messages.at(-1)?.bodyPreview ?? 'Sem mensagens recentes.',
+        unreadCount: conversation.status === 'OPEN' ? countUnreadInbound(messages) : 0,
+        messages,
+      };
+    });
+}
+
 function activeConnectionFor(branchId: string) {
   return (
     developmentConnections.find(
@@ -440,6 +705,22 @@ function activeConnectionFor(branchId: string) {
         !connection.branchId && connection.allowTenantFallback && connection.status === 'ACTIVE',
     )
   );
+}
+
+function activeConnectionFrom(connections: readonly MessagingConnection[], branchId: string) {
+  const active = connections.filter((connection) => connection.status === 'ACTIVE');
+  return (
+    active.find((connection) => connection.branchId === branchId) ??
+    active.find((connection) => !connection.branchId && connection.allowTenantFallback)
+  );
+}
+
+function emptyDataSet(): MessagingStatusDataSet {
+  return {
+    conversations: [],
+    messagesByConversationId: new Map(),
+    deliveryCounts: {},
+  };
 }
 
 function inactiveConnectionFor(branchId: string) {
@@ -474,9 +755,11 @@ function toConnectionModel(
 
 function deliveryMetricsFor(
   state: MessagingStatusViewState,
+  dataSet?: MessagingStatusDataSet,
 ): readonly MessagingDeliveryMetricModel[] {
   if (state === 'loading' || state === 'empty' || state === 'error') return [];
-  return Object.entries(developmentDeliveryCounts).map(([deliveryState, count]) => ({
+  const counts = dataSet?.deliveryCounts ?? developmentDeliveryCounts;
+  return Object.entries(counts).map(([deliveryState, count]) => ({
     id: deliveryState as MessageDeliveryState,
     label: deliveryLabelByState[deliveryState as MessageDeliveryState],
     count: state === 'offline' && deliveryState === 'QUEUED' ? count + 2 : count,
@@ -608,6 +891,15 @@ function formatDateTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function countUnreadInbound(messages: readonly MessagingMessageStatusModel[]) {
+  return messages.filter((message) => message.directionLabel === 'Cliente').length;
+}
+
+function shortIdentifier(value: string) {
+  const compact = value.replace(/[^a-zA-Z0-9]/g, '');
+  return compact.length <= 6 ? compact : compact.slice(-6);
 }
 
 function sanitizeMessageBody(value: string) {
