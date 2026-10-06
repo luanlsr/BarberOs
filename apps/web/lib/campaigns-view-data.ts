@@ -268,9 +268,7 @@ export async function getCampaignsViewModel(
     } catch (error) {
       return buildModel(base, 'error', 'Não foi possível carregar campanhas agora.', [], {
         code:
-          error instanceof Error && 'code' in error
-            ? String(error.code)
-            : 'CAMPAIGNS_LOAD_FAILED',
+          error instanceof Error && 'code' in error ? String(error.code) : 'CAMPAIGNS_LOAD_FAILED',
         message: 'Campanhas indisponíveis.',
         requestId: requestContext.requestId,
       });
@@ -473,17 +471,14 @@ async function getPersistentCampaignsViewModel(
       : state === 'empty'
         ? 'Nenhuma campanha criada para esta unidade.'
         : 'Campanhas de WhatsApp com audiência, revisão, agenda e resultado operacional.';
-  const previews = await loadPersistentAudiencePreviews(service, context, campaigns, base.canCreate);
-
-  return buildModel(
-    base,
-    state,
-    description,
+  const previews = await loadPersistentAudiencePreviews(
+    service,
+    context,
     campaigns,
-    undefined,
-    options.campaignId,
-    previews,
+    base.canCreate,
   );
+
+  return buildModel(base, state, description, campaigns, undefined, options.campaignId, previews);
 }
 
 async function loadPersistentAudiencePreviews(

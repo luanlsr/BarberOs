@@ -120,8 +120,8 @@ export const settingsSections = [
     summary:
       'Acompanhe o plano atual, gere um fluxo de troca de plano via Asaas, baixe comprovantes e configure dados fiscais do tenant.',
     highlights: [
-      { label: 'Plano', value: 'Pro AI' },
-      { label: 'Cobrança', value: 'Asaas' },
+      { label: 'Plano', value: 'Assinatura do tenant' },
+      { label: 'Cobrança', value: 'Faturas persistidas' },
       { label: 'Fiscal', value: 'Dados de nota' },
     ],
     tasks: [

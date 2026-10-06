@@ -1,3 +1,5 @@
+import type { ScheduleBlock } from '@barberos/contracts';
+
 export type StoreOpeningHours = {
   branchId: string;
   startTime: string;
@@ -28,27 +30,6 @@ const defaultOpeningHours: Omit<StoreOpeningHours, 'branchId'> = {
   timezone: 'America/Sao_Paulo',
 };
 
-const defaultBlocks: readonly StoreScheduleBlock[] = [
-  {
-    id: 'dev-block-lunch',
-    branchId: 'dev-branch',
-    dateIso: '2026-09-05',
-    professionalId: null,
-    startTime: '12:00',
-    endTime: '13:00',
-    reason: 'Almoço da equipe',
-  },
-  {
-    id: 'dev-block-training',
-    branchId: 'dev-branch',
-    dateIso: '2026-09-05',
-    professionalId: 'dev-professional-rafael',
-    startTime: '16:00',
-    endTime: '16:30',
-    reason: 'Bloqueio administrativo',
-  },
-];
-
 export function getStoreOperationsSettingsStorageKey(branchId: string) {
   return 'barberos:store-operations-settings:' + branchId;
 }
@@ -59,7 +40,19 @@ export function getStoreOperationsSettings(branchId: string): StoreOperationsSet
       ...defaultOpeningHours,
       branchId,
     },
-    blocks: defaultBlocks.filter((block) => block.branchId === branchId),
+    blocks: [],
+  };
+}
+
+export function toStoreScheduleBlock(block: ScheduleBlock): StoreScheduleBlock {
+  return {
+    id: block.id,
+    branchId: block.branchId,
+    dateIso: toSaoPauloDateIso(block.startsAt),
+    professionalId: block.professionalId ?? null,
+    startTime: toSaoPauloTimeLabel(block.startsAt),
+    endTime: toSaoPauloTimeLabel(block.endsAt),
+    reason: block.reason ?? scheduleBlockTypeLabels[block.type] ?? 'Bloqueio de agenda',
   };
 }
 
@@ -106,3 +99,30 @@ function fromMinutes(totalMinutes: number) {
   const minute = totalMinutes % 60;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
+
+function toSaoPauloDateIso(value: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+  }).formatToParts(new Date(value));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function toSaoPauloTimeLabel(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value));
+}
+
+const scheduleBlockTypeLabels: Record<ScheduleBlock['type'], string> = {
+  BREAK: 'Intervalo',
+  DAY_OFF: 'Folga',
+  VACATION: 'Férias',
+  MAINTENANCE: 'Manutenção',
+  MANUAL: 'Bloqueio de agenda',
+};

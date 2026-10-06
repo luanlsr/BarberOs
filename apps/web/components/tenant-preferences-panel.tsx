@@ -39,9 +39,6 @@ export function TenantPreferencesPanel({
       logoUrl: initialPreferences?.logoUrl ?? null,
     };
 
-    applyBrandThemePreferences(preferences);
-    storeBrandThemePreferences(preferences);
-
     if (!canManage) {
       showToast('Seu perfil pode visualizar, mas não salvar preferências.', 'warning');
       return;
@@ -75,6 +72,7 @@ export function TenantPreferencesPanel({
       }
       showToast('Preferências visuais salvas com sucesso.');
     } catch {
+      applyBrandThemePreferences(preferences);
       showToast(
         'Não foi possível salvar no servidor. A cor ficou aplicada nesta sessão.',
         'warning',

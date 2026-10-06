@@ -42,12 +42,7 @@ type UserInterfacePreferencesRow = {
 
 export async function getTenantVisualPreferences(tenantId: string) {
   const client = await createSupabaseServerClient();
-  if (!client) {
-    return {
-      ...defaultTenantVisualPreferences,
-      tenantId,
-    };
-  }
+  if (!client) return null;
 
   const { data, error } = await client
     .from('tenant_visual_preferences')
@@ -56,7 +51,7 @@ export async function getTenantVisualPreferences(tenantId: string) {
     .maybeSingle();
 
   if (error) {
-    if (isDevelopmentAuthEnabled()) return { ...defaultTenantVisualPreferences, tenantId };
+    if (isDevelopmentAuthEnabled()) return null;
     throw error;
   }
 
@@ -65,13 +60,7 @@ export async function getTenantVisualPreferences(tenantId: string) {
 
 export async function getUserInterfacePreferences(tenantId: string, userId: string) {
   const client = await createSupabaseServerClient();
-  if (!client) {
-    return {
-      ...defaultUserInterfacePreferences,
-      tenantId,
-      userId,
-    };
-  }
+  if (!client) return null;
 
   const { data, error } = await client
     .from('user_interface_preferences')
@@ -81,7 +70,7 @@ export async function getUserInterfacePreferences(tenantId: string, userId: stri
     .maybeSingle();
 
   if (error) {
-    if (isDevelopmentAuthEnabled()) return { ...defaultUserInterfacePreferences, tenantId, userId };
+    if (isDevelopmentAuthEnabled()) return null;
     throw error;
   }
 

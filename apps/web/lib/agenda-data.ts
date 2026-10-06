@@ -19,8 +19,10 @@ import {
   getStoreOperationsSettings,
   toFullCalendarSlotMaxTime,
   toFullCalendarSlotTime,
+  type StoreOperationsSettings,
   type StoreScheduleBlock,
 } from './store-operations-settings';
+import { getPersistentStoreOperationsSettings } from './store-operations-settings-server';
 import { formatPhoneForDisplay } from './phone-format';
 
 export type AgendaTone = 'neutral' | 'success' | 'warning' | 'danger';
@@ -278,6 +280,7 @@ export async function getAgendaViewModel(
     view?: string;
     panel?: string;
     time?: string;
+    operationsSettings?: StoreOperationsSettings;
   } = {},
 ): Promise<AgendaViewModel> {
   const dateIso = normalizeDate(options.date);
@@ -288,7 +291,9 @@ export async function getAgendaViewModel(
     professionalId: options.professionalId,
     appointmentId: options.appointmentId,
   });
-  return buildAgendaViewModel({ session, ...options, date: dateIso, data });
+  const operationsSettings =
+    options.operationsSettings ?? (await getPersistentStoreOperationsSettings(session, branchId));
+  return buildAgendaViewModel({ session, ...options, date: dateIso, data, operationsSettings });
 }
 
 export function buildAgendaViewModel({
@@ -301,6 +306,7 @@ export function buildAgendaViewModel({
   panel,
   time,
   data = emptyAgendaDataSource,
+  operationsSettings,
 }: {
   session: SessionContext;
   date?: string;
@@ -311,6 +317,7 @@ export function buildAgendaViewModel({
   panel?: string;
   time?: string;
   data?: AgendaDataSource;
+  operationsSettings?: StoreOperationsSettings;
 }): AgendaViewModel {
   const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
   const hasReadPermission =
@@ -331,8 +338,8 @@ export function buildAgendaViewModel({
   const calendarView = normalizeCalendarView(view);
   const agendaPanel = normalizeAgendaPanel(panel);
   const defaultTimeLabel = normalizeTimeLabel(time);
-  const operationsSettings = getStoreOperationsSettings(branchId);
-  const openingHours = toAgendaOpeningHours(operationsSettings.openingHours);
+  const effectiveOperationsSettings = operationsSettings ?? getStoreOperationsSettings(branchId);
+  const openingHours = toAgendaOpeningHours(effectiveOperationsSettings.openingHours);
   const appointments = hasReadPermission
     ? data.appointments
         .filter((appointment) => appointment.branchId === branchId)
@@ -364,7 +371,7 @@ export function buildAgendaViewModel({
     (session.entitlements ?? []).includes('core.operations') &&
     session.branchScope.includes(branchId);
   const scheduleBlocks = buildScheduleBlocks(
-    operationsSettings.blocks,
+    effectiveOperationsSettings.blocks,
     dateIso,
     visibleProfessionals,
   );
@@ -420,9 +427,9 @@ export function buildAgendaViewModel({
     kpis: buildKpis(
       appointments,
       visibleProfessionals.length,
-      operationsSettings.openingHours.slotMinutes,
-      operationsSettings.openingHours.startTime,
-      operationsSettings.openingHours.endTime,
+      effectiveOperationsSettings.openingHours.slotMinutes,
+      effectiveOperationsSettings.openingHours.startTime,
+      effectiveOperationsSettings.openingHours.endTime,
       scheduleBlocks.length,
     ),
     emptyMessage: hasReadPermission

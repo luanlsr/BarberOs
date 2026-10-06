@@ -2,16 +2,9 @@ import { NextResponse } from 'next/server';
 import {
   updateTenantVisualPreferencesCommandSchema,
   updateUserInterfacePreferencesCommandSchema,
-  type ThemePreference,
 } from '@barberos/contracts';
+import { createSupabaseServerClient, getRequestContext } from '../../../../../lib/auth/server';
 import {
-  createSupabaseServerClient,
-  getRequestContext,
-  isDevelopmentAuthEnabled,
-} from '../../../../../lib/auth/server';
-import {
-  defaultTenantVisualPreferences,
-  defaultUserInterfacePreferences,
   getTenantVisualPreferences,
   getUserInterfacePreferences,
   mapTenantVisualPreferences,
@@ -24,9 +17,6 @@ type PreferencesPayload = {
   userPreferences?: unknown;
 };
 
-const devTenantPreferences = new Map<string, typeof defaultTenantVisualPreferences>();
-const devUserPreferences = new Map<string, typeof defaultUserInterfacePreferences>();
-
 export async function GET(request: Request) {
   const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
   const context = await resolveContext(request, requestId);
@@ -36,18 +26,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const tenantPreferences = devTenantPreferences.get(context.tenantId) ??
-      (await getTenantVisualPreferences(context.tenantId)) ?? {
-        ...defaultTenantVisualPreferences,
-        tenantId: context.tenantId,
-      };
-    const userKey = `${context.tenantId}:${context.userId}`;
-    const userPreferences = devUserPreferences.get(userKey) ??
-      (await getUserInterfacePreferences(context.tenantId, context.userId)) ?? {
-        ...defaultUserInterfacePreferences,
-        tenantId: context.tenantId,
-        userId: context.userId,
-      };
+    const tenantPreferences = await getTenantVisualPreferences(context.tenantId);
+    const userPreferences = await getUserInterfacePreferences(context.tenantId, context.userId);
 
     return NextResponse.json({
       data: { tenantPreferences, userPreferences },
@@ -88,16 +68,12 @@ export async function PATCH(request: Request) {
 
     const client = await createSupabaseServerClient();
     if (!client) {
-      if (!isDevelopmentAuthEnabled()) {
-        throw Object.assign(new Error('Persistence is not configured.'), {
-          code: 'PERSISTENCE_NOT_CONFIGURED',
-        });
-      }
-      const saved = saveDevelopmentPreferences(context.tenantId, context.userId, {
-        tenantCommand,
-        userCommand,
-      });
-      return NextResponse.json({ data: saved, requestId: context.requestId });
+      return jsonError(
+        'PERSISTENCE_NOT_CONFIGURED',
+        'Settings persistence is not configured.',
+        503,
+        context.requestId,
+      );
     }
 
     const [tenantPreferences, userPreferences] = await Promise.all([
@@ -111,15 +87,8 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       data: {
-        tenantPreferences: tenantPreferences ?? {
-          ...defaultTenantVisualPreferences,
-          tenantId: context.tenantId,
-        },
-        userPreferences: userPreferences ?? {
-          ...defaultUserInterfacePreferences,
-          tenantId: context.tenantId,
-          userId: context.userId,
-        },
+        tenantPreferences,
+        userPreferences,
       },
       requestId: context.requestId,
     });
@@ -185,49 +154,4 @@ async function upsertUserPreferences(
     .single();
   if (error) throw error;
   return mapUserInterfacePreferences(data);
-}
-
-function saveDevelopmentPreferences(
-  tenantId: string,
-  userId: string,
-  {
-    tenantCommand,
-    userCommand,
-  }: {
-    tenantCommand: ReturnType<typeof updateTenantVisualPreferencesCommandSchema.parse> | null;
-    userCommand: ReturnType<typeof updateUserInterfacePreferencesCommandSchema.parse> | null;
-  },
-) {
-  const now = new Date().toISOString();
-  const currentTenant = devTenantPreferences.get(tenantId) ?? {
-    ...defaultTenantVisualPreferences,
-    tenantId,
-  };
-  const currentUser = devUserPreferences.get(`${tenantId}:${userId}`) ?? {
-    ...defaultUserInterfacePreferences,
-    tenantId,
-    userId,
-  };
-  const tenantPreferences = tenantCommand
-    ? {
-        ...currentTenant,
-        logoUrl: tenantCommand.logoUrl ?? currentTenant.logoUrl,
-        accentColorHex: tenantCommand.accentColorHex ?? currentTenant.accentColorHex,
-        updatedBy: userId,
-        updatedAt: now,
-      }
-    : currentTenant;
-  const userPreferences = userCommand
-    ? {
-        ...currentUser,
-        theme: (userCommand.theme ?? currentUser.theme) as ThemePreference,
-        notificationPreferences:
-          userCommand.notificationPreferences ?? currentUser.notificationPreferences,
-        updatedAt: now,
-      }
-    : currentUser;
-
-  devTenantPreferences.set(tenantId, tenantPreferences);
-  devUserPreferences.set(`${tenantId}:${userId}`, userPreferences);
-  return { tenantPreferences, userPreferences };
 }

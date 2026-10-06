@@ -20,7 +20,8 @@ import { TenantPreferencesPanel } from '../../../components/tenant-preferences-p
 import { getSessionContext } from '../../../lib/auth/server';
 import { getAgendaViewModel } from '../../../lib/agenda-data';
 import { getTenantVisualPreferences } from '../../../lib/settings-preferences';
-import { getStoreOperationsSettings } from '../../../lib/store-operations-settings';
+import { getPersistentStoreOperationsSettings } from '../../../lib/store-operations-settings-server';
+import { getTenantBillingSettingsViewModel } from '../../../lib/tenant-billing-settings';
 import {
   canAccessSettingsSection,
   getSettingsSection,
@@ -55,10 +56,21 @@ export default async function SettingsSectionPage({
   const visibleSections = settingsSections.filter((candidate) =>
     canAccessSettingsSection(candidate, session),
   );
+  const branchId = session.activeBranchId ?? session.branchScope[0] ?? '';
+  const storeOperationsSettings =
+    section.key === 'barbearia-filiais'
+      ? await getPersistentStoreOperationsSettings(session, branchId)
+      : null;
   const agendaModel =
-    section.key === 'barbearia-filiais' ? await getAgendaViewModel(session, {}) : null;
+    section.key === 'barbearia-filiais'
+      ? await getAgendaViewModel(session, {
+          operationsSettings: storeOperationsSettings ?? undefined,
+        })
+      : null;
   const tenantVisualPreferences =
     section.key === 'preferencias' ? await getTenantVisualPreferences(session.tenantId) : null;
+  const tenantBilling =
+    section.key === 'plano-cobranca' ? await getTenantBillingSettingsViewModel(session) : null;
 
   return (
     <div className="settings-page settings-section-page">
@@ -124,9 +136,7 @@ export default async function SettingsSectionPage({
               <BusinessHoursSettingsPanel
                 branchName={session.branchName}
                 professionals={agendaModel?.professionals ?? []}
-                settings={getStoreOperationsSettings(
-                  session.activeBranchId ?? session.branchScope[0] ?? '',
-                )}
+                settings={storeOperationsSettings!}
               />
             </>
           ) : null}
@@ -199,32 +209,13 @@ export default async function SettingsSectionPage({
 
           {section.key === 'plano-cobranca' ? (
             <>
-              <SettingsFormGrid
-                items={[
-                  ['Plano atual', 'Pro AI'],
-                  ['Próxima cobrança', 'Via Asaas'],
-                  ['Comprovantes', 'Disponíveis para download'],
-                  ['Nota fiscal', 'Dados fiscais do tenant'],
-                ]}
-              />
+              <SettingsFormGrid items={tenantBilling?.summaryItems ?? []} />
               <SettingsOperationalPanel
-                cards={[
-                  {
-                    icon: CreditCard,
-                    title: 'Trocar plano',
-                    body: 'Gere um novo checkout Asaas para upgrade ou downgrade com confirmação de pagamento.',
-                  },
-                  {
-                    icon: WalletCards,
-                    title: 'Comprovantes',
-                    body: 'Baixe pagamentos e concilie cobranças com financeiro e caixa.',
-                  },
-                  {
-                    icon: FileText,
-                    title: 'Dados fiscais',
-                    body: 'Configure CNPJ, razão social e endereço fiscal para futura emissão de nota.',
-                  },
-                ]}
+                cards={(tenantBilling?.operationalCards ?? []).map((card, index) => ({
+                  icon: [CreditCard, WalletCards, FileText][index] ?? FileText,
+                  title: card.title,
+                  body: card.body,
+                }))}
               />
             </>
           ) : null}

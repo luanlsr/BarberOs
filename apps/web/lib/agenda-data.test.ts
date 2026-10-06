@@ -383,6 +383,52 @@ describe('agenda data loading layer', () => {
     );
   });
 
+  test('uses persisted operations settings for schedule blocks without dev fixtures', () => {
+    const model = buildAgenda({
+      session: developmentSession,
+      date: '2026-09-05',
+      mode: 'new',
+      operationsSettings: {
+        openingHours: {
+          branchId: 'dev-branch',
+          startTime: '09:00',
+          endTime: '17:00',
+          slotMinutes: 30,
+          timezone: 'America/Sao_Paulo',
+        },
+        blocks: [
+          {
+            id: 'block-real-lunch',
+            branchId: 'dev-branch',
+            dateIso: '2026-09-05',
+            professionalId: null,
+            startTime: '12:00',
+            endTime: '13:00',
+            reason: 'Intervalo real',
+          },
+        ],
+      },
+    });
+
+    expect(model.openingHours.startTime).toBe('09:00');
+    expect(model.scheduleBlocks).toEqual([
+      expect.objectContaining({
+        id: 'block-real-lunch',
+        professionalName: 'Todos os profissionais',
+        reason: 'Intervalo real',
+      }),
+    ]);
+    expect(model.scheduleBlocks.map((block) => block.id)).not.toContain('dev-block-lunch');
+    expect(model.newAppointment.occupiedSlots).toContainEqual(
+      expect.objectContaining({
+        kind: 'block',
+        professionalId: 'professional-carlos',
+        timeLabel: '12:00',
+        customerName: 'bloqueio: Intervalo real',
+      }),
+    );
+  });
+
   test('sorts new appointment selects alphabetically and preserves service eligibility', () => {
     const model = buildAgenda({ session: developmentSession, date: '2026-09-05', mode: 'new' });
 
